@@ -23,7 +23,12 @@ const options: swaggerJsdoc.Options = {
         "**Module 15**: Transporter & Vehicle Network — a registry of transporter profiles, their vehicles, " +
         "declared service areas, and a manually-set availability flag. Discovery/filtering only: no logistics " +
         "pricing, route optimization, GPS tracking, shipment creation, or payment processing.\n\n" +
-        "Logistics quotes, shipment/GPS tracking, delivery reconciliation, and payment status tracking are not yet part of this API.",
+        "**Module 16**: Logistics Quote & Optimization — logistics requests, deterministic cost/route estimates, " +
+        "transporter quotes, and quote acceptance. No GPS tracking, shipment lifecycle, or payment processing.\n\n" +
+        "**Module 17**: Shipment & GPS Tracking — turns an accepted Module 16 quote into a Shipment, an explicit " +
+        "pickup-to-delivery lifecycle, GPS/location ingestion and history, ETA and route-progress estimates. " +
+        "No transport pricing, quote optimization, payment processing, or delivery/quality reconciliation.\n\n" +
+        "Delivery & quality reconciliation and payment status tracking are not yet part of this API.",
     },
     servers: [{ url: env.BACKEND_URL, description: "Current environment" }],
     components: {

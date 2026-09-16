@@ -951,6 +951,9 @@ model CropLot {
   // (never Cascade), matching every other historical-transaction relation
   // on this model above.
   logisticsRequests LogisticsRequest[]
+  // Module 17 — every shipment ever created for a logistics request raised
+  // against this lot.
+  shipments          Shipment[]
 
   @@index([farmerId, status])
   @@index([fpoId, status])
@@ -2522,6 +2525,8 @@ model TransporterProfile {
   // only (Prisma requires both sides of an explicit relation); nothing
   // about Module 15's own profile/vehicle/service-area behavior changes.
   logisticsQuotes LogisticsQuote[]
+  // Module 17 — additive back-relation only.
+  shipments       Shipment[]
 
   @@index([verificationStatus])
   @@index([isActive])
@@ -2573,6 +2578,8 @@ model Vehicle {
   // Module 16 — additive back-relation only, same reasoning as
   // TransporterProfile.logisticsQuotes above.
   logisticsQuotes LogisticsQuote[]
+  // Module 17 — additive back-relation only.
+  shipments       Shipment[]
 
   @@index([transporterId])
   @@index([vehicleType])
@@ -2630,6 +2637,8 @@ model VehicleDriver {
   updatedAt DateTime @updatedAt
 
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  // Module 17 — additive back-relation only (driver assignment is optional).
+  shipments Shipment[]
 
   @@index([transporterId])
   @@map("vehicle_drivers")
@@ -2761,6 +2770,7 @@ model LogisticsRequest {
   requester User    @relation(fields: [requesterUserId], references: [id], onDelete: Restrict)
 
   quotes            LogisticsQuote[]               @relation("RequestQuotes")
+  shipment          Shipment?
   acceptedQuote      LogisticsQuote?                @relation("AcceptedQuote", fields: [acceptedQuoteId], references: [id])
   recommendedQuote   LogisticsQuote?                @relation("RecommendedQuote", fields: [recommendedQuoteId], references: [id])
   optimizationResults LogisticsOptimizationResult[]
@@ -2816,6 +2826,7 @@ model LogisticsQuote {
   // accepted/recommended choice.
   acceptedForRequest    LogisticsRequest?
   recommendedForRequest LogisticsRequest?
+  shipment              Shipment?
 
   @@index([logisticsRequestId, status])
   @@index([transportProviderId, status])
@@ -2848,4 +2859,180 @@ model LogisticsOptimizationResult {
 
   @@index([logisticsRequestId, calculatedAt])
   @@map("logistics_optimization_results")
+}
+
+// ---------------------------------------------------------------------------
+// Module 17 — Shipment & GPS Tracking
+//
+// Consumes Module 16's accepted LogisticsQuote as-is (acceptedQuoteId is
+// @unique on LogisticsRequest, so at most one Shipment can ever be created
+// per request — enforced again here with Shipment.logisticsRequestId being
+// @unique for the same "only one active shipment per request" guarantee).
+// There is no separate Order model in this codebase (see Module 16's own
+// comment) — a Shipment hangs off the same CropLot as its LogisticsRequest.
+// Provider/vehicle/driver are the exact Module 15 models; nothing is
+// duplicated here.
+// ---------------------------------------------------------------------------
+
+enum ShipmentStatus {
+  CREATED
+  CONFIRMED
+  ASSIGNED
+  READY_FOR_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  ARRIVED
+  DELIVERED
+  CANCELLED
+}
+
+// Step 13 — provider-agnostic ingestion source for a GPS/location update.
+enum LocationUpdateSource {
+  DRIVER_APP
+  GPS_DEVICE
+  IOT_DEVICE
+  ADMIN
+  SYSTEM
+}
+
+enum ShipmentEventType {
+  SHIPMENT_CREATED
+  SHIPMENT_CONFIRMED
+  VEHICLE_ASSIGNED
+  DRIVER_ASSIGNED
+  READY_FOR_PICKUP
+  PICKED_UP
+  TRANSIT_STARTED
+  LOCATION_UPDATED
+  ARRIVED
+  DELIVERED
+  CANCELLED
+}
+
+// One row per accepted logistics quote (Step 4/28: duplicate creation is
+// prevented at the DB level via the @unique constraints below, not just in
+// application code — two concurrent create attempts against the same
+// accepted quote can never both succeed).
+model Shipment {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  logisticsRequestId String @unique
+  acceptedQuoteId     String @unique
+
+  lotId String
+
+  transportProviderId String
+  vehicleId           String
+  driverId             String?
+
+  commodity    String
+  quantityKg   Decimal      @db.Decimal(14, 2)
+  quantityUnit QuantityUnit @default(KG)
+
+  pickupAddress   String?
+  pickupDistrict  String
+  pickupState     String
+  pickupLatitude  Float?
+  pickupLongitude Float?
+
+  destinationAddress   String?
+  destinationDistrict  String
+  destinationState     String
+  destinationLatitude  Float?
+  destinationLongitude Float?
+
+  // Step 32 — snapshot of the accepted quote's own agreed transport amount,
+  // never recalculated here (Module 17 does not own transport pricing).
+  agreedAmount Decimal @db.Decimal(12, 2)
+  currency     String  @default("INR")
+
+  // Step 16 — INITIAL_ESTIMATE, sourced from Module 16's own
+  // estimatedDistanceKm/estimatedDurationMinutes on the accepted quote (or
+  // the parent request when the quote itself didn't carry one).
+  estimatedDistanceKm      Decimal? @db.Decimal(10, 2)
+  estimatedDurationMinutes Int?
+
+  scheduledPickupAt    DateTime?
+  estimatedDeliveryAt  DateTime?
+  actualPickupAt       DateTime?
+  actualDeliveryAt     DateTime?
+
+  status ShipmentStatus @default(CREATED)
+
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  logisticsRequest  LogisticsRequest   @relation(fields: [logisticsRequestId], references: [id], onDelete: Restrict)
+  acceptedQuote     LogisticsQuote     @relation(fields: [acceptedQuoteId], references: [id], onDelete: Restrict)
+  lot               CropLot            @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  transportProvider TransporterProfile @relation(fields: [transportProviderId], references: [id], onDelete: Restrict)
+  vehicle           Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  driver            VehicleDriver?     @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  locations ShipmentLocation[]
+  events    ShipmentEvent[]
+
+  @@index([status])
+  @@index([transportProviderId, status])
+  @@index([vehicleId, status])
+  @@index([lotId])
+  @@index([createdAt])
+  @@map("shipments")
+}
+
+// Step 9/29 — one row per GPS/location ping. Never stored on Vehicle
+// (a vehicle can carry many shipments over its lifetime; location belongs
+// to the trip). Indexed for both "history of this shipment" and "history
+// in this time range" (Step 29).
+model ShipmentLocation {
+  id String @id @default(uuid())
+
+  shipmentId String
+
+  latitude  Float
+  longitude Float
+
+  accuracyMeters  Float?
+  speedKmh        Float?
+  headingDegrees  Float?
+
+  recordedAt DateTime
+  source     LocationUpdateSource @default(DRIVER_APP)
+
+  createdAt DateTime @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([recordedAt])
+  @@index([shipmentId, recordedAt])
+  @@map("shipment_locations")
+}
+
+// Step 22/23 — append-only, auditable lifecycle history. Kept alongside
+// Shipment.status (never relied on instead of it), same convention as
+// LotStatusHistory/CropLot.status.
+model ShipmentEvent {
+  id String @id @default(uuid())
+
+  shipmentId String
+
+  eventType      ShipmentEventType
+  previousStatus ShipmentStatus?
+  newStatus      ShipmentStatus?
+
+  actorUserId String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, createdAt])
+  @@map("shipment_events")
 }

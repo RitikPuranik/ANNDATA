@@ -117,6 +117,19 @@ export type ErrorCode =
   | "QUOTE_ALREADY_ACCEPTED_FOR_REQUEST"
   | "UNAUTHORIZED_QUOTE_ACCESS"
   | "NO_QUOTES_TO_OPTIMIZE"
+  // Module 17 — Shipment & GPS Tracking. SHIPMENT_NOT_FOUND is thrown via
+  // the generic NotFoundError (same convention as every module above);
+  // the remaining codes below are genuine business-rule violations
+  // thrown via ShipmentDomainError.
+  | "SHIPMENT_ALREADY_EXISTS"
+  | "LOGISTICS_QUOTE_NOT_ACCEPTED"
+  | "INVALID_SHIPMENT_TRANSITION"
+  | "DRIVER_NOT_FOUND"
+  | "DRIVER_NOT_ELIGIBLE"
+  | "UNAUTHORIZED_SHIPMENT_ACCESS"
+  | "INVALID_GPS_COORDINATES"
+  | "INVALID_GPS_TIMESTAMP"
+  | "SHIPMENT_NOT_TRACKABLE"
   | "UNEXPECTED_ERROR";
 
 export class AppError extends Error {
@@ -316,6 +329,36 @@ export class LogisticsDomainError extends AppError {
       | "QUOTE_ALREADY_ACCEPTED_FOR_REQUEST"
       | "UNAUTHORIZED_QUOTE_ACCESS"
       | "NO_QUOTES_TO_OPTIMIZE"
+    >,
+    statusCode = 422,
+  ) {
+    super(message, statusCode, code);
+  }
+}
+
+/**
+ * Module 17's equivalent of LogisticsDomainError. SHIPMENT_NOT_FOUND is NOT
+ * included here — thrown via the generic NotFoundError (same convention as
+ * every module above), and DRIVER_NOT_FOUND likewise. UNAUTHORIZED_SHIPMENT_ACCESS
+ * defaults to 403 explicitly at the call site; every other code here is a
+ * 422 business-rule violation (invalid transition, GPS validation failure,
+ * duplicate shipment, ineligible driver, etc.) unless the call site
+ * overrides statusCode.
+ */
+export class ShipmentDomainError extends AppError {
+  constructor(
+    message: string,
+    code: Extract<
+      ErrorCode,
+      | "SHIPMENT_ALREADY_EXISTS"
+      | "LOGISTICS_QUOTE_NOT_ACCEPTED"
+      | "INVALID_SHIPMENT_TRANSITION"
+      | "DRIVER_NOT_FOUND"
+      | "DRIVER_NOT_ELIGIBLE"
+      | "UNAUTHORIZED_SHIPMENT_ACCESS"
+      | "INVALID_GPS_COORDINATES"
+      | "INVALID_GPS_TIMESTAMP"
+      | "SHIPMENT_NOT_TRACKABLE"
     >,
     statusCode = 422,
   ) {

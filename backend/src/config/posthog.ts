@@ -124,6 +124,9 @@ const ALLOWED_EVENTS = new Set([
   "logistics_quote_submitted",
   "logistics_quote_accepted",
   "logistics_quote_rejected",
+  // Module 17 — Shipment & GPS Tracking
+  "shipment_created",
+  "shipment_delivered",
 ]);
 
 // Defense in depth: even if a caller accidentally passes a sensitive key in

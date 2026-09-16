@@ -114,6 +114,11 @@ import { createVehicleRouter } from "./modules/transporters/vehicle.routes";
 import { createAdminTransporterRouter } from "./modules/transporters/admin-transporter.routes";
 import { PrismaLogisticsRequestRepository } from "./modules/logistics/logistics-request.repository";
 import { PrismaLogisticsQuoteRepository } from "./modules/logistics/logistics-quote.repository";
+import { PrismaShipmentRepository } from "./modules/shipments/shipment.repository";
+import { PrismaShipmentLocationRepository } from "./modules/shipments/shipment-location.repository";
+import { PrismaShipmentEventRepository } from "./modules/shipments/shipment-event.repository";
+import { PrismaShipmentDriverRepository } from "./modules/shipments/shipment-driver.repository";
+import { ShipmentAuthorizationService } from "./modules/shipments/shipment.authorization";
 import { LogisticsOptimizationResultRepository } from "./modules/logistics/logistics-optimization-result.repository";
 import { LogisticsVehicleDiscoveryRepository } from "./modules/logistics/logistics-vehicle-discovery.repository";
 import { LogisticsAuthorizationService } from "./modules/logistics/logistics.authorization";
@@ -125,8 +130,10 @@ import { LogisticsOptimizationEngine } from "./modules/logistics/logistics-optim
 import { getCostConfig, getRouteConfig } from "./modules/logistics/logistics.config";
 import { LogisticsRequestService } from "./modules/logistics/logistics-request.service";
 import { LogisticsQuoteService } from "./modules/logistics/logistics-quote.service";
+import { ShipmentService } from "./modules/shipments/shipment.service";
 import { createLogisticsRequestRouter } from "./modules/logistics/logistics-request.routes";
 import { createLogisticsQuoteRouter } from "./modules/logistics/logistics-quote.routes";
+import { createShipmentRouter } from "./modules/shipments/shipment.routes";
 
 export interface AppDependencies {
   authRepository: AuthRepository;
@@ -636,6 +643,40 @@ export function createApp(deps: AppDependencies): Express {
 
   app.use("/api", createLogisticsRequestRouter(logisticsRequestService, deps.authRepository, deps.auditService));
   app.use("/api", createLogisticsQuoteRouter(logisticsQuoteService, deps.authRepository, deps.auditService));
+
+  // Module 17 — Shipment & GPS Tracking. Consumes Module 16's own
+  // logisticsRequestRepository/logisticsQuoteRepository and Module 15's own
+  // transporterRepository/vehicleRepository/transporterAuthorizationService
+  // (all constructed just above) as-is, plus this file's own already-
+  // constructed cropLotRepository/farmerProfileResolver/fpoAuthorization —
+  // no duplicate registries, no re-implemented route-distance logic (the
+  // same routeDistanceProvider instance Module 16 uses is reused for ETA
+  // recalculation and route-progress estimation).
+  const shipmentRepository = new PrismaShipmentRepository(deps.prisma);
+  const shipmentLocationRepository = new PrismaShipmentLocationRepository(deps.prisma);
+  const shipmentEventRepository = new PrismaShipmentEventRepository(deps.prisma);
+  const shipmentDriverRepository = new PrismaShipmentDriverRepository(deps.prisma);
+  const shipmentAuthorization = new ShipmentAuthorizationService(deps.prisma, fpoAuthorization);
+
+  const shipmentService = new ShipmentService(
+    shipmentRepository,
+    shipmentLocationRepository,
+    shipmentEventRepository,
+    logisticsRequestRepository,
+    logisticsQuoteRepository,
+    deps.cropLotRepository,
+    farmerProfileResolver,
+    transporterRepository,
+    vehicleRepository,
+    shipmentDriverRepository,
+    transporterAuthorizationService,
+    shipmentAuthorization,
+    routeDistanceProvider,
+    deps.auditService,
+    deps.prisma
+  );
+
+  app.use("/api", createShipmentRouter(shipmentService, deps.authRepository, deps.auditService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

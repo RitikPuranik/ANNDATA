@@ -23,3 +23,17 @@ against a live DB here — run the three commands above, then:
 to verify Module 16's own repository/service code and run its full test suite,
 including the accept-quote concurrency test in tests/integration (see
 tests/integration/logistics.routes.test.ts and any *.db.test.ts files added for it).
+
+Module 17 (Shipment & GPS Tracking) hit the exact same wall. Its state machine and
+Zod schemas don't import generated Prisma types either, so they were unit-tested for
+real (see tests/unit/shipment-state-machine.test.ts and
+tests/unit/shipment.schemas.test.ts). Its repository/service files (shipment.types.ts,
+shipment.repository.ts, shipment.service.ts, etc.) reference Prisma-generated enum
+names (ShipmentStatus, LocationUpdateSource, ...) only in type positions, which
+ts-jest's isolatedModules transpilation elides per-file — so ShipmentService itself
+could be instantiated and run against hand-built mocks for every collaborator with no
+live client needed (see tests/unit/shipment.service.test.ts, 12 tests). That is real
+control-flow execution, not full type-checking — run the commands above, then
+`npm run build`, to confirm cross-file type correctness (field-name typos etc.) before
+merging. See MODULE_17_IMPLEMENTATION_REPORT.md for the full verification/limitations
+breakdown.

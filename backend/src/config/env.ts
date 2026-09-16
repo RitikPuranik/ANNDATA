@@ -82,6 +82,11 @@ const envSchema = z.object({
   LOGISTICS_DEFAULT_QUOTE_VALIDITY_HOURS: z.coerce.number().int().positive().default(72),
   LOGISTICS_ROUTE_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(3600),
   LOGISTICS_COST_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(3600),
+
+  // Module 17 — Shipment & GPS Tracking
+  GPS_LOCATION_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(120),
+  GPS_FUTURE_TIMESTAMP_TOLERANCE_SECONDS: z.coerce.number().int().min(0).default(120),
+  SHIPMENT_LOCATION_MAX_BATCH_SIZE: z.coerce.number().int().positive().max(500).default(100),
 });
 
 const parsed = envSchema.safeParse(process.env);
