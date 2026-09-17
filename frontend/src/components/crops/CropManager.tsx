@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Sprout, Star, Trash2 } from "lucide-react";
+import { Star, Trash2 } from "lucide-react";
+import { CropSticker } from "@/components/crops/CropSticker";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ function CropRow({ crop, farms }: { crop: FarmerCrop; farms: Farm[] }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0">
       <div className="flex gap-3">
-        <Sprout className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+        <CropSticker name={localizedCropName(crop.crop, language)} size="md" className="mt-0.5" />
         <div>
           <p className="font-medium">
             {localizedCropName(crop.crop, language)}

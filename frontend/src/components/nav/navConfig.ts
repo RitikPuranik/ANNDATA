@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   Landmark,
   Truck,
+  PackageCheck,
   type LucideIcon,
 } from "lucide-react";
 import { UserRole } from "@/types/api";
@@ -31,23 +32,26 @@ export interface NavItem {
 export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   FARMER: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/farms", label: "My Farms", icon: Sprout },
-    { href: "/crops", label: "My Crops", icon: Wheat },
-    { href: "/lots", label: "My Lots", icon: Package },
-    { href: "/quality", label: "Quality", icon: ShieldCheck },
-    { href: "/market", label: "Market Prices", icon: LineChart },
-    { href: "/forecasts", label: "Price Forecast", icon: BarChart3 },
-    { href: "/sell-vs-store", label: "Sell vs Store", icon: Scale },
-    { href: "/warehouses", label: "Warehouses", icon: Warehouse },
-    { href: "/trade-offers", label: "Trade Offers", icon: Handshake },
-    { href: "/net-realization", label: "Net Realization", icon: ReceiptText },
+    { href: "/farms", label: "Farms", icon: Sprout },
+    { href: "/crops", label: "Crops", icon: Wheat },
+    { href: "/lots", label: "My Produce", icon: Package },
+    { href: "/quality", label: "Crop Quality", icon: ShieldCheck },
+    { href: "/market", label: "Market", icon: LineChart },
+    { href: "/forecasts", label: "Price Trend", icon: BarChart3 },
+    { href: "/sell-vs-store", label: "Sell or Store", icon: Scale },
+    { href: "/warehouses", label: "Storage", icon: Warehouse },
+    { href: "/trade-offers", label: "Offers", icon: Handshake },
+    { href: "/logistics", label: "Transport", icon: Truck },
+    { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
+    { href: "/net-realization", label: "My Earnings", icon: ReceiptText },
     { href: "/fpo-membership", label: "My FPO", icon: Building2 },
     { href: "/profile", label: "Profile", icon: UserCircle },
   ],
   BUYER: [
     { href: "/buyer", label: "Dashboard", icon: LayoutDashboard },
     { href: "/buyer/demands", label: "My Demands", icon: ClipboardList },
-    { href: "/trade-offers", label: "Trade Offers", icon: Handshake },
+    { href: "/trade-offers", label: "Offers", icon: Handshake },
+    { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
     { href: "/buyer/profile", label: "Company Profile", icon: UserCircle },
   ],
   FPO_ADMIN: [
@@ -55,6 +59,8 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/fpo/members", label: "Members", icon: Users },
     { href: "/fpo/lots", label: "Pooled Lots", icon: Package },
     { href: "/fpo/aggregation", label: "Aggregation", icon: BarChart3 },
+    { href: "/logistics", label: "Transport", icon: Truck },
+    { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
   ],
   ADMIN: [
     { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -63,11 +69,18 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/admin/warehouses", label: "Warehouses", icon: Warehouse },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/transporters", label: "Transport Network", icon: Truck },
+    { href: "/logistics", label: "Transport", icon: Truck },
+    { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
   ],
   GOVERNMENT_VIEWER: [
     { href: "/government", label: "FPO Insights", icon: Landmark },
   ],
-  TRANSPORTER: [{ href: "/transporter", label: "Transport Network", icon: Truck }, { href: "/trade-offers", label: "Offers", icon: Handshake }],
+  TRANSPORTER: [
+    { href: "/transporter", label: "Transport Network", icon: Truck },
+    { href: "/logistics", label: "Available Loads", icon: Truck },
+    { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
+    { href: "/trade-offers", label: "Offers", icon: Handshake },
+  ],
   WAREHOUSE_OPERATOR: [{ href: "/warehouse", label: "Storage Operations", icon: Warehouse }],
 };
 

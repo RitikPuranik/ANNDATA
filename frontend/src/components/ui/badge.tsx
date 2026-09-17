@@ -11,7 +11,7 @@ export type BadgeTone =
 
 const toneClasses: Record<BadgeTone, string> = {
   neutral: "bg-secondary text-secondary-foreground",
-  success: "bg-primary/10 text-primary",
+  success: "bg-success/10 text-success",
   warning: "bg-warning/15 text-warning-foreground",
   destructive: "bg-destructive/10 text-destructive",
   info: "bg-blue-500/10 text-blue-700",
