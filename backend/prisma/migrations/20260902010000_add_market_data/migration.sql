@@ -1,4 +1,5 @@
 -- Module 6: additive market-data foundation. Existing application tables are untouched.
+CREATE TYPE "QuantityUnit" AS ENUM ('KG', 'QTL', 'TONNE');
 CREATE TYPE "MarketImportOperation" AS ENUM ('HISTORICAL_IMPORT', 'INCREMENTAL_SYNC');
 CREATE TYPE "MarketImportStatus" AS ENUM ('RUNNING', 'SUCCEEDED', 'PARTIAL_SUCCESS', 'FAILED', 'SKIPPED');
 
