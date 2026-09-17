@@ -37,3 +37,31 @@ control-flow execution, not full type-checking — run the commands above, then
 `npm run build`, to confirm cross-file type correctness (field-name typos etc.) before
 merging. See MODULE_17_IMPLEMENTATION_REPORT.md for the full verification/limitations
 breakdown.
+
+Module 18 (Delivery & Quality Reconciliation) hit the exact same wall, and went one
+step further trying to work around it: the matching `@prisma/prisma-schema-wasm`
+package for this repo's own pinned engine commit
+(5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2) was installed from the (reachable)
+npm registry, which does get the CLI further, but `prisma format`/`validate`/`generate`
+still fall through to fetching the native query-engine binary from
+`binaries.prisma.sh`, which has no npm-hosted fallback and is not reachable here. Run
+the three commands at the top of this file, then `npm run build`, to confirm.
+
+Same as Module 16/17, the pure-logic pieces (delivery-state-machine.ts,
+delivery.schemas.ts, and — this module's own addition — the two deterministic
+reconciliation engines, delivery-quantity-reconciliation.engine.ts and
+delivery-quality-reconciliation.engine.ts) import no generated Prisma types at all and
+were unit-tested for real. Its Prisma-enum-typed files (delivery.service.ts,
+delivery-quality-agreement.resolver.ts, etc.) reference those enums only in type
+positions, so — same trick as Module 17 — DeliveryService and
+DeliveryQualityAgreementResolver were both instantiated and run against hand-built
+mocks for every collaborator (repositories, PrismaClient, audit, authorization): see
+tests/unit/delivery.service.test.ts (8 tests: full acceptance, partial acceptance,
+rejection, the accepted-quantity-exceeds-delivered guard, and the double-acceptance
+concurrency race) and tests/unit/delivery-quality-agreement.resolver.test.ts (5 tests:
+the BuyerDemand > QualityStandard > lot-assessment > NONE priority order). 45 tests
+total, all passing; the full pre-existing suite was also re-run and showed zero
+regressions (861/880 passing — the 19 pre-existing failures, in buyer-matching/
+sell-store-orchestration/warehouse-recommendation/wdra-*, are unrelated to this module
+and were already failing before it existed). See MODULE_18_IMPLEMENTATION_REPORT.md
+for the full breakdown.

@@ -954,6 +954,8 @@ model CropLot {
   // Module 17 — every shipment ever created for a logistics request raised
   // against this lot.
   shipments          Shipment[]
+  // Module 18 — every delivery ever recorded against a shipment of this lot.
+  deliveries         Delivery[]
 
   @@index([farmerId, status])
   @@index([fpoId, status])
@@ -1481,6 +1483,8 @@ model BuyerProfile {
   user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   demands            BuyerDemand[]
   buyerOffers        TradeOffer[]            @relation("OfferBuyer")
+  // Module 18 — every delivery ever recorded against this buyer.
+  deliveries         Delivery[]
 
   @@index([verificationStatus])
   @@index([state, district])
@@ -1554,6 +1558,12 @@ model TradeOffer {
   // priority comment for why a non-accepted offer can still be used for an
   // explicit "what if I take this offer" calculation).
   netRealizationCalculations NetRealizationCalculation[]
+
+  // Module 18 — the delivery(ies) recorded against a shipment for this
+  // accepted trade (there is no separate Order model in this codebase —
+  // see Module 16/17's own comment — so an accepted TradeOffer is the
+  // commercial transaction Module 18 reconciles delivery against).
+  deliveries Delivery[]
 
   @@index([lotId, status])
   @@index([buyerId, status])
@@ -2976,6 +2986,12 @@ model Shipment {
   locations ShipmentLocation[]
   events    ShipmentEvent[]
 
+  // Module 18 — at most one Delivery record per shipment (Delivery.shipmentId
+  // is @unique below); a shipment must not have multiple active deliveries
+  // unless a future multi-drop shipment model is introduced (see Delivery's
+  // own comment).
+  delivery Delivery?
+
   @@index([status])
   @@index([transportProviderId, status])
   @@index([vehicleId, status])
@@ -3035,4 +3051,270 @@ model ShipmentEvent {
 
   @@index([shipmentId, createdAt])
   @@map("shipment_events")
+}
+
+// ---------------------------------------------------------------------------
+// Module 18 — Delivery & Quality Reconciliation
+//
+// Records and reconciles what was EXPECTED vs ACTUALLY DELIVERED vs
+// ACTUALLY ACCEPTED, for both quantity and quality, for a completed
+// Module 17 Shipment. Never recreates Module 5's quality grading system
+// (QualityAssessment/QualityMetric/QualityStandard) — a delivery's own
+// inspection is its own DeliveryQualityAssessment, but the *thresholds* an
+// observation is judged against are resolved from the commercial
+// transaction's own agreed quality (BuyerDemand.qualityRequirements/grade
+// when the accepted TradeOffer came from one) and, as a fallback, Module
+// 5's existing QualityStandard rows for the lot's crop — never redefined
+// or duplicated here (see delivery-quality-reconciliation.engine.ts).
+// Module 18 does not perform GPS tracking (Module 17), buyer matching
+// (Module 12), transport optimization (Module 16), payment execution
+// (Module 19), ledger settlement (Module 20), or dispute resolution.
+// ---------------------------------------------------------------------------
+
+enum DeliveryStatus {
+  PENDING
+  RECEIVED
+  UNDER_INSPECTION
+  PARTIALLY_ACCEPTED
+  ACCEPTED
+  REJECTED
+  RECONCILED
+  CANCELLED
+}
+
+// Step 8 — SHORT/EXACT/EXCESS is always relative to the configured
+// tolerance band (see delivery.config.ts), never a raw delivered==expected
+// equality check: a variance inside tolerance is EXACT even if the two
+// numbers differ by a few kg.
+enum DeliveryQuantityResult {
+  SHORT
+  EXACT
+  EXCESS
+}
+
+// Step 5 — mirrors QualityAssessmentStatus's PASS/PARTIAL/FAIL shape but is
+// its own enum: a delivery quality *result* is a reconciliation outcome
+// (agreed vs actual), never a workflow-position status like Module 5's.
+enum DeliveryQualityResult {
+  PASS
+  PARTIAL
+  FAIL
+  PENDING
+}
+
+enum WeighingMethod {
+  WEIGHBRIDGE
+  ELECTRONIC_SCALE
+  MANUAL
+  OTHER
+}
+
+// Step 15 — metadata-only references, same convention as QualityImage
+// (build spec section 15 equivalent): never a place binary files are
+// stored, and never a second, separate file-storage system from Module 5's
+// own storageProvider/externalId/secureUrl shape.
+enum DeliveryEvidenceType {
+  WEIGHMENT_SLIP
+  DELIVERY_RECEIPT
+  QUALITY_CERTIFICATE
+  INSPECTION_DOCUMENT
+  PHOTOGRAPH
+  OTHER
+}
+
+// One row per completed Shipment (Step 11: a delivery must originate from
+// a valid shipment, never created disconnected from one) — shipmentId is
+// @unique below, so a shipment can never have more than one Delivery
+// record; this codebase's shipments are single-drop only (Module 17 has no
+// partial/multi-delivery shipment concept — see Shipment's own schema
+// comment), so Step 2's "model partial deliveries explicitly if the
+// existing order/lot design requires it" does not apply here. Partial
+// *acceptance* of a single delivery (Step 18) is fully supported without
+// needing multiple Delivery rows.
+model Delivery {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  // Human-facing reference, e.g. "DEL-2026-000123" — server-generated,
+  // immutable, mirrors CropLot.lotNumber / QualityAssessment.assessmentNumber
+  // (see delivery-number.ts).
+  deliveryNumber String @unique
+
+  shipmentId String @unique
+  lotId      String
+  // The accepted TradeOffer this delivery is reconciled against, resolved
+  // server-side from the lot's ACCEPTED offer for this buyer at delivery
+  // creation time — never accepted from the client (Step 6: "Do not let
+  // the frontend redefine the agreed quality during reconciliation").
+  // Nullable only because a lot can theoretically have an ACCEPTED offer
+  // later withdrawn/re-negotiated after the shipment/delivery already
+  // exist; the snapshot already resolved is what reconciliation uses.
+  tradeOfferId String?
+  buyerId      String
+
+  expectedQuantityKg  Decimal      @db.Decimal(14, 2)
+  deliveredQuantityKg Decimal?     @db.Decimal(14, 2)
+  acceptedQuantityKg  Decimal?     @db.Decimal(14, 2)
+  rejectedQuantityKg  Decimal?     @db.Decimal(14, 2)
+  quantityUnit        QuantityUnit @default(KG)
+
+  status DeliveryStatus @default(PENDING)
+
+  receivedAt      DateTime?
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  reconciledAt    DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shipment   Shipment     @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  lot        CropLot      @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  tradeOffer TradeOffer?  @relation(fields: [tradeOfferId], references: [id], onDelete: SetNull)
+  buyer      BuyerProfile @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+
+  weighments         DeliveryWeighment[]
+  qualityAssessments DeliveryQualityAssessment[]
+  reconciliations    DeliveryReconciliation[]
+  evidence           DeliveryEvidence[]
+
+  @@index([lotId])
+  @@index([buyerId, status])
+  @@index([status])
+  @@index([createdAt])
+  @@map("deliveries")
+}
+
+// Step 3 — one row per weighing event (never a single mutable row), so a
+// re-weigh after a dispute never destroys the original reading. Net weight
+// is always calculated server-side (grossWeightKg - tareWeightKg) — the
+// service layer never trusts a client-supplied net figure (see
+// delivery.service.ts's recordWeighment()).
+model DeliveryWeighment {
+  id         String @id @default(uuid())
+  deliveryId String
+
+  grossWeightKg Decimal      @db.Decimal(14, 2)
+  tareWeightKg  Decimal      @db.Decimal(14, 2)
+  netWeightKg   Decimal      @db.Decimal(14, 2)
+  weightUnit    QuantityUnit @default(KG)
+
+  weighingMethod    WeighingMethod @default(WEIGHBRIDGE)
+  weighingTimestamp DateTime
+  scaleReference    String?
+  recordedByUserId  String?
+  notes             String?
+
+  createdAt DateTime @default(now())
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId, createdAt])
+  @@map("delivery_weighments")
+}
+
+// Step 4/5 — the delivery-time quality inspection. Deliberately does not
+// duplicate QualityAssessment's own metrics/images/defects sub-models;
+// DeliveryQualityObservation below is a minimal, delivery-reconciliation-
+// specific shape (an observed value plus the resolved agreed range and the
+// computed pass/fail — Step 7's engine output persisted, not recomputed on
+// every read).
+model DeliveryQualityAssessment {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  deliveryId String
+
+  inspectorUserId  String?
+  overallGrade     QualityGrade?
+  overallResult    DeliveryQualityResult @default(PENDING)
+  algorithmVersion String                @default("v1")
+  assessedAt       DateTime              @default(now())
+  notes            String?
+
+  createdAt DateTime @default(now())
+
+  delivery     Delivery                     @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  observations DeliveryQualityObservation[]
+
+  @@index([deliveryId, createdAt])
+  @@map("delivery_quality_assessments")
+}
+
+model DeliveryQualityObservation {
+  id           String @id @default(uuid())
+  assessmentId String
+
+  metricCode String
+  metricName String
+  value      Decimal @db.Decimal(10, 2)
+  unit       String?
+
+  expectedMin Decimal? @db.Decimal(10, 2)
+  expectedMax Decimal? @db.Decimal(10, 2)
+  passed      Boolean
+  variance    Decimal? @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  assessment DeliveryQualityAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@map("delivery_quality_observations")
+}
+
+// Step 16 — the single authoritative reconciliation result. One immutable
+// row per calculation run (never overwritten in place — same "append,
+// don't mutate" convention as LogisticsOptimizationResult), so a later
+// recalculation never erases an earlier result a decision may have already
+// been based on. `explanation` holds the full DeliveryQuantityReconciliationEngine
+// / DeliveryQualityReconciliationEngine output (passed/failed parameters,
+// variances) — Step 7: "make comparison deterministic and explainable".
+model DeliveryReconciliation {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  deliveryId String
+
+  expectedQuantityKg       Decimal                @db.Decimal(14, 2)
+  deliveredQuantityKg      Decimal                @db.Decimal(14, 2)
+  acceptedQuantityKg       Decimal                @db.Decimal(14, 2)
+  quantityVarianceKg       Decimal                @db.Decimal(14, 2)
+  quantityTolerancePercent Decimal                @db.Decimal(5, 2)
+  quantityResult           DeliveryQuantityResult
+
+  qualityResult DeliveryQualityResult
+
+  overallStatus DeliveryStatus
+
+  explanation Json
+
+  algorithmVersion String   @default("v1")
+  calculatedAt     DateTime @default(now())
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId, calculatedAt])
+  @@map("delivery_reconciliations")
+}
+
+// Step 15 — metadata/reference only (never binary storage in Postgres),
+// same shape as Module 5's QualityImage.
+model DeliveryEvidence {
+  id         String @id @default(uuid())
+  deliveryId String
+
+  evidenceType    DeliveryEvidenceType
+  storageProvider String
+  externalId      String
+  secureUrl       String
+
+  uploadedByUserId String?
+  uploadedAt       DateTime @default(now())
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId])
+  @@map("delivery_evidence")
 }
