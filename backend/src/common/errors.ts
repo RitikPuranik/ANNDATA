@@ -130,21 +130,6 @@ export type ErrorCode =
   | "INVALID_GPS_COORDINATES"
   | "INVALID_GPS_TIMESTAMP"
   | "SHIPMENT_NOT_TRACKABLE"
-  // Module 18 — Delivery & Quality Reconciliation. DELIVERY_NOT_FOUND is
-  // thrown via the generic NotFoundError (same convention as every module
-  // above); UNAUTHORIZED_DELIVERY_ACCESS is thrown via the generic
-  // AuthorizationError. The remaining codes below are genuine business-rule
-  // violations thrown via DeliveryDomainError.
-  | "DELIVERY_ALREADY_EXISTS"
-  | "SHIPMENT_NOT_ELIGIBLE_FOR_DELIVERY"
-  | "INVALID_DELIVERY_TRANSITION"
-  | "INVALID_WEIGHMENT"
-  | "DELIVERY_NOT_YET_RECEIVED"
-  | "QUALITY_ASSESSMENT_REQUIRED"
-  | "RECONCILIATION_REQUIRED"
-  | "ACCEPTED_QUANTITY_EXCEEDS_DELIVERED"
-  | "INVALID_ACCEPTANCE_QUANTITY"
-  | "DELIVERY_NOT_MUTABLE"
   | "UNEXPECTED_ERROR";
 
 export class AppError extends Error {
@@ -374,38 +359,6 @@ export class ShipmentDomainError extends AppError {
       | "INVALID_GPS_COORDINATES"
       | "INVALID_GPS_TIMESTAMP"
       | "SHIPMENT_NOT_TRACKABLE"
-    >,
-    statusCode = 422,
-  ) {
-    super(message, statusCode, code);
-  }
-}
-
-/**
- * Module 18's equivalent of ShipmentDomainError. DELIVERY_NOT_FOUND is NOT
- * included here — thrown via the generic NotFoundError (same convention as
- * every module above) — and UNAUTHORIZED_DELIVERY_ACCESS is thrown via the
- * generic AuthorizationError. Every other code here is a 422 business-rule
- * violation (invalid transition, missing weighment/quality prerequisite,
- * an acceptance quantity that exceeds what was delivered, an attempt to
- * mutate a finalized delivery, etc.) unless the call site overrides
- * statusCode.
- */
-export class DeliveryDomainError extends AppError {
-  constructor(
-    message: string,
-    code: Extract<
-      ErrorCode,
-      | "DELIVERY_ALREADY_EXISTS"
-      | "SHIPMENT_NOT_ELIGIBLE_FOR_DELIVERY"
-      | "INVALID_DELIVERY_TRANSITION"
-      | "INVALID_WEIGHMENT"
-      | "DELIVERY_NOT_YET_RECEIVED"
-      | "QUALITY_ASSESSMENT_REQUIRED"
-      | "RECONCILIATION_REQUIRED"
-      | "ACCEPTED_QUANTITY_EXCEEDS_DELIVERED"
-      | "INVALID_ACCEPTANCE_QUANTITY"
-      | "DELIVERY_NOT_MUTABLE"
     >,
     statusCode = 422,
   ) {

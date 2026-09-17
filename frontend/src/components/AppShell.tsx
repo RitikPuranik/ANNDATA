@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, X, ChevronDown, Bell, Search, CircleUserRound, Plus, ShoppingBag } from "lucide-react";
+import { LogOut, Menu, X, ChevronDown, Bell, Search, Plus, ShoppingBag, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { NAV_BY_ROLE, ROLE_LABEL, type NavItem } from "@/components/nav/navConfig";
 import { cn } from "@/lib/utils";
@@ -27,14 +27,23 @@ function Brand() {
 
 function NavLink({ item, onClick, compact = false }: { item: NavItem; onClick?: () => void; compact?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const active = isActive(pathname, item);
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
-      onClick={onClick}
+      onClick={(e) => {
+        onClick?.();
+        if (item.href !== window.location.pathname) window.dispatchEvent(new CustomEvent("anndata:navigate-start"));
+      }}
+      prefetch
+      onMouseEnter={() => router.prefetch(item.href)}
+      onFocus={() => router.prefetch(item.href)}
+      onMouseDown={() => router.prefetch(item.href)}
+      onTouchStart={() => router.prefetch(item.href)}
       className={cn("app-nav-link", compact && "app-nav-link-compact", active && "active")}
-      data-tour={item.href === "/profile" ? "profile" : `nav-${item.href}`}
+      data-tour={`nav-${item.href}`}
     >
       <span className="app-nav-icon"><Icon className="h-[15px] w-[15px]" /></span>
       <span>{item.label}</span>
@@ -62,25 +71,100 @@ function choosePrimary(items: NavItem[]) {
   for (const label of preferred) {
     const item = items.find((x) => x.label === label);
     if (item && !picked.some((x) => x.href === item.href)) picked.push(item);
-    if (picked.length === 6) break;
+    if (picked.length === 5) break;
   }
-  if (picked.length < 6) {
+  if (picked.length < 5) {
     for (const item of items) {
       if (!picked.some((x) => x.href === item.href)) picked.push(item);
-      if (picked.length === 6) break;
+      if (picked.length === 5) break;
     }
   }
   return picked;
 }
 
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "F";
+}
+
+function AccountMenu({ onLogout, loggingOut }: { onLogout: () => void; loggingOut: boolean }) {
+  const { user } = useAuth();
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  if (!user) return null;
+  const roleLabel = ROLE_LABEL[user.role] ?? "Farmer";
+  const firstName = user.fullName.trim().split(/\s+/)[0] || "Farmer";
+
+  return (
+    <div className="anndata-account" ref={ref}>
+      <button
+        type="button"
+        className={cn("anndata-account-trigger", open && "is-open")}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label="Open account menu"
+      >
+        <span className="anndata-account-avatar">{initials(user.fullName)}</span>
+        <span className="anndata-account-text">
+          <b>{firstName}</b>
+          <small>{roleLabel}</small>
+        </span>
+        <ChevronDown className="anndata-account-chevron" />
+      </button>
+
+      {open && (
+        <div className="anndata-account-panel" role="menu">
+          <div className="anndata-account-identity">
+            <span className="anndata-account-avatar anndata-account-avatar-lg">{initials(user.fullName)}</span>
+            <span className="anndata-account-identity-copy">
+              <b title={user.fullName}>{user.fullName}</b>
+              <small>{roleLabel}</small>
+              <em><span /> Active account</em>
+            </span>
+          </div>
+
+          <div className="anndata-account-section-label">Your account</div>
+          <Link href="/profile" className="anndata-account-item" role="menuitem" onClick={() => setOpen(false)}>
+            <span className="anndata-account-item-icon"><User /></span>
+            <span><b>My Profile</b><small>Personal and farm details</small></span>
+            <span className="anndata-account-arrow">›</span>
+          </Link>
+
+          <div className="anndata-account-divider" />
+          <button className="anndata-account-signout" onClick={onLogout} disabled={loggingOut} role="menuitem">
+            <span className="anndata-account-signout-icon"><LogOut /></span>
+            <span>{loggingOut ? "Signing out…" : "Sign out"}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [moreOpen, setMoreOpen] = React.useState(false);
-  const [accountOpen, setAccountOpen] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
+  const [navigating, setNavigating] = React.useState(false);
 
   React.useEffect(() => {
     const openFromTour = () => setDrawerOpen(true);
@@ -90,15 +174,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     setMoreOpen(false);
-    setAccountOpen(false);
+    setNavigating(false);
   }, [pathname]);
+
+  React.useEffect(() => {
+    const start = () => setNavigating(true);
+    window.addEventListener("anndata:navigate-start", start);
+    return () => window.removeEventListener("anndata:navigate-start", start);
+  }, []);
 
   if (!user) return <>{children}</>;
 
   const navItems = NAV_BY_ROLE[user.role] ?? [];
   const primary = choosePrimary(navItems);
-  const secondary = navItems.filter((item) => !primary.some((x) => x.href === item.href));
-  const initials = user.fullName.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase() || "U";
+  // Keep the main navigation unchanged. Only hide account/identity items from the All menu.
+  const hiddenFromAll = new Set(["Profile", "Account", "Farmer", "Workspace"]);
+  const secondary = navItems.filter((item) =>
+    !primary.some((x) => x.href === item.href) && !hiddenFromAll.has(item.label)
+  );
+
+  // Warm the most-used routes in the background so navigation is ready before the user clicks.
+  React.useEffect(() => {
+    const routes = [...primary, ...secondary].map((item) => item.href);
+    const warm = () => routes.forEach((href) => router.prefetch(href));
+    const id = window.setTimeout(warm, 120);
+    return () => window.clearTimeout(id);
+  }, [router, user.role]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -107,17 +208,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-frame">
+      {navigating && <div className="anndata-route-overlay" role="status" aria-live="polite">
+        <div className="anndata-route-loader">
+          <div className="anndata-route-mark"><LogoMark className="h-6 w-6" /></div>
+          <div className="anndata-route-copy"><strong>Opening your page</strong><span>Just a moment…</span></div>
+          <div className="anndata-route-progress"><i /></div>
+        </div>
+      </div>}
       <header className="app-header-top">
         <div className="mobile-only">
           <button className="icon-btn header-menu-btn" onClick={() => setDrawerOpen(true)} aria-label="Open menu"><Menu /></button>
         </div>
 
         <Brand />
-
-        <div className="header-workspace" aria-label="Current workspace">
-          <span>WORKSPACE</span>
-          <b>{ROLE_LABEL[user.role]}</b>
-        </div>
 
         <div className="topbar-search" role="search">
           <Search className="h-4 w-4" />
@@ -127,25 +230,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="topbar-actions">
           <Link href="/lots/new" className="header-list-button"><Plus className="h-4 w-4" /> Sell produce</Link>
-          <Link href="/shipments" className="header-utility desktop-only" title="Orders & shipments"><ShoppingBag className="h-[17px] w-[17px]" /><span>Activity</span></Link>
+          <Link href="/shipments" className="header-utility desktop-only" title="My activity"><ShoppingBag className="h-[17px] w-[17px]" /><span>Activity</span></Link>
           <LanguageSwitcher />
           <button className="icon-btn notification-btn" aria-label="Notifications"><Bell /></button>
-
-          <div className="account-wrap desktop-only">
-            <button className="account-trigger" onClick={() => setAccountOpen((v) => !v)} aria-expanded={accountOpen}>
-              <span className="avatar small" translate="no">{initials}</span>
-              <span className="account-copy"><b>Account</b><small>{ROLE_LABEL[user.role]}</small></span>
-              <ChevronDown className={cn("h-3.5 w-3.5", accountOpen && "rotate-180")} />
-            </button>
-            {accountOpen && <>
-              <button className="account-backdrop" aria-label="Close account menu" onClick={() => setAccountOpen(false)} />
-              <div className="account-menu">
-                <div className="account-menu-head"><span className="avatar" translate="no">{initials}</span><div><b translate="no">{user.fullName}</b><small>{ROLE_LABEL[user.role]}</small></div></div>
-                <Link href="/profile" onClick={() => setAccountOpen(false)}><CircleUserRound /> Profile & account</Link>
-                <button onClick={handleLogout} disabled={loggingOut}><LogOut /> {loggingOut ? "Signing out…" : "Sign out"}</button>
-              </div>
-            </>}
-          </div>
+          <AccountMenu onLogout={handleLogout} loggingOut={loggingOut} />
         </div>
       </header>
 
@@ -158,16 +246,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {moreOpen && <>
               <button className="nav-menu-backdrop" aria-label="Close menu" onClick={() => setMoreOpen(false)} />
               <div className="nav-more-menu">
-                <div className="nav-more-head"><div><b>All workspace tools</b><span>Everything available to you</span></div><span className="nav-more-role">{ROLE_LABEL[user.role]}</span></div>
+                <div className="nav-more-head"><div><b>All workspace tools</b><span>Everything available to you</span></div></div>
                 <div className="nav-more-grid">{secondary.map((item) => <NavLink key={item.href} item={item} compact onClick={() => setMoreOpen(false)} />)}</div>
-                <Link href="/profile" className="nav-profile-link" onClick={() => setMoreOpen(false)}><CircleUserRound className="h-4 w-4" /> Profile & account</Link>
               </div>
             </>}
           </div>
 
           {primary.map((item) => <NavLink key={item.href} item={item} />)}
           <span className="nav-spacer" />
-          <Link href="/shipments" className="nav-end-link">My activity</Link>
+          <Link href="/shipments" className="nav-end-link"><ShoppingBag className="h-4 w-4" /><span>My Activity</span><small>Orders & deliveries</small></Link>
         </div>
       </nav>
 
@@ -175,16 +262,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {drawerOpen && <div className="mobile-drawer-backdrop" onClick={() => setDrawerOpen(false)}><aside className="mobile-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-head"><Brand /><button className="icon-btn" onClick={() => setDrawerOpen(false)}><X /></button></div>
-        <div className="drawer-workspace"><span>WORKSPACE</span><b>{ROLE_LABEL[user.role]}</b></div>
+        <Link href="/profile" className="app-user-card" onClick={() => setDrawerOpen(false)}>
+          <span className="avatar">{initials(user.fullName)}</span>
+          <span className="min-w-0"><b className="block truncate">{user.fullName}</b><small className="block truncate">{ROLE_LABEL[user.role] ?? "Farmer"} · {user.mobile}</small></span>
+        </Link>
         <nav className="mobile-drawer-nav">{navItems.map((item) => <NavLink key={item.href} item={item} onClick={() => setDrawerOpen(false)} />)}</nav>
-        <Link href="/profile" className="app-user-card" onClick={() => setDrawerOpen(false)}><span className="avatar" translate="no">{initials}</span><span className="min-w-0"><b translate="no">{user.fullName}</b><small>{ROLE_LABEL[user.role]}</small></span><CircleUserRound className="ml-auto h-4 w-4 opacity-50" /></Link>
         <button className="app-logout" onClick={handleLogout} disabled={loggingOut}><LogOut className="h-4 w-4" /> {loggingOut ? "Signing out…" : "Sign out"}</button>
       </aside></div>}
 
-      <nav className="mobile-bottom-nav">
-        {primary.slice(0, 4).map((item) => { const Icon = item.icon; const active = isActive(pathname, item); return <Link key={item.href} href={item.href} className={cn(active && "active")}><Icon /><span>{item.label}</span></Link>; })}
-        <button onClick={() => setDrawerOpen(true)}><Menu /><span>All</span></button>
-      </nav>
       <OnboardingTour />
     </div>
   );

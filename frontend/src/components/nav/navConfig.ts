@@ -45,14 +45,12 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
     { href: "/net-realization", label: "My Earnings", icon: ReceiptText },
     { href: "/fpo-membership", label: "My FPO", icon: Building2 },
-    { href: "/profile", label: "Profile", icon: UserCircle },
   ],
   BUYER: [
     { href: "/buyer", label: "Dashboard", icon: LayoutDashboard },
     { href: "/buyer/demands", label: "My Demands", icon: ClipboardList },
     { href: "/trade-offers", label: "Offers", icon: Handshake },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
-    { href: "/buyer/profile", label: "Company Profile", icon: UserCircle },
   ],
   FPO_ADMIN: [
     { href: "/fpo", label: "Dashboard", icon: LayoutDashboard },

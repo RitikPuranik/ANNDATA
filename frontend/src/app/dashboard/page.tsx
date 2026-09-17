@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2, Handshake, LineChart, Package, Plus, Scale, ShieldCheck, Sprout, Warehouse, Wheat, ChevronRight, Search, TrendingUp, MapPin, Store, Truck, CircleDollarSign } from "lucide-react";
+import { ArrowRight, Building2, Handshake, LineChart, Package, Plus, Scale, ShieldCheck, Sprout, Warehouse, Wheat, ChevronRight, Search, TrendingUp, Store, Truck, CircleDollarSign, Sparkles, BadgeCheck, Users, MapPinned } from "lucide-react";
 import { CropSticker } from "@/components/crops/CropSticker";
 import Link from "next/link";
 import { RoleProtectedPage } from "@/components/RoleProtectedPage";
@@ -12,16 +12,32 @@ import { Badge, toneForStatus } from "@/components/ui/badge";
 import { LoadingBlock, ErrorBlock } from "@/components/StateBlocks";
 import { useFarmerProfileQuery } from "@/hooks/useFarmerProfile";
 import { ProfileCompletionCard } from "@/components/farmer-profile/ProfileCompletionCard";
+import { ROLE_LABEL } from "@/components/nav/navConfig";
 import { PageHeader, StatCard } from "@/components/ui/stat-card";
 import { ApiRequestError } from "@/types/api";
 import { lotApi } from "@/services/lotApi";
 import { tradeOfferApi } from "@/services/tradeApi";
 
+/**
+ * Real photos so a farmer recognises each card at a glance — flat cards,
+ * no gradients, same dark/gold palette the app already uses.
+ * Source: Wikimedia Commons, freely licensed — swap for your own brand
+ * photography whenever you have it.
+ */
 const ACTIONS=[
- {title:"My Farms",description:"See your farms and fields.",href:"/farms",icon:<Sprout/>,kind:"crop"},
- {title:"My Crops",description:"Manage the crops you are growing.",href:"/crops",icon:<Wheat/>,kind:"crops"},
- {title:"Market",description:"See today's local market prices.",href:"/market",icon:<Store/>,kind:"market"},
- {title:"Sell Produce",description:"List your crop for buyers.",href:"/lots/new",icon:<Package/>,kind:"sell"},
+ {title:"My Farms",description:"See your farms and fields.",href:"/farms",icon:<Sprout/>,kind:"crop",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=400"},
+ {title:"My Crops",description:"Manage the crops you are growing.",href:"/crops",icon:<Wheat/>,kind:"crops",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Colorful%20winter%20Vegetables%20-01.jpg?width=400"},
+ {title:"Market",description:"See today's local market prices.",href:"/market",icon:<Store/>,kind:"market",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Vegetable%20market%2C%20Ahmedabad.jpg?width=400"},
+ {title:"Sell Produce",description:"List your crop for buyers.",href:"/lots/new",icon:<Package/>,kind:"sell",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Farmers%27%20Market%20%28Apni%20Mandi%29%20in%20Chandigarh.jpg?width=400"},
+];
+
+/** Flat, solid-colour promo banners — same idea as Blinkit's "Pharmacy / Pet
+ * care / Diaper run" row — but only using the app's own dark + gold tones,
+ * no gradients, no new colours. */
+const SALE_CARDS=[
+ {title:"Sell your produce today",description:"List a lot in under two minutes and reach buyers directly.",cta:"Sell now",href:"/lots/new",bg:"bg-[#171714]",text:"text-white",sub:"text-[#c9c4b4]",btn:"bg-[#e1bd4f] text-[#171714]",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Farmers%27%20Market%20%28Apni%20Mandi%29%20in%20Chandigarh.jpg?width=360"},
+ {title:"Check today's mandi price",description:"Compare rates across nearby markets before you decide.",cta:"Open market",href:"/market",bg:"bg-[#e1bd4f]",text:"text-[#171714]",sub:"text-[#5a4a1c]",btn:"bg-[#171714] text-white",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Vegetable%20market%2C%20Ahmedabad.jpg?width=360"},
+ {title:"Grow with your FPO",description:"Aggregate produce with other farmers for a better price.",cta:"View FPO",href:"/fpo-membership",bg:"bg-[#faf8f3] border border-[#e4ddd2]",text:"text-[#171714]",sub:"text-[#77776f]",btn:"bg-[#171714] text-white",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=360"},
 ];
 
 function DashboardStats(){
@@ -48,17 +64,39 @@ function RecentProduce(){
  </Card>;
 }
 
-function ActionVisual({kind}:{kind:string}){
- if(kind==="crops") return <div className="action-visual action-visual-crops"><CropSticker name="wheat" size="md"/><CropSticker name="soybean" size="sm" className="action-mini-sticker"/><CropSticker name="maize" size="sm" className="action-mini-sticker second"/></div>;
- if(kind==="market") return <div className="action-visual action-visual-market"><div className="market-building"><Store/><span>MARKET</span></div><div className="market-price-row"><span>Wheat</span><b>₹2,350</b></div><div className="market-price-row"><span>Soybean</span><b>₹4,120</b></div></div>;
- if(kind==="sell") return <div className="action-visual action-visual-sell"><div className="sell-bag"><Package/></div><div className="sell-route"><span>Farm</span><ArrowRight/><span>Buyer</span></div><b>Ready to sell</b></div>;
- return <div className="action-visual action-visual-farm"><div className="farm-icon"><Sprout/></div><div className="farm-lines"><i/><i/><i/></div><MapPin className="farm-pin"/></div>;
+/** Flat category card: photo on top (zoom on hover + gradient for depth),
+ * white footer below. */
+function CategoryCard({title,description,image,href,ribbon}:{title:string;description:string;image:string;href:string;ribbon?:string}){
+ return <Link href={href} className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition hover:border-[#a8842f] hover:shadow-lg">
+  <div className="img-zoom img-gradient h-[130px] w-full bg-[#f1f3f6]">
+   {ribbon && <span className="ribbon"><Sparkles className="h-3 w-3"/> {ribbon}</span>}
+   <img src={image} alt={title} className="h-full w-full object-cover" loading="lazy" />
+  </div>
+  <div className="flex items-center justify-between gap-2 px-4 py-3">
+   <span className="min-w-0"><b className="block truncate text-sm font-bold text-[#171714]">{title}</b><small className="block truncate text-xs text-muted-foreground">{description}</small></span>
+   <ChevronRight className="h-4 w-4 flex-none text-muted-foreground" />
+  </div>
+ </Link>;
 }
 
 function MarketplaceShortcuts(){
- return <section className="mt-7">
+ return <section className="mt-7 fade-in-up d1">
   <div className="flex items-end justify-between mb-4"><div><h2 className="text-lg font-bold">What do you want to do?</h2><p className="text-sm text-muted-foreground mt-1">Simple shortcuts for your farm, crops and market.</p></div><Link href="/market" className="text-sm font-bold flex items-center gap-1">See market <ArrowRight className="h-4 w-4"/></Link></div>
-  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{ACTIONS.map(a=><Link href={a.href} key={a.href} className="quick-card farmer-action-card"><ActionVisual kind={a.kind}/><span className="quick-copy"><b>{a.title}</b><small>{a.description}</small></span><span className="quick-card-arrow"><ChevronRight/></span></Link>)}</div>
+  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{ACTIONS.map((a,i)=><CategoryCard key={a.href} title={a.title} description={a.description} image={a.image} href={a.href} ribbon={i===0?"Popular":i===2?"Live prices":undefined}/>)}</div>
+ </section>;
+}
+
+/** Flat solid-colour promo cards — photo (zoomed + gradient) + headline + one button. */
+function SaleCards(){
+ return <section className="mt-6 grid gap-4 sm:grid-cols-3 fade-in-up d2">
+  {SALE_CARDS.map(s=><Link href={s.href} key={s.href} className={`group flex items-center justify-between gap-3 overflow-hidden rounded-lg p-5 transition hover:shadow-lg ${s.bg}`}>
+   <span className="min-w-0">
+    <b className={`block text-base font-extrabold leading-tight ${s.text}`}>{s.title}</b>
+    <small className={`mt-1 block text-xs leading-5 ${s.sub}`}>{s.description}</small>
+    <span className={`mt-3 inline-flex items-center rounded-md px-3 py-2 text-xs font-bold transition group-hover:brightness-110 ${s.btn}`}>{s.cta}</span>
+   </span>
+   <span className="img-zoom h-20 w-20 flex-none overflow-hidden rounded-md"><img src={s.image} alt="" className="h-full w-full object-cover" loading="lazy" /></span>
+  </Link>)}
  </section>;
 }
 
@@ -68,18 +106,48 @@ function MarketPreview(){
  </Card>;
 }
 
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "F";
+}
+
 function DashboardContent(){
  const {user}=useAuth(); if(!user)return null;
  const profile=useFarmerProfileQuery();
  return <div>
-  <div className="dashboard-hero">
-   <div className="dashboard-hero-copy"><div className="dashboard-kicker">YOUR FARM HOME</div><h1>Welcome back, <span translate="no">{user.fullName.split(" ")[0]}</span>.</h1><p>Everything you need to grow, check prices and sell your produce.</p><div className="dashboard-hero-actions"><Link href="/lots/new" className="dashboard-primary"><Plus className="h-5 w-5"/> Sell produce</Link><Link href="/market" className="dashboard-secondary"><Search className="h-5 w-5"/> Check market</Link></div></div>
-   <div className="dashboard-hero-side"><div className="hero-side-label">QUICK VIEW</div><div className="hero-side-row"><span>Market prices</span><Link href="/market">Open →</Link></div><div className="hero-side-row"><span>Trade offers</span><Link href="/trade-offers">Review →</Link></div><div className="hero-side-row"><span>Shipments</span><Link href="/shipments">Track →</Link></div></div>
+  <div className="dashboard-hero fade-in-up">
+   <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=900" alt="" className="dashboard-hero-bg" loading="eager" />
+   <div className="dashboard-hero-copy"><div className="dashboard-kicker">YOUR FARM HOME</div><h1>Welcome back, <span translate="no">{user.fullName.split(" ")[0]}</span>.</h1><p>Everything you need to grow, check prices and sell your produce.</p><div className="dashboard-hero-actions"><Link href="/lots/new" className="dashboard-primary"><Plus className="h-5 w-5"/> Sell produce</Link><Link href="/market" className="dashboard-secondary"><Search className="h-5 w-5"/> Check market</Link></div>
+    <div className="trust-bar">
+     <div className="trust-item"><BadgeCheck/><span>Verified<br/>farmers</span></div>
+     <div className="trust-item"><Users/><span>Direct buyer<br/>access</span></div>
+     <div className="trust-item"><MapPinned/><span>Pan-India<br/>delivery</span></div>
+     <div className="trust-item"><ShieldCheck/><span>Secure<br/>payments</span></div>
+    </div>
+   </div>
+   <div className="dashboard-hero-side">
+    <Link href="/profile" className="hero-profile-card">
+     <span className="avatar">{initials(user.fullName)}</span>
+     <span className="min-w-0">
+      <b className="block truncate">{user.fullName}</b>
+      <small className="block truncate">{ROLE_LABEL[user.role] ?? "Farmer"} · {user.mobile}</small>
+     </span>
+     <ChevronRight className="h-4 w-4 shrink-0"/>
+    </Link>
+    {profile.data && (
+     <div className="hero-profile-progress">
+      <span>Profile {profile.data.completion.percentage}% complete</span>
+      <div className="hero-profile-bar"><span style={{width:`${profile.data.completion.percentage}%`}}/></div>
+     </div>
+    )}
+    <div className="hero-side-label">QUICK VIEW</div><div className="hero-side-row"><span>Market prices</span><Link href="/market">Open →</Link></div><div className="hero-side-row"><span>Trade offers</span><Link href="/trade-offers">Review →</Link></div><div className="hero-side-row"><span>Shipments</span><Link href="/shipments">Track →</Link></div>
+   </div>
   </div>
   {user.accountStatus === "PENDING_VERIFICATION" && <Alert variant="info" className="my-5">Your account is pending verification. Some actions may stay limited until it is confirmed.</Alert>}
-  <div className="mt-5"><div className="mb-3"><h2 className="text-lg font-bold">Your day at a glance</h2><p className="text-sm text-muted-foreground mt-1">A quick look at what is happening with your farm.</p></div><DashboardStats/></div>
+  <div className="mt-5 fade-in-up"><div className="mb-3"><h2 className="text-lg font-bold">Your day at a glance</h2><p className="text-sm text-muted-foreground mt-1">A quick look at what is happening with your farm.</p></div><DashboardStats/></div>
   <MarketplaceShortcuts/>
-  <div className="mt-6 grid gap-5 lg:grid-cols-[1.35fr_.75fr]"><div className="space-y-5"><RecentProduce/><MarketPreview/></div><div className="space-y-5">{profile.isLoading?<LoadingBlock/>:profile.isError?<ErrorBlock message={profile.error instanceof ApiRequestError?profile.error.message:"Could not load profile."} onRetry={()=>profile.refetch()}/>:profile.data?<ProfileCompletionCard completion={profile.data.completion} showLinkToProfile/>:null}<Card><div className="p-5"><h2 className="text-base font-bold">Useful tools</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Keep decisions and operations in one place.</p><div className="mt-4 grid gap-2"><Link href="/sell-vs-store" className="flex items-center justify-between rounded-lg border border-border px-3 py-3 text-xs font-bold hover:bg-[#fafaf7]">Sell vs store <Scale className="h-4 w-4"/></Link><Link href="/quality" className="flex items-center justify-between rounded-lg border border-border px-3 py-3 text-xs font-bold hover:bg-[#fafaf7]">Quality <ShieldCheck className="h-4 w-4"/></Link><Link href="/fpo-membership" className="flex items-center justify-between rounded-lg border border-border px-3 py-3 text-xs font-bold hover:bg-[#fafaf7]">My FPO <Building2 className="h-4 w-4"/></Link></div></div></Card></div></div>
+  <SaleCards/>
+  <div className="mt-6 grid gap-5 lg:grid-cols-[1.35fr_.75fr] fade-in-up d3"><div className="space-y-5"><RecentProduce/><MarketPreview/></div><div className="space-y-5">{profile.isLoading?<LoadingBlock/>:profile.isError?<ErrorBlock message={profile.error instanceof ApiRequestError?profile.error.message:"Could not load profile."} onRetry={()=>profile.refetch()}/>:profile.data?<ProfileCompletionCard completion={profile.data.completion} showLinkToProfile/>:null}<Card><div className="p-5"><h2 className="text-base font-bold">Useful tools</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Keep decisions and operations in one place.</p><div className="mt-4 grid gap-2"><Link href="/sell-vs-store" className="flex items-center justify-between rounded-lg border border-border px-3 py-3 text-xs font-bold hover:bg-[#fafaf7]">Sell vs store <Scale className="h-4 w-4"/></Link><Link href="/quality" className="flex items-center justify-between rounded-lg border border-border px-3 py-3 text-xs font-bold hover:bg-[#fafaf7]">Quality <ShieldCheck className="h-4 w-4"/></Link><Link href="/fpo-membership" className="flex items-center justify-between rounded-lg border border-border px-3 py-3 text-xs font-bold hover:bg-[#fafaf7]">My FPO <Building2 className="h-4 w-4"/></Link></div></div></Card></div></div>
  </div>;
 }
 export default function DashboardPage(){return <RoleProtectedPage role="FARMER"><DashboardContent/></RoleProtectedPage>}

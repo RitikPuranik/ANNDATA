@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Pencil, Trash2, Sprout, Droplets, Plus } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Card, Alert } from "@/components/ui/primitives";
 import { EmptyState } from "@/components/EmptyState";
@@ -76,45 +76,45 @@ function FarmCard({ farm, showName }: { farm: Farm; showName: boolean }) {
   }
 
   return (
-    <Card>
-      {deleteError && (
-        <Alert variant="error" className="mb-4">
-          {deleteError}
-        </Alert>
-      )}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-medium">{showName ? farm.name || t("farm.unnamed") : t("farm.myFarm")}</h3>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {farm.village}, {farm.taluka.name}, {farm.district.name}, {farm.state.name}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
+    <div className="item-tile">
+      <span className="item-tile-icon"><Sprout className="h-6 w-6" aria-hidden /></span>
+      <div className="item-tile-body">
+        <h3>{showName ? farm.name || t("farm.unnamed") : t("farm.myFarm")}</h3>
+        {deleteError && (
+          <Alert variant="error" className="mt-2 mb-1 text-xs">
+            {deleteError}
+          </Alert>
+        )}
+        <p className="mt-1.5 flex items-start gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          {farm.village}, {farm.taluka.name}, {farm.district.name}, {farm.state.name}
+        </p>
+        <div className="item-tile-chips">
+          <span className="item-chip gold">
             {farm.area} {areaUnitLabel(t, farm.areaUnit)}
-            {farm.irrigationType !== "NOT_SPECIFIED" && <> · {t(`irrigation.${farm.irrigationType}`)}</>}
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-1">
-          <button
-            type="button"
-            aria-label={t("common.edit")}
-            className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
-            onClick={() => setIsEditing(true)}
-          >
-            <Pencil className="h-4 w-4" aria-hidden />
-          </button>
-          <button
-            type="button"
-            aria-label={t("common.delete")}
-            disabled={deleteFarm.isPending}
-            className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden />
-          </button>
+          </span>
+          {farm.irrigationType !== "NOT_SPECIFIED" && (
+            <span className="item-chip">
+              <Droplets className="h-3 w-3" /> {t(`irrigation.${farm.irrigationType}`)}
+            </span>
+          )}
         </div>
       </div>
-    </Card>
+      <div className="item-tile-actions">
+        <button type="button" aria-label={t("common.edit")} onClick={() => setIsEditing(true)}>
+          <Pencil className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className="danger"
+          aria-label={t("common.delete")}
+          disabled={deleteFarm.isPending}
+          onClick={handleDelete}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -133,12 +133,12 @@ export function FarmList({ farms }: { farms: Farm[] }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="item-tile-grid">
       {farms.map((farm) => (
         <FarmCard key={farm.id} farm={farm} showName={farms.length > 1} />
       ))}
-      <Link href="/farms/new" className="inline-block text-sm font-medium text-primary hover:underline">
-        {t("farm.addAnother")}
+      <Link href="/farms/new" className="item-tile-add">
+        <Plus className="h-4 w-4" /> {t("farm.addAnother")}
       </Link>
     </div>
   );

@@ -87,9 +87,6 @@ const envSchema = z.object({
   GPS_LOCATION_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(120),
   GPS_FUTURE_TIMESTAMP_TOLERANCE_SECONDS: z.coerce.number().int().min(0).default(120),
   SHIPMENT_LOCATION_MAX_BATCH_SIZE: z.coerce.number().int().positive().max(500).default(100),
-
-  // Module 18 — Delivery & Quality Reconciliation
-  DELIVERY_QUANTITY_TOLERANCE_PERCENT: z.coerce.number().min(0).max(100).default(2),
 });
 
 const parsed = envSchema.safeParse(process.env);

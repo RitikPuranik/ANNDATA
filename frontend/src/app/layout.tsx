@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
-// @ts-expect-error Next.js handles global CSS imports at build time.
+// @ts-expect-error Next.js processes global CSS imports at build time.
 import "./globals.css";
 import { AppProviders } from "./providers/AppProviders";
 

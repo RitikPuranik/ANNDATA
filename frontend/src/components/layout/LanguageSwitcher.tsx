@@ -52,7 +52,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-10 items-center gap-1.5 rounded-full border px-3 text-xs font-bold uppercase tracking-wider backdrop-blur-md transition-all duration-300"
+        className="language-switcher-trigger flex h-10 items-center gap-1.5 rounded-full border px-3 text-xs font-bold uppercase tracking-wider transition-all duration-200"
       >
         {isTranslating ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -65,16 +65,16 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-xl border shadow-2xl backdrop-blur-md"
+          className="language-switcher-menu absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-xl border shadow-2xl"
         >
-          <div className="flex items-center gap-2 border-b px-3 py-2">
+          <div className="language-switcher-search flex items-center gap-2 border-b px-3 py-2">
             <Search className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
             <input
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search language…"
-              className="w-full bg-transparent text-sm outline-none placeholder:opacity-60"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
           </div>
           <div className="max-h-72 overflow-y-auto py-1">
@@ -91,8 +91,8 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                   setQuery("");
                 }}
                 className={cn(
-                  "flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-white/10",
-                  l.code === language ? "font-semibold" : "font-normal opacity-80",
+                  "language-option flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left text-sm transition-colors",
+                  l.code === language ? "font-semibold" : "font-normal",
                 )}
               >
                 <span>{l.nativeName}</span>
