@@ -2834,8 +2834,8 @@ model LogisticsQuote {
   // above — singular (not `[]`) because those FK columns are @unique, so
   // at most one LogisticsRequest can ever point at a given quote as its
   // accepted/recommended choice.
-  acceptedForRequest    LogisticsRequest?
-  recommendedForRequest LogisticsRequest?
+  acceptedForRequest    LogisticsRequest? @relation("AcceptedQuote")
+  recommendedForRequest LogisticsRequest? @relation("RecommendedQuote")
   shipment              Shipment?
 
   @@index([logisticsRequestId, status])
