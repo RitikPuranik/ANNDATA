@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Alert, Card } from "@/components/ui/primitives";
 import { Badge, toneForStatus } from "@/components/ui/badge";
 import { PageHeader, QuickLinkCard, StatCard } from "@/components/ui/stat-card";
+import { PromoTileStrip, CategoryGrid } from "@/components/marketing/HomeHero";
 import { LoadingBlock } from "@/components/StateBlocks";
 import { buyerApi, demandApi, tradeOfferApi } from "@/services/tradeApi";
 
@@ -79,13 +80,15 @@ function BuyerDashboardContent() {
   return (
     <div>
       <PageHeader title={<>Welcome back, <span translate="no">{user.fullName.split(" ")[0]}</span></>} description="Manage your sourcing demand and trade offers." />
+      <div className="mb-6"><PromoTileStrip /></div>
+      <div className="mb-6"><h2 className="mb-3 text-lg font-bold text-foreground">Browse by category</h2><CategoryGrid /></div>
       <div className="mb-6">
         <BuyerStats />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <div>
-            <h2 className="mb-3 text-lg font-semibold">Explore</h2>
+            <h2 className="mb-3 text-lg font-bold text-foreground">Explore</h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {QUICK_LINKS.map((l) => (
                 <QuickLinkCard key={l.href} {...l} />

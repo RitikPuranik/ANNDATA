@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Package } from "lucide-react";
+import { Plus } from "lucide-react";
+import { CropSticker } from "@/components/crops/CropSticker";
 import { RoleProtectedPage } from "@/components/RoleProtectedPage";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ function LotsContent() {
             key={f.value}
             onClick={() => setFilter(f.value)}
             className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-              filter === f.value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:bg-secondary"
+              filter === f.value ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary"
             }`}
           >
             {f.label}
@@ -67,27 +68,26 @@ function LotsContent() {
       ) : (lotsQuery.data ?? []).length === 0 ? (
         <EmptyState message="No lots match this filter yet." actionLabel="Create a lot" onAction={() => (window.location.href = "/lots/new")} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {lotsQuery.data!.map((lot) => (
             <Link
               key={lot.id}
               href={`/lots/${lot.id}`}
-              className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Package className="h-5 w-5" aria-hidden />
-                </span>
-                <Badge tone={toneForStatus(lot.status)}>{lot.status.replace(/_/g, " ")}</Badge>
+              <div className="relative flex h-24 items-center justify-center bg-gradient-to-br from-accent/15 to-accent/5">
+                <CropSticker name={lot.crop?.name} size="lg" />
+                <span className="absolute right-2 top-2"><Badge tone={toneForStatus(lot.status)}>{lot.status.replace(/_/g, " ")}</Badge></span>
               </div>
-              <div className="mt-4">
-                <h3 className="font-semibold text-foreground">
+              <div className="flex flex-1 flex-col p-3.5">
+                <h3 className="line-clamp-1 font-semibold text-foreground">
                   {lot.crop?.name}
                   {lot.variety ? ` · ${lot.variety}` : ""}
                 </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {lot.quantity} {lot.unit} · Available {new Date(lot.availabilityDate).toLocaleDateString()}
+                <p className="mt-1 text-lg font-bold text-foreground">
+                  {lot.quantity} <span className="text-xs font-medium text-muted-foreground">{lot.unit}</span>
                 </p>
+                <p className="mt-auto pt-2 text-xs text-muted-foreground">Available {new Date(lot.availabilityDate).toLocaleDateString()}</p>
               </div>
             </Link>
           ))}
