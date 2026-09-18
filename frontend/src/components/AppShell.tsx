@@ -40,7 +40,7 @@ function NavLink({ item, onClick, compact = false }: { item: NavItem; onClick?: 
   const warmRoute = React.useCallback(() => {
     router.prefetch(item.href);
     if (item.href === "/dashboard") {
-      void queryClient.prefetchQuery({ queryKey: ["lots", "mine"], queryFn: lotApi.listMine });
+      void queryClient.prefetchQuery({ queryKey: ["lots", "mine"], queryFn: () => lotApi.listMine() });
       void queryClient.prefetchQuery({ queryKey: ["trade-offers", "mine"], queryFn: tradeOfferApi.list });
     } else if (item.href === "/farms") {
       void queryClient.prefetchQuery({ queryKey: FARMER_ME_QUERY_KEY, queryFn: farmerApi.getMe });
@@ -181,6 +181,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [moreOpen, setMoreOpen] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
 
+  const navItems = React.useMemo(() => (user ? NAV_BY_ROLE[user.role] ?? [] : []), [user]);
+  const primary = React.useMemo(() => choosePrimary(navItems), [navItems]);
+  // Keep the main navigation unchanged. Only hide account/identity items from the All menu.
+  const secondary = React.useMemo(() => {
+    const hiddenFromAll = new Set(["Profile", "Account", "Farmer", "Workspace"]);
+    return navItems.filter((item) => !primary.some((x) => x.href === item.href) && !hiddenFromAll.has(item.label));
+  }, [navItems, primary]);
+
   React.useEffect(() => {
     const openFromTour = () => setDrawerOpen(true);
     window.addEventListener("anndata:open-menu", openFromTour);
@@ -191,23 +199,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMoreOpen(false);
   }, [pathname]);
 
-  if (!user) return <>{children}</>;
-
-  const navItems = NAV_BY_ROLE[user.role] ?? [];
-  const primary = choosePrimary(navItems);
-  // Keep the main navigation unchanged. Only hide account/identity items from the All menu.
-  const hiddenFromAll = new Set(["Profile", "Account", "Farmer", "Workspace"]);
-  const secondary = navItems.filter((item) =>
-    !primary.some((x) => x.href === item.href) && !hiddenFromAll.has(item.label)
-  );
-
-  // Warm the most-used routes in the background so navigation is ready before the user clicks.
+  // Warm the most-used routes in the background so navigation is ready before
+  // the user clicks. This must run on every render regardless of whether the
+  // user is signed in yet — hooks can never be called conditionally — so it
+  // guards itself internally instead of sitting after the early return below.
   React.useEffect(() => {
+    if (!user) return;
     const routes = [...primary, ...secondary].map((item) => item.href);
     const warm = () => routes.forEach((href) => router.prefetch(href));
     const id = window.setTimeout(warm, 120);
     return () => window.clearTimeout(id);
-  }, [router, user.role]);
+  }, [router, user, primary, secondary]);
+
+  if (!user) return <>{children}</>;
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -226,7 +230,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="topbar-search" role="search">
           <Search className="h-4 w-4" />
           <span>Search your crops, farms or market…</span>
-          <kbd>⌘ K</kbd>
         </div>
 
         <div className="topbar-actions">

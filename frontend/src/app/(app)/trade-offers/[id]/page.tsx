@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Undo2, History, MessageSquareText } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Card, Alert, Label, FieldError } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -185,9 +184,7 @@ export default function TradeOfferDetailPage() {
   const params = useParams<{ id: string }>();
   return (
     <ProtectedRoute>
-      <AppShell>
-        <TradeOfferDetailContent id={params.id} />
-      </AppShell>
+      <TradeOfferDetailContent id={params.id} />
     </ProtectedRoute>
   );
 }

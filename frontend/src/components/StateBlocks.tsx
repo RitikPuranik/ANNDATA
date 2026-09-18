@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export function LoadingBlock({ label }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+    <div data-nav-loading-indicator="true" className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
       <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
       <span className="text-sm">{label ?? "Loading…"}</span>
     </div>

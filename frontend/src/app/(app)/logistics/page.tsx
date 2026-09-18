@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Truck, ArrowRight, MapPin } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Badge, toneForStatus } from "@/components/ui/badge";
@@ -118,9 +117,7 @@ function LogisticsContent() {
 export default function LogisticsPage() {
   return (
     <ProtectedRoute>
-      <AppShell>
-        <LogisticsContent />
-      </AppShell>
+      <LogisticsContent />
     </ProtectedRoute>
   );
 }
