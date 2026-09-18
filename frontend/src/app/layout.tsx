@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 // @ts-expect-error Next.js processes global CSS imports at build time.
 import "./globals.css";
 import { AppProviders } from "./providers/AppProviders";
+import { NavigationLoader } from "@/components/NavigationLoader";
 
 const fontSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -38,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>{children}<NavigationLoader /></AppProviders>
       </body>
     </html>
   );

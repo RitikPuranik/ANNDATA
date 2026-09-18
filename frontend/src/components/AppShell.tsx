@@ -10,6 +10,11 @@ import { cn } from "@/lib/utils";
 import { LogoMark } from "@/components/Logo";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { OnboardingTour } from "@/components/OnboardingTour";
+import { useQueryClient } from "@tanstack/react-query";
+import { lotApi } from "@/services/lotApi";
+import { tradeOfferApi } from "@/services/tradeApi";
+import { farmerApi } from "@/services/farmerApi";
+import { FARMER_ME_QUERY_KEY } from "@/hooks/useFarmerProfile";
 
 function isActive(pathname: string, item: NavItem) {
   if (["/dashboard", "/buyer", "/fpo", "/admin", "/government"].includes(item.href)) return pathname === item.href;
@@ -28,8 +33,19 @@ function Brand() {
 function NavLink({ item, onClick, compact = false }: { item: NavItem; onClick?: () => void; compact?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const active = isActive(pathname, item);
   const Icon = item.icon;
+
+  const warmRoute = React.useCallback(() => {
+    router.prefetch(item.href);
+    if (item.href === "/dashboard") {
+      void queryClient.prefetchQuery({ queryKey: ["lots", "mine"], queryFn: lotApi.listMine });
+      void queryClient.prefetchQuery({ queryKey: ["trade-offers", "mine"], queryFn: tradeOfferApi.list });
+    } else if (item.href === "/farms") {
+      void queryClient.prefetchQuery({ queryKey: FARMER_ME_QUERY_KEY, queryFn: farmerApi.getMe });
+    }
+  }, [item.href, queryClient, router]);
   return (
     <Link
       href={item.href}
@@ -38,10 +54,10 @@ function NavLink({ item, onClick, compact = false }: { item: NavItem; onClick?: 
         if (item.href !== window.location.pathname) window.dispatchEvent(new CustomEvent("anndata:navigate-start"));
       }}
       prefetch
-      onMouseEnter={() => router.prefetch(item.href)}
-      onFocus={() => router.prefetch(item.href)}
-      onMouseDown={() => router.prefetch(item.href)}
-      onTouchStart={() => router.prefetch(item.href)}
+      onMouseEnter={warmRoute}
+      onFocus={warmRoute}
+      onMouseDown={warmRoute}
+      onTouchStart={warmRoute}
       className={cn("app-nav-link", compact && "app-nav-link-compact", active && "active")}
       data-tour={`nav-${item.href}`}
     >
@@ -164,7 +180,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [moreOpen, setMoreOpen] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
-  const [navigating, setNavigating] = React.useState(false);
 
   React.useEffect(() => {
     const openFromTour = () => setDrawerOpen(true);
@@ -174,14 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     setMoreOpen(false);
-    setNavigating(false);
   }, [pathname]);
-
-  React.useEffect(() => {
-    const start = () => setNavigating(true);
-    window.addEventListener("anndata:navigate-start", start);
-    return () => window.removeEventListener("anndata:navigate-start", start);
-  }, []);
 
   if (!user) return <>{children}</>;
 
@@ -208,13 +216,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-frame">
-      {navigating && <div className="anndata-route-overlay" role="status" aria-live="polite">
-        <div className="anndata-route-loader">
-          <div className="anndata-route-mark"><LogoMark className="h-6 w-6" /></div>
-          <div className="anndata-route-copy"><strong>Opening your page</strong><span>Just a moment…</span></div>
-          <div className="anndata-route-progress"><i /></div>
-        </div>
-      </div>}
       <header className="app-header-top">
         <div className="mobile-only">
           <button className="icon-btn header-menu-btn" onClick={() => setDrawerOpen(true)} aria-label="Open menu"><Menu /></button>

@@ -18,6 +18,7 @@ import { ApiRequestError } from "@/types/api";
 import { lotApi } from "@/services/lotApi";
 import { tradeOfferApi } from "@/services/tradeApi";
 
+
 /**
  * Real photos so a farmer recognises each card at a glance — flat cards,
  * no gradients, same dark/gold palette the app already uses.
@@ -116,7 +117,7 @@ function DashboardContent(){
  const profile=useFarmerProfileQuery();
  return <div>
   <div className="dashboard-hero fade-in-up">
-   <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=900" alt="" className="dashboard-hero-bg" loading="eager" />
+  <img src="/images/image.png" alt="Farmer using a phone while working on the farm" className="dashboard-hero-bg" loading="eager" />
    <div className="dashboard-hero-copy"><div className="dashboard-kicker">YOUR FARM HOME</div><h1>Welcome back, <span translate="no">{user.fullName.split(" ")[0]}</span>.</h1><p>Everything you need to grow, check prices and sell your produce.</p><div className="dashboard-hero-actions"><Link href="/lots/new" className="dashboard-primary"><Plus className="h-5 w-5"/> Sell produce</Link><Link href="/market" className="dashboard-secondary"><Search className="h-5 w-5"/> Check market</Link></div>
     <div className="trust-bar">
      <div className="trust-item"><BadgeCheck/><span>Verified<br/>farmers</span></div>
