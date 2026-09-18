@@ -4,7 +4,7 @@
 
 FarmLink is a modular backend platform built with **Express, TypeScript, Prisma, and PostgreSQL**. The project is being developed incrementally so each module reuses the authorization, audit, domain models, and service boundaries established by earlier modules.
 
-> **Current implementation status:** Modules **1–15 are implemented**. Module **16 (Logistics Quote & Optimization)** is the next major planned module.
+> **Current implementation status:** Modules **1–18 are implemented**. Module **19 (Payment Status Tracking)** is the next major planned module.
 
 ## Implemented Modules
 
