@@ -145,6 +145,22 @@ export type ErrorCode =
   | "ACCEPTED_QUANTITY_EXCEEDS_DELIVERED"
   | "INVALID_ACCEPTANCE_QUANTITY"
   | "DELIVERY_NOT_MUTABLE"
+  // Module 19 — Payment Status Tracking. PAYMENT_OBLIGATION_NOT_FOUND and
+  // PAYMENT_RECORD_NOT_FOUND are thrown via the generic NotFoundError
+  // (same convention as every module above); UNAUTHORIZED_PAYMENT_ACCESS
+  // is thrown via the generic AuthorizationError. The remaining codes
+  // below are genuine business-rule violations thrown via
+  // PaymentDomainError.
+  | "PAYMENT_OBLIGATION_ALREADY_EXISTS"
+  | "DELIVERY_NOT_RECONCILED"
+  | "INVALID_PAYMENT_AMOUNT"
+  | "PAYMENT_CURRENCY_MISMATCH"
+  | "PAYMENT_OBLIGATION_CANCELLED"
+  | "PAYMENT_OBLIGATION_NOT_MUTABLE"
+  | "INVALID_PAYMENT_TRANSITION"
+  | "DUPLICATE_PAYMENT_SUBMISSION"
+  | "UNAUTHORIZED_PAYMENT_ACCESS"
+  | "PAYMENT_RECORD_NOT_REVERSIBLE"
   | "UNEXPECTED_ERROR";
 
 export class AppError extends Error {
@@ -406,6 +422,37 @@ export class DeliveryDomainError extends AppError {
       | "ACCEPTED_QUANTITY_EXCEEDS_DELIVERED"
       | "INVALID_ACCEPTANCE_QUANTITY"
       | "DELIVERY_NOT_MUTABLE"
+    >,
+    statusCode = 422,
+  ) {
+    super(message, statusCode, code);
+  }
+}
+
+/**
+ * Module 19's equivalent of DeliveryDomainError. PAYMENT_OBLIGATION_NOT_FOUND
+ * and PAYMENT_RECORD_NOT_FOUND are NOT included here — thrown via the
+ * generic NotFoundError (same convention as every module above) —
+ * and UNAUTHORIZED_PAYMENT_ACCESS is thrown via the generic
+ * AuthorizationError. Every other code here is a 422 business-rule
+ * violation (invalid amount, currency mismatch, mutating a
+ * cancelled/finalized obligation, a duplicate idempotent submission,
+ * etc.) unless the call site overrides statusCode.
+ */
+export class PaymentDomainError extends AppError {
+  constructor(
+    message: string,
+    code: Extract<
+      ErrorCode,
+      | "PAYMENT_OBLIGATION_ALREADY_EXISTS"
+      | "DELIVERY_NOT_RECONCILED"
+      | "INVALID_PAYMENT_AMOUNT"
+      | "PAYMENT_CURRENCY_MISMATCH"
+      | "PAYMENT_OBLIGATION_CANCELLED"
+      | "PAYMENT_OBLIGATION_NOT_MUTABLE"
+      | "INVALID_PAYMENT_TRANSITION"
+      | "DUPLICATE_PAYMENT_SUBMISSION"
+      | "PAYMENT_RECORD_NOT_REVERSIBLE"
     >,
     statusCode = 422,
   ) {

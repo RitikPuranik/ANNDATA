@@ -280,6 +280,13 @@ model User {
   // relation on this model.
   logisticsRequestsRaised LogisticsRequest[]
 
+  // Module 19 — every payment ever recorded by this user (BUYER reporting
+  // their own payment, or ADMIN/FARMER/FPO_ADMIN confirming receipt).
+  // Restrict, same reasoning as every other historical-record relation on
+  // this model: a deleted/deactivated user must never take a payment
+  // record's history down with them.
+  paymentsRecorded PaymentRecord[]
+
   @@index([mobile])
   @@index([email])
   @@index([publicId])
@@ -518,6 +525,12 @@ model Fpo {
   // see WarehouseOwnerType for why exactly one of the two is ever set).
   ownedWarehouses Warehouse[]
 
+  // Module 19 — payment obligations where this FPO is the seller (mirrors
+  // FarmerProfile.paymentObligations; see PaymentObligation's own
+  // sellerFarmerId/sellerFpoId comment for why exactly one of the two is
+  // ever set on a given obligation).
+  paymentObligations PaymentObligation[]
+
   @@index([stateId])
   @@index([districtId])
   @@index([talukaId])
@@ -634,6 +647,11 @@ model FarmerProfile {
   // Module 4 — actual declared produce (never a duplicate of estimated
   // FarmerCrop/aggregation figures, see CropLot's own comment).
   cropLots CropLot[]
+
+  // Module 19 — payment obligations where this farmer is the seller
+  // (mutually exclusive with Fpo.paymentObligations — see
+  // PaymentObligation's own sellerFarmerId/sellerFpoId comment).
+  paymentObligations PaymentObligation[]
 
   @@index([userId])
   @@index([fpoId])
@@ -1485,6 +1503,8 @@ model BuyerProfile {
   buyerOffers        TradeOffer[]            @relation("OfferBuyer")
   // Module 18 — every delivery ever recorded against this buyer.
   deliveries         Delivery[]
+  // Module 19 — every payment obligation ever created against this buyer.
+  paymentObligations PaymentObligation[]
 
   @@index([verificationStatus])
   @@index([state, district])
@@ -1564,6 +1584,12 @@ model TradeOffer {
   // see Module 16/17's own comment — so an accepted TradeOffer is the
   // commercial transaction Module 18 reconciles delivery against).
   deliveries Delivery[]
+
+  // Module 19 — payment obligations whose commercial terms (price,
+  // quantity) were resolved from this offer at the time its delivery was
+  // reconciled. See PaymentObligation.tradeOfferId's own comment for why
+  // this stays nullable, mirroring Delivery.tradeOfferId.
+  paymentObligations PaymentObligation[]
 
   @@index([lotId, status])
   @@index([buyerId, status])
@@ -3179,6 +3205,13 @@ model Delivery {
   reconciliations    DeliveryReconciliation[]
   evidence           DeliveryEvidence[]
 
+  // Module 19 — the single payment obligation created from this delivery's
+  // finalized reconciliation (Step 26: only a RECONCILED delivery may ever
+  // have one — see payment.service.ts's createObligation()). One-to-one:
+  // a delivery is reconciled exactly once and never spawns a second
+  // obligation.
+  paymentObligation PaymentObligation?
+
   @@index([lotId])
   @@index([buyerId, status])
   @@index([status])
@@ -3317,4 +3350,157 @@ model DeliveryEvidence {
 
   @@index([deliveryId])
   @@map("delivery_evidence")
+}
+
+// ---------------------------------------------------------------------------
+// Module 19 — Payment Status Tracking
+//
+// A PAYMENT STATUS system, not a payment gateway (Step 36): no bank
+// transfer, UPI, or card execution ever happens here. PaymentObligation is
+// the authoritative financial obligation created once a Module 18 Delivery
+// reaches RECONCILED; PaymentRecord is an append-only log of externally
+// made/reported payments against it. See payment.service.ts's own comment
+// for the full lifecycle and Module 20 handoff contract.
+// ---------------------------------------------------------------------------
+
+enum PaymentObligationStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERPAID
+  OVERDUE
+  CANCELLED
+  DISPUTED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  UPI
+  NEFT
+  RTGS
+  IMPS
+  CASH
+  CHEQUE
+  OTHER
+}
+
+// Step 15 — PAYMENT_RECORDED vs PAYMENT_CONFIRMED: a buyer-submitted
+// payment claim starts as RECORDED and never silently becomes an
+// unquestioned financial fact. CONFIRMED is set only by an authorized
+// counterparty confirmation (see payment.authorization.ts). REVERSED is
+// the explicit correction/reversal path (Step 23) — a PaymentRecord is
+// never deleted or edited in place once created.
+enum PaymentRecordStatus {
+  RECORDED
+  CONFIRMED
+  REVERSED
+}
+
+// One row per completed Module 18 delivery (Step 3). expectedQuantity x
+// agreedUnitPrice + adjustments = finalPayableAmount, always calculated
+// server-side from Module 18's handoff — never accepted as authoritative
+// from the client (Step 2/8). currency is a plain default-"INR" String,
+// same convention as Shipment.currency/LogisticsQuote.currency — no
+// dedicated Currency enum exists anywhere else in this schema either.
+model PaymentObligation {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  // One obligation per delivery (Step 7: never created from an arbitrary
+  // shipment) — enforced by @unique below.
+  deliveryId String @unique
+
+  // The commercial terms this obligation's amount was resolved from.
+  // Nullable for the same reason Delivery.tradeOfferId is nullable (an
+  // accepted offer withdrawn/renegotiated after delivery already exists);
+  // the amount already resolved and stored below is what matters once set.
+  tradeOfferId String?
+
+  buyerId String
+  // Exactly one of sellerFarmerId/sellerFpoId is set, mirroring
+  // CropLot.farmerId/fpoId and LotOwnerType — never both, never neither.
+  sellerFarmerId String?
+  sellerFpoId    String?
+
+  currency String @default("INR")
+
+  grossAmount        Decimal @db.Decimal(16, 2)
+  adjustments        Decimal @default(0) @db.Decimal(16, 2)
+  finalPayableAmount Decimal @db.Decimal(16, 2)
+
+  // Server-calculated only (Step 10/13) — never trusted from the client.
+  amountPaid Decimal @default(0) @db.Decimal(16, 2)
+  amountDue  Decimal @db.Decimal(16, 2)
+
+  status PaymentObligationStatus @default(PENDING)
+
+  // Step 17 — derived from accepted commercial terms where available;
+  // null when no due date exists. A null dueAt can never become OVERDUE
+  // (see payment-status.calculator.ts).
+  dueAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  delivery   Delivery     @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+  tradeOffer TradeOffer?  @relation(fields: [tradeOfferId], references: [id], onDelete: SetNull)
+  buyer      BuyerProfile @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+  sellerFarmer FarmerProfile? @relation(fields: [sellerFarmerId], references: [id], onDelete: SetNull)
+  sellerFpo    Fpo?           @relation(fields: [sellerFpoId], references: [id], onDelete: SetNull)
+
+  payments PaymentRecord[]
+
+  @@index([buyerId, status])
+  @@index([sellerFarmerId, status])
+  @@index([sellerFpoId, status])
+  @@index([status])
+  @@index([dueAt])
+  @@index([createdAt])
+  @@map("payment_obligations")
+}
+
+// Step 5 — a payment that has been externally made and is being reported/
+// tracked here; this module never initiates it (Step 36). Append-only
+// (Step 23): a correction never overwrites amount/paidAt in place, it is
+// recorded as a REVERSED row plus a fresh RECORDED row — same "append,
+// don't mutate" convention as DeliveryReconciliation/LogisticsOptimizationResult.
+model PaymentRecord {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  paymentObligationId String
+
+  amount        Decimal       @db.Decimal(16, 2)
+  currency      String        @default("INR")
+  paymentMethod PaymentMethod
+
+  // Step 21 — the idempotency key a client must supply so a network
+  // retry/duplicate submission can never create a second PaymentRecord
+  // for the same intended payment. Distinct from externalReference (a
+  // UTR/cheque number/bank reference kept purely for display — Step 16),
+  // which may be reused across otherwise-unrelated fields and is never
+  // itself trusted as a dedupe key. Unique per obligation, not globally.
+  idempotencyKey String
+
+  // Step 16 — reference only, never a banking-API identifier. Explicitly
+  // never: card numbers, CVV, PIN, passwords, bank login credentials, UPI
+  // PIN (Step 16's own prohibition — enforced in payment.schemas.ts).
+  externalReference String?
+
+  paidAt DateTime
+  status PaymentRecordStatus @default(RECORDED)
+
+  recordedByUserId String
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  obligation PaymentObligation @relation(fields: [paymentObligationId], references: [id], onDelete: Restrict)
+  recordedBy User              @relation(fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentObligationId, idempotencyKey])
+  @@index([paymentObligationId, createdAt])
+  @@index([status])
+  @@map("payment_records")
 }

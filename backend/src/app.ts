@@ -142,6 +142,11 @@ import { PrismaDeliveryEvidenceRepository } from "./modules/deliveries/delivery-
 import { DeliveryAuthorizationService } from "./modules/deliveries/delivery.authorization";
 import { DeliveryService } from "./modules/deliveries/delivery.service";
 import { createDeliveryRouter } from "./modules/deliveries/delivery.routes";
+import { PrismaPaymentObligationRepository } from "./modules/payments/payment-obligation.repository";
+import { PrismaPaymentRecordRepository } from "./modules/payments/payment-record.repository";
+import { PaymentAuthorizationService } from "./modules/payments/payment.authorization";
+import { PaymentService } from "./modules/payments/payment.service";
+import { createPaymentRouter } from "./modules/payments/payment.routes";
 
 export interface AppDependencies {
   authRepository: AuthRepository;
@@ -718,6 +723,30 @@ export function createApp(deps: AppDependencies): Express {
   );
 
   app.use("/api", createDeliveryRouter(deliveryService, deps.authRepository, deps.auditService));
+
+  // Module 19 — Payment Status Tracking. Consumes Module 18's own
+  // deliveryRepository/deliveryService (never re-implements
+  // reconciliation), this file's own already-constructed
+  // farmerProfileResolver/fpoAuthorization (same instances Module 18
+  // uses — no duplicate FPO-membership logic), and deps.prisma directly
+  // for the caller-identity lookups (buyer/farmer profile by userId)
+  // that mirror DeliveryService's own resolveCallerBuyerProfileId.
+  const paymentObligationRepository = new PrismaPaymentObligationRepository(deps.prisma);
+  const paymentRecordRepository = new PrismaPaymentRecordRepository(deps.prisma);
+  const paymentAuthorization = new PaymentAuthorizationService(fpoAuthorization);
+
+  const paymentService = new PaymentService(
+    deps.prisma,
+    paymentObligationRepository,
+    paymentRecordRepository,
+    deliveryRepository,
+    deliveryService,
+    paymentAuthorization,
+    farmerProfileResolver,
+    deps.auditService,
+  );
+
+  app.use("/api", createPaymentRouter(paymentService, deps.authRepository, deps.auditService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -47,21 +47,26 @@ still fall through to fetching the native query-engine binary from
 `binaries.prisma.sh`, which has no npm-hosted fallback and is not reachable here. Run
 the three commands at the top of this file, then `npm run build`, to confirm.
 
-Same as Module 16/17, the pure-logic pieces (delivery-state-machine.ts,
-delivery.schemas.ts, and — this module's own addition — the two deterministic
-reconciliation engines, delivery-quantity-reconciliation.engine.ts and
-delivery-quality-reconciliation.engine.ts) import no generated Prisma types at all and
-were unit-tested for real. Its Prisma-enum-typed files (delivery.service.ts,
-delivery-quality-agreement.resolver.ts, etc.) reference those enums only in type
-positions, so — same trick as Module 17 — DeliveryService and
-DeliveryQualityAgreementResolver were both instantiated and run against hand-built
-mocks for every collaborator (repositories, PrismaClient, audit, authorization): see
-tests/unit/delivery.service.test.ts (8 tests: full acceptance, partial acceptance,
-rejection, the accepted-quantity-exceeds-delivered guard, and the double-acceptance
-concurrency race) and tests/unit/delivery-quality-agreement.resolver.test.ts (5 tests:
-the BuyerDemand > QualityStandard > lot-assessment > NONE priority order). 45 tests
-total, all passing; the full pre-existing suite was also re-run and showed zero
-regressions (861/880 passing — the 19 pre-existing failures, in buyer-matching/
-sell-store-orchestration/warehouse-recommendation/wdra-*, are unrelated to this module
-and were already failing before it existed). See MODULE_18_IMPLEMENTATION_REPORT.md
-for the full breakdown.
+Same as Module 16/17/18, the pure-logic pieces (payment-state-machine.ts and
+payment-status.calculator.ts) import no generated Prisma types at all — and, going
+one step further than Module 18's own reconciliation engines, payment-status.calculator.ts
+doesn't even import Prisma's `Decimal`: it reuses net-realization's own `Money` class
+(net-realization-money.ts), extended with a few additive comparison methods
+(isZero/isPositive/greaterThan/equals) for Module 19's own use, since Step 20 of the
+build spec explicitly allows "Prisma Decimal OR the existing money abstraction" and
+Money has zero Prisma dependency. Both were unit-tested for real (see
+tests/unit/payment-state-machine.test.ts, 10 tests, and
+tests/unit/payment-status.calculator.test.ts, 10 tests — all real execution, not
+elided by isolatedModules, since there's no missing-client dependency to elide). Its
+Prisma-enum-typed files (payment.service.ts, payment-obligation.repository.ts,
+payment-record.repository.ts, payment.types.ts) reference those enums only in type
+positions, so — same trick as Module 17/18 — PaymentService was instantiated and run
+against hand-built mocks for every collaborator: see tests/unit/payment.service.test.ts
+(21 tests: obligation creation and its price/quantity resolution from Module 18's own
+handoff + the accepted TradeOffer, authorization for every role, partial/full/over-
+payment, idempotent retry, currency-mismatch and cancelled-obligation guards, dispute
+and cancellation transitions, and the derived-OVERDUE-on-read path). 41 tests total,
+all passing; the full pre-existing suite was also re-run and showed zero regressions
+(same 6 suites / 20 tests pre-existing failures as Module 18 left it, all unrelated).
+See MODULE_19_IMPLEMENTATION_REPORT.md for the full breakdown.
+
