@@ -57,33 +57,30 @@ function CropRow({ crop, farms }: { crop: FarmerCrop; farms: Farm[] }) {
   }
 
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0">
-      <div className="flex gap-3">
-        <CropSticker name={localizedCropName(crop.crop, language)} size="md" className="mt-0.5" />
-        <div>
-          <p className="font-medium">
-            {localizedCropName(crop.crop, language)}
-            {crop.isPrimary && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                <Star className="h-3 w-3" aria-hidden />
-                {t("crop.primary")}
-              </span>
-            )}
-          </p>
-          <p className="text-sm text-muted-foreground">
+    <div className="item-tile">
+      <CropSticker name={localizedCropName(crop.crop, language)} size="lg" />
+      <div className="item-tile-body">
+        <h3>{localizedCropName(crop.crop, language)}</h3>
+        {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+        <div className="item-tile-chips">
+          <span className="item-chip gold">
             {crop.area} {crop.areaUnit === "ACRE" ? t("farm.areaUnit.acre") : t("farm.areaUnit.hectare")}
-            {farm && farms.length > 1 && <> · {farm.name || t("farm.myFarm")}</>}
-          </p>
-          {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
+          </span>
+          {farm && farms.length > 1 && <span className="item-chip">{farm.name || t("farm.myFarm")}</span>}
+          {crop.isPrimary && (
+            <span className="item-chip gold">
+              <Star className="h-3 w-3" aria-hidden />
+              {t("crop.primary")}
+            </span>
+          )}
         </div>
       </div>
-      <div className="flex shrink-0 gap-1">
+      <div className="item-tile-actions">
         {!crop.isPrimary && (
           <button
             type="button"
             aria-label={t("crop.setPrimary")}
             disabled={updateCrop.isPending}
-            className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
             onClick={handleSetPrimary}
           >
             <Star className="h-4 w-4" aria-hidden />
@@ -91,9 +88,9 @@ function CropRow({ crop, farms }: { crop: FarmerCrop; farms: Farm[] }) {
         )}
         <button
           type="button"
+          className="danger"
           aria-label={t("common.delete")}
           disabled={deleteCrop.isPending}
-          className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
           onClick={handleRemove}
         >
           <Trash2 className="h-4 w-4" aria-hidden />
@@ -225,7 +222,7 @@ export function CropManager({ crops, farms }: { crops: FarmerCrop[]; farms: Farm
       {crops.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{t("crop.empty")}</p>
       ) : (
-        <div className="mt-3">
+        <div className="mt-3 item-tile-grid">
           {crops.map((crop) => (
             <CropRow key={crop.id} crop={crop} farms={farms} />
           ))}

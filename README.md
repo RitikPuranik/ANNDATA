@@ -4,7 +4,7 @@
 
 FarmLink is a modular backend platform built with **Express, TypeScript, Prisma, and PostgreSQL**. The project is being developed incrementally so each module reuses the authorization, audit, domain models, and service boundaries established by earlier modules.
 
-> **Current implementation status:** Modules **1–15 are implemented**. Module **16 (Logistics Quote & Optimization)** is the next major planned module.
+> **Current implementation status:** Modules **1–18 are implemented**. Module **19 (Payment Status Tracking)** is the next major planned module.
 
 ## Implemented Modules
 
@@ -25,9 +25,9 @@ FarmLink is a modular backend platform built with **Express, TypeScript, Prisma,
 | 13 | RFQ / Offers / Negotiation | ✅ Complete |
 | 14 | Net Realization Calculator | ✅ Complete |
 | 15 | Transporter & Vehicle Network | ✅ Complete — registry only (see docs/modules/module-15-transporter-vehicle-network.md); no quotes/pricing/tracking |
-| 16 | Logistics Quote & Optimization | ✅ Complete |
-| 17 | Shipment & GPS Tracking | ✅ Complete |
-| 18 | Delivery & Quality Reconciliation | ✅ Complete |
+| 16 | Logistics Quote & Optimization | ⏳ Next |
+| 17 | Shipment & GPS Tracking | ❌ Planned |
+| 18 | Delivery & Quality Reconciliation | ❌ Planned |
 | 19 | Payment Status Tracking | ❌ Planned |
 | 20 | Digital Transaction Ledger | ❌ Planned |
 | 21 | Dispute & Grievance Management | ❌ Planned |
