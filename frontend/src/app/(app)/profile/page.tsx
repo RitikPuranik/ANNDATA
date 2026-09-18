@@ -5,7 +5,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { PageHeader } from "@/components/ui/stat-card";
@@ -145,9 +144,7 @@ function ProfileContent() {
 export default function ProfilePage() {
   return (
     <ProtectedRoute>
-      <AppShell>
-        <ProfileContent />
-      </AppShell>
+      <ProfileContent />
     </ProtectedRoute>
   );
 }

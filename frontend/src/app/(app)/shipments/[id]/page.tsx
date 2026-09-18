@@ -15,7 +15,6 @@ import {
   History,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Card, Alert } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -201,9 +200,7 @@ export default function ShipmentDetailPage() {
   const params = useParams<{ id: string }>();
   return (
     <ProtectedRoute>
-      <AppShell>
-        <ShipmentDetailContent id={params.id} />
-      </AppShell>
+      <ShipmentDetailContent id={params.id} />
     </ProtectedRoute>
   );
 }

@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calculator, Sparkles, XCircle, Truck, CheckCircle2, Undo2, PackagePlus } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Card, Alert, Label } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -275,9 +274,7 @@ export default function LogisticsDetailPage() {
   const params = useParams<{ id: string }>();
   return (
     <ProtectedRoute>
-      <AppShell>
-        <LogisticsDetailContent id={params.id} />
-      </AppShell>
+      <LogisticsDetailContent id={params.id} />
     </ProtectedRoute>
   );
 }

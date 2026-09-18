@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { PackageCheck, ArrowRight, MapPin } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Badge, toneForStatus } from "@/components/ui/badge";
 import { LoadingBlock, ErrorBlock } from "@/components/StateBlocks";
@@ -94,9 +93,7 @@ function ShipmentsContent() {
 export default function ShipmentsPage() {
   return (
     <ProtectedRoute>
-      <AppShell>
-        <ShipmentsContent />
-      </AppShell>
+      <ShipmentsContent />
     </ProtectedRoute>
   );
 }

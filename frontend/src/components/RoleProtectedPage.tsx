@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRole } from "@/types/api";
 
@@ -13,13 +12,14 @@ import { UserRole } from "@/types/api";
  * (spec section 31 — role-aware routing) rather than seeing another role's
  * placeholder. This is UX-layer only; the backend independently enforces
  * the real authorization boundary on every API call.
+ *
+ * The app chrome (AppShell) is no longer mounted here — it lives once in
+ * `app/(app)/layout.tsx` so it isn't torn down and rebuilt on every page.
  */
 export function RoleProtectedPage({ role, children }: { role: UserRole; children: React.ReactNode }) {
   return (
     <ProtectedRoute>
-      <RoleCheck role={role}>
-        <AppShell>{children}</AppShell>
-      </RoleCheck>
+      <RoleCheck role={role}>{children}</RoleCheck>
     </ProtectedRoute>
   );
 }

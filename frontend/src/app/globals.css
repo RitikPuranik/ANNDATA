@@ -897,9 +897,8 @@
 @keyframes anndata-loader-pulse { 0%,100% { transform:scale(1) } 50% { transform:scale(1.045) } }
 @keyframes anndata-loader-slide { 0% { transform:translateX(-130%) } 100% { transform:translateX(340%) } }
 
-/* v18 — persistent navigation cover: the old AppShell unmounts during a
-   route change, so the loader must live at root-layout level. It is compact
-   and intentionally quick rather than a long full-screen animation. */
+/* v19 — the loader now stays mounted at all times and is shown/hidden by
+   fading opacity, so there is no abrupt on/off "blink" between pages. */
 @layer components {
   .anndata-global-route-loader {
     position: fixed;
@@ -907,8 +906,17 @@
     z-index: 100000;
     display: grid;
     place-items: center;
-    background: rgba(250, 249, 244, .96);
-    animation: anndata-global-loader-in .08s ease-out both;
+    background: rgba(250, 249, 244, .97);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .22s ease, visibility .22s ease;
+  }
+
+  .anndata-global-route-loader.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: all;
   }
 
   .anndata-global-loader-card {
@@ -945,9 +953,15 @@
     background: #171714;
     animation: anndata-global-loader-slide .55s ease-in-out infinite;
   }
+
+  .anndata-global-loader-text {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: #8a8579;
+  }
 }
 
-@keyframes anndata-global-loader-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes anndata-global-loader-slide {
   from { transform: translateX(-140%); }
   to { transform: translateX(330%); }

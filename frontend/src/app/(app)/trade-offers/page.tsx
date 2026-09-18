@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Handshake, ArrowRight } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Badge, toneForStatus } from "@/components/ui/badge";
 import { LoadingBlock, ErrorBlock } from "@/components/StateBlocks";
@@ -81,9 +80,7 @@ function TradeOffersContent() {
 export default function TradeOffersPage() {
   return (
     <ProtectedRoute>
-      <AppShell>
-        <TradeOffersContent />
-      </AppShell>
+      <TradeOffersContent />
     </ProtectedRoute>
   );
 }

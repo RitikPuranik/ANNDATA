@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/stat-card";
 import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
 import { Input } from "@/components/ui/input";
@@ -190,9 +189,7 @@ function NewLogisticsRequestContent() {
 export default function NewLogisticsRequestPage() {
   return (
     <ProtectedRoute>
-      <AppShell>
-        <NewLogisticsRequestContent />
-      </AppShell>
+      <NewLogisticsRequestContent />
     </ProtectedRoute>
   );
 }
