@@ -134,6 +134,19 @@ import { ShipmentService } from "./modules/shipments/shipment.service";
 import { createLogisticsRequestRouter } from "./modules/logistics/logistics-request.routes";
 import { createLogisticsQuoteRouter } from "./modules/logistics/logistics-quote.routes";
 import { createShipmentRouter } from "./modules/shipments/shipment.routes";
+import { PrismaDeliveryRepository } from "./modules/deliveries/delivery.repository";
+import { PrismaDeliveryWeighmentRepository } from "./modules/deliveries/delivery-weighment.repository";
+import { PrismaDeliveryQualityRepository } from "./modules/deliveries/delivery-quality.repository";
+import { PrismaDeliveryReconciliationRepository } from "./modules/deliveries/delivery-reconciliation.repository";
+import { PrismaDeliveryEvidenceRepository } from "./modules/deliveries/delivery-evidence.repository";
+import { DeliveryAuthorizationService } from "./modules/deliveries/delivery.authorization";
+import { DeliveryService } from "./modules/deliveries/delivery.service";
+import { createDeliveryRouter } from "./modules/deliveries/delivery.routes";
+import { PrismaPaymentObligationRepository } from "./modules/payments/payment-obligation.repository";
+import { PrismaPaymentRecordRepository } from "./modules/payments/payment-record.repository";
+import { PaymentAuthorizationService } from "./modules/payments/payment.authorization";
+import { PaymentService } from "./modules/payments/payment.service";
+import { createPaymentRouter } from "./modules/payments/payment.routes";
 
 export interface AppDependencies {
   authRepository: AuthRepository;
@@ -677,6 +690,63 @@ export function createApp(deps: AppDependencies): Express {
   );
 
   app.use("/api", createShipmentRouter(shipmentService, deps.authRepository, deps.auditService));
+
+  // Module 18 — Delivery & Quality Reconciliation. Consumes Module 17's own
+  // shipmentRepository, this file's own already-constructed
+  // cropLotRepository/farmerProfileResolver/fpoAuthorization/
+  // transporterAuthorizationService, and Module 5's own
+  // qualityStandardRepository (deps.qualityStandardRepository) — no
+  // duplicate registries, no recreated quality grading logic. See
+  // delivery-quality-agreement.resolver.ts for exactly how Module 5's own
+  // QualityStandard rows are reused (never copied).
+  const deliveryRepository = new PrismaDeliveryRepository(deps.prisma);
+  const deliveryWeighmentRepository = new PrismaDeliveryWeighmentRepository(deps.prisma);
+  const deliveryQualityRepository = new PrismaDeliveryQualityRepository(deps.prisma);
+  const deliveryReconciliationRepository = new PrismaDeliveryReconciliationRepository(deps.prisma);
+  const deliveryEvidenceRepository = new PrismaDeliveryEvidenceRepository(deps.prisma);
+  const deliveryAuthorization = new DeliveryAuthorizationService(deps.prisma, fpoAuthorization);
+
+  const deliveryService = new DeliveryService(
+    deps.prisma,
+    deliveryRepository,
+    deliveryWeighmentRepository,
+    deliveryQualityRepository,
+    deliveryReconciliationRepository,
+    deliveryEvidenceRepository,
+    shipmentRepository,
+    deps.cropLotRepository,
+    deps.qualityStandardRepository,
+    deliveryAuthorization,
+    farmerProfileResolver,
+    transporterAuthorizationService,
+    deps.auditService,
+  );
+
+  app.use("/api", createDeliveryRouter(deliveryService, deps.authRepository, deps.auditService));
+
+  // Module 19 — Payment Status Tracking. Consumes Module 18's own
+  // deliveryRepository/deliveryService (never re-implements
+  // reconciliation), this file's own already-constructed
+  // farmerProfileResolver/fpoAuthorization (same instances Module 18
+  // uses — no duplicate FPO-membership logic), and deps.prisma directly
+  // for the caller-identity lookups (buyer/farmer profile by userId)
+  // that mirror DeliveryService's own resolveCallerBuyerProfileId.
+  const paymentObligationRepository = new PrismaPaymentObligationRepository(deps.prisma);
+  const paymentRecordRepository = new PrismaPaymentRecordRepository(deps.prisma);
+  const paymentAuthorization = new PaymentAuthorizationService(fpoAuthorization);
+
+  const paymentService = new PaymentService(
+    deps.prisma,
+    paymentObligationRepository,
+    paymentRecordRepository,
+    deliveryRepository,
+    deliveryService,
+    paymentAuthorization,
+    farmerProfileResolver,
+    deps.auditService,
+  );
+
+  app.use("/api", createPaymentRouter(paymentService, deps.authRepository, deps.auditService));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

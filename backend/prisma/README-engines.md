@@ -37,3 +37,36 @@ control-flow execution, not full type-checking — run the commands above, then
 `npm run build`, to confirm cross-file type correctness (field-name typos etc.) before
 merging. See MODULE_17_IMPLEMENTATION_REPORT.md for the full verification/limitations
 breakdown.
+
+Module 18 (Delivery & Quality Reconciliation) hit the exact same wall, and went one
+step further trying to work around it: the matching `@prisma/prisma-schema-wasm`
+package for this repo's own pinned engine commit
+(5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2) was installed from the (reachable)
+npm registry, which does get the CLI further, but `prisma format`/`validate`/`generate`
+still fall through to fetching the native query-engine binary from
+`binaries.prisma.sh`, which has no npm-hosted fallback and is not reachable here. Run
+the three commands at the top of this file, then `npm run build`, to confirm.
+
+Same as Module 16/17/18, the pure-logic pieces (payment-state-machine.ts and
+payment-status.calculator.ts) import no generated Prisma types at all — and, going
+one step further than Module 18's own reconciliation engines, payment-status.calculator.ts
+doesn't even import Prisma's `Decimal`: it reuses net-realization's own `Money` class
+(net-realization-money.ts), extended with a few additive comparison methods
+(isZero/isPositive/greaterThan/equals) for Module 19's own use, since Step 20 of the
+build spec explicitly allows "Prisma Decimal OR the existing money abstraction" and
+Money has zero Prisma dependency. Both were unit-tested for real (see
+tests/unit/payment-state-machine.test.ts, 10 tests, and
+tests/unit/payment-status.calculator.test.ts, 10 tests — all real execution, not
+elided by isolatedModules, since there's no missing-client dependency to elide). Its
+Prisma-enum-typed files (payment.service.ts, payment-obligation.repository.ts,
+payment-record.repository.ts, payment.types.ts) reference those enums only in type
+positions, so — same trick as Module 17/18 — PaymentService was instantiated and run
+against hand-built mocks for every collaborator: see tests/unit/payment.service.test.ts
+(21 tests: obligation creation and its price/quantity resolution from Module 18's own
+handoff + the accepted TradeOffer, authorization for every role, partial/full/over-
+payment, idempotent retry, currency-mismatch and cancelled-obligation guards, dispute
+and cancellation transitions, and the derived-OVERDUE-on-read path). 41 tests total,
+all passing; the full pre-existing suite was also re-run and showed zero regressions
+(same 6 suites / 20 tests pre-existing failures as Module 18 left it, all unrelated).
+See MODULE_19_IMPLEMENTATION_REPORT.md for the full breakdown.
+

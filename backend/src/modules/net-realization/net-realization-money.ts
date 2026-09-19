@@ -79,6 +79,31 @@ export class Money {
     return this.paise < 0n;
   }
 
+  // --- Module 19 (Payment Status Tracking) additions ------------------
+  // Additive only — no existing method's behavior changes. Module 19's
+  // own calculator (payment-status.calculator.ts) needs comparisons this
+  // class didn't previously expose, and reuses this class rather than
+  // duplicating paise-safe arithmetic (Step 20's own "Use Prisma Decimal
+  // or the existing money abstraction" — this is that existing
+  // abstraction, and the only one with zero Prisma dependency, matching
+  // Module 19's own pure/no-DB-call calculator requirement).
+
+  isZero(): boolean {
+    return this.paise === 0n;
+  }
+
+  isPositive(): boolean {
+    return this.paise > 0n;
+  }
+
+  greaterThan(other: Money): boolean {
+    return this.paise > other.paise;
+  }
+
+  equals(other: Money): boolean {
+    return this.paise === other.paise;
+  }
+
   toNumber(): number {
     const rupees = this.paise / PAISE_PER_RUPEE;
     const remainder = this.paise % PAISE_PER_RUPEE;

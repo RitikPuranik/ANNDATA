@@ -130,6 +130,37 @@ export type ErrorCode =
   | "INVALID_GPS_COORDINATES"
   | "INVALID_GPS_TIMESTAMP"
   | "SHIPMENT_NOT_TRACKABLE"
+  // Module 18 — Delivery & Quality Reconciliation. DELIVERY_NOT_FOUND is
+  // thrown via the generic NotFoundError (same convention as every module
+  // above); UNAUTHORIZED_DELIVERY_ACCESS is thrown via the generic
+  // AuthorizationError. The remaining codes below are genuine business-rule
+  // violations thrown via DeliveryDomainError.
+  | "DELIVERY_ALREADY_EXISTS"
+  | "SHIPMENT_NOT_ELIGIBLE_FOR_DELIVERY"
+  | "INVALID_DELIVERY_TRANSITION"
+  | "INVALID_WEIGHMENT"
+  | "DELIVERY_NOT_YET_RECEIVED"
+  | "QUALITY_ASSESSMENT_REQUIRED"
+  | "RECONCILIATION_REQUIRED"
+  | "ACCEPTED_QUANTITY_EXCEEDS_DELIVERED"
+  | "INVALID_ACCEPTANCE_QUANTITY"
+  | "DELIVERY_NOT_MUTABLE"
+  // Module 19 — Payment Status Tracking. PAYMENT_OBLIGATION_NOT_FOUND and
+  // PAYMENT_RECORD_NOT_FOUND are thrown via the generic NotFoundError
+  // (same convention as every module above); UNAUTHORIZED_PAYMENT_ACCESS
+  // is thrown via the generic AuthorizationError. The remaining codes
+  // below are genuine business-rule violations thrown via
+  // PaymentDomainError.
+  | "PAYMENT_OBLIGATION_ALREADY_EXISTS"
+  | "DELIVERY_NOT_RECONCILED"
+  | "INVALID_PAYMENT_AMOUNT"
+  | "PAYMENT_CURRENCY_MISMATCH"
+  | "PAYMENT_OBLIGATION_CANCELLED"
+  | "PAYMENT_OBLIGATION_NOT_MUTABLE"
+  | "INVALID_PAYMENT_TRANSITION"
+  | "DUPLICATE_PAYMENT_SUBMISSION"
+  | "UNAUTHORIZED_PAYMENT_ACCESS"
+  | "PAYMENT_RECORD_NOT_REVERSIBLE"
   | "UNEXPECTED_ERROR";
 
 export class AppError extends Error {
@@ -359,6 +390,69 @@ export class ShipmentDomainError extends AppError {
       | "INVALID_GPS_COORDINATES"
       | "INVALID_GPS_TIMESTAMP"
       | "SHIPMENT_NOT_TRACKABLE"
+    >,
+    statusCode = 422,
+  ) {
+    super(message, statusCode, code);
+  }
+}
+
+/**
+ * Module 18's equivalent of ShipmentDomainError. DELIVERY_NOT_FOUND is NOT
+ * included here — thrown via the generic NotFoundError (same convention as
+ * every module above) — and UNAUTHORIZED_DELIVERY_ACCESS is thrown via the
+ * generic AuthorizationError. Every other code here is a 422 business-rule
+ * violation (invalid transition, missing weighment/quality prerequisite,
+ * an acceptance quantity that exceeds what was delivered, an attempt to
+ * mutate a finalized delivery, etc.) unless the call site overrides
+ * statusCode.
+ */
+export class DeliveryDomainError extends AppError {
+  constructor(
+    message: string,
+    code: Extract<
+      ErrorCode,
+      | "DELIVERY_ALREADY_EXISTS"
+      | "SHIPMENT_NOT_ELIGIBLE_FOR_DELIVERY"
+      | "INVALID_DELIVERY_TRANSITION"
+      | "INVALID_WEIGHMENT"
+      | "DELIVERY_NOT_YET_RECEIVED"
+      | "QUALITY_ASSESSMENT_REQUIRED"
+      | "RECONCILIATION_REQUIRED"
+      | "ACCEPTED_QUANTITY_EXCEEDS_DELIVERED"
+      | "INVALID_ACCEPTANCE_QUANTITY"
+      | "DELIVERY_NOT_MUTABLE"
+    >,
+    statusCode = 422,
+  ) {
+    super(message, statusCode, code);
+  }
+}
+
+/**
+ * Module 19's equivalent of DeliveryDomainError. PAYMENT_OBLIGATION_NOT_FOUND
+ * and PAYMENT_RECORD_NOT_FOUND are NOT included here — thrown via the
+ * generic NotFoundError (same convention as every module above) —
+ * and UNAUTHORIZED_PAYMENT_ACCESS is thrown via the generic
+ * AuthorizationError. Every other code here is a 422 business-rule
+ * violation (invalid amount, currency mismatch, mutating a
+ * cancelled/finalized obligation, a duplicate idempotent submission,
+ * etc.) unless the call site overrides statusCode.
+ */
+export class PaymentDomainError extends AppError {
+  constructor(
+    message: string,
+    code: Extract<
+      ErrorCode,
+      | "PAYMENT_OBLIGATION_ALREADY_EXISTS"
+      | "DELIVERY_NOT_RECONCILED"
+      | "INVALID_PAYMENT_AMOUNT"
+      | "PAYMENT_CURRENCY_MISMATCH"
+      | "PAYMENT_OBLIGATION_CANCELLED"
+      | "PAYMENT_OBLIGATION_NOT_MUTABLE"
+      | "INVALID_PAYMENT_TRANSITION"
+      | "DUPLICATE_PAYMENT_SUBMISSION"
+      | "PAYMENT_RECORD_NOT_REVERSIBLE"
     >,
     statusCode = 422,
   ) {
