@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageHeader } from "@/components/ui/stat-card";
-import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Card, Label, FieldError, FieldHint, Alert, ErrorSummary } from "@/components/ui/primitives";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -47,8 +47,35 @@ function NewLogisticsRequestContent() {
   const [refrigerated, setRefrigerated] = React.useState(false);
   const [instructions, setInstructions] = React.useState("");
   const [serverError, setServerError] = React.useState<string | null>(null);
+  // Errors only show once the person has tried to submit at least once —
+  // showing "required" on every empty field before they've even started
+  // typing is more noise than help.
+  const [attempted, setAttempted] = React.useState(false);
 
   const effectiveLotId = user?.role === "ADMIN" ? manualLotId : lotId;
+
+  function validate(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!effectiveLotId) {
+      errs.lotId = user?.role === "ADMIN" ? "Enter the lot's public ID." : "Please select which lot you want to move.";
+    }
+    if (!quantity.trim()) {
+      errs.quantity = "Enter how much you want to move.";
+    } else if (Number.isNaN(Number(quantity)) || Number(quantity) <= 0) {
+      errs.quantity = "Enter a quantity greater than 0.";
+    }
+    if (!destDistrict.trim()) errs.destDistrict = "Enter the destination district.";
+    if (!destState.trim()) errs.destState = "Enter the destination state.";
+    if (destPincode.trim() && !/^\d{6}$/.test(destPincode.trim())) {
+      errs.destPincode = "PIN codes are exactly 6 digits, e.g. 400001.";
+    }
+    if (pickupAt && deadline && new Date(pickupAt) > new Date(deadline)) {
+      errs.deadline = "The delivery deadline can't be before the requested pickup time.";
+    }
+    return errs;
+  }
+
+  const fieldErrors = attempted ? validate() : {};
 
   const create = useMutation({
     mutationFn: () =>
@@ -63,10 +90,8 @@ function NewLogisticsRequestContent() {
         specialInstructions: instructions || undefined,
       }),
     onSuccess: (req) => router.push(`/logistics/${req.requestId}`),
-    onError: (e) => setServerError(e instanceof ApiRequestError ? e.message : "Something went wrong."),
+    onError: (e) => setServerError(e instanceof ApiRequestError ? e.message : "We couldn't reach the server. Please check your connection and try again."),
   });
-
-  const canSubmit = !!effectiveLotId && !!quantity && !!destDistrict && !!destState;
 
   if (user?.role === "FPO_ADMIN" && !ready) return null;
 
@@ -93,16 +118,28 @@ function NewLogisticsRequestContent() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
+            setAttempted(true);
+            if (Object.keys(validate()).length > 0) return;
             create.mutate();
           }}
           noValidate
         >
+          {attempted && Object.keys(fieldErrors).length > 1 && (
+            <ErrorSummary title="Please fix the following before continuing:" items={Object.values(fieldErrors)} />
+          )}
           {serverError && <Alert variant="error">{serverError}</Alert>}
 
           {user?.role === "ADMIN" ? (
             <div>
               <Label htmlFor="lotId">Lot ID</Label>
-              <Input id="lotId" placeholder="Lot public ID" value={manualLotId} onChange={(e) => setManualLotId(e.target.value)} />
+              <Input
+                id="lotId"
+                placeholder="Lot public ID"
+                hasError={!!fieldErrors.lotId}
+                value={manualLotId}
+                onChange={(e) => setManualLotId(e.target.value)}
+              />
+              <FieldError>{fieldErrors.lotId}</FieldError>
             </div>
           ) : (
             <div>
@@ -110,24 +147,41 @@ function NewLogisticsRequestContent() {
               {(user?.role === "FARMER" && myLotsQuery.isLoading) || (user?.role === "FPO_ADMIN" && fpoId && fpoLotsQuery.isLoading) ? (
                 <LoadingBlock />
               ) : (
-                <Select id="lotId" value={lotId} onChange={(e) => setLotId(e.target.value)}>
+                <Select id="lotId" hasError={!!fieldErrors.lotId} value={lotId} onChange={(e) => setLotId(e.target.value)}>
                   <option value="">Select a lot</option>
                   {lots.map((l: any) => (
                     <option key={l.id} value={l.id}>
                       {l.crop?.name}
-                      {l.variety ? ` · ${l.variety}` : ""} — {l.quantity} {l.unit}
+                      {l.variety ? ` · ${l.variety}` : ""} — {l.quantity.value} {l.quantity.unit}
                     </option>
                   ))}
                 </Select>
               )}
-              {user?.role === "FPO_ADMIN" && !fpoId && <p className="mt-1 text-xs text-muted-foreground">Pick an FPO above first.</p>}
+              {user?.role === "FPO_ADMIN" && !fpoId ? (
+                <FieldHint>Pick an FPO above first.</FieldHint>
+              ) : (
+                <FieldError>{fieldErrors.lotId}</FieldError>
+              )}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="quantity">Quantity to move</Label>
-              <Input id="quantity" type="number" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              <Input
+                id="quantity"
+                type="number"
+                step="any"
+                placeholder="e.g. 50"
+                hasError={!!fieldErrors.quantity}
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+              {fieldErrors.quantity ? (
+                <FieldError>{fieldErrors.quantity}</FieldError>
+              ) : (
+                <FieldHint>A number greater than 0.</FieldHint>
+              )}
             </div>
             <div>
               <Label htmlFor="unit">Unit</Label>
@@ -142,17 +196,24 @@ function NewLogisticsRequestContent() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="destDistrict">Destination district</Label>
-              <Input id="destDistrict" value={destDistrict} onChange={(e) => setDestDistrict(e.target.value)} />
+              <Input id="destDistrict" hasError={!!fieldErrors.destDistrict} value={destDistrict} onChange={(e) => setDestDistrict(e.target.value)} />
+              <FieldError>{fieldErrors.destDistrict}</FieldError>
             </div>
             <div>
               <Label htmlFor="destState">Destination state</Label>
-              <Input id="destState" value={destState} onChange={(e) => setDestState(e.target.value)} />
+              <Input id="destState" hasError={!!fieldErrors.destState} value={destState} onChange={(e) => setDestState(e.target.value)} />
+              <FieldError>{fieldErrors.destState}</FieldError>
             </div>
           </div>
 
           <div>
             <Label htmlFor="destPincode">Destination pincode (optional)</Label>
-            <Input id="destPincode" value={destPincode} onChange={(e) => setDestPincode(e.target.value)} />
+            <Input id="destPincode" inputMode="numeric" maxLength={6} hasError={!!fieldErrors.destPincode} value={destPincode} onChange={(e) => setDestPincode(e.target.value)} />
+            {fieldErrors.destPincode ? (
+              <FieldError>{fieldErrors.destPincode}</FieldError>
+            ) : (
+              <FieldHint>6 digits, e.g. 400001.</FieldHint>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -162,7 +223,8 @@ function NewLogisticsRequestContent() {
             </div>
             <div>
               <Label htmlFor="deadline">Delivery deadline (optional)</Label>
-              <Input id="deadline" type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              <Input id="deadline" type="datetime-local" hasError={!!fieldErrors.deadline} value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              <FieldError>{fieldErrors.deadline}</FieldError>
             </div>
           </div>
 
@@ -176,10 +238,9 @@ function NewLogisticsRequestContent() {
             <Input id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
           </div>
 
-          <Button type="submit" disabled={!canSubmit} isLoading={create.isPending}>
+          <Button type="submit" isLoading={create.isPending}>
             Raise request
           </Button>
-          <FieldError>{!canSubmit && quantity ? "Fill in the lot, quantity and destination to continue." : undefined}</FieldError>
         </form>
       </Card>
     </div>

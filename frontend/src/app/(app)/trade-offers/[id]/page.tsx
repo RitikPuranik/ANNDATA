@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Undo2, History, MessageSquareText } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageHeader } from "@/components/ui/stat-card";
-import { Card, Alert, Label, FieldError } from "@/components/ui/primitives";
+import { Card, Alert, Label, FieldError, FieldHint } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -22,6 +22,17 @@ function CounterForm({ publicId, onDone }: { publicId: string; onDone: () => voi
   const [price, setPrice] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [attempted, setAttempted] = React.useState(false);
+
+  function validate(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!quantity.trim()) errs.quantity = "Enter the quantity for your counter offer.";
+    else if (Number.isNaN(Number(quantity)) || Number(quantity) <= 0) errs.quantity = "Enter a quantity greater than 0.";
+    if (!price.trim()) errs.price = "Enter your counter price per unit.";
+    else if (Number.isNaN(Number(price)) || Number(price) <= 0) errs.price = "Enter a price greater than 0.";
+    return errs;
+  }
+  const fieldErrors = attempted ? validate() : {};
 
   const counter = useMutation({
     mutationFn: () =>
@@ -32,7 +43,7 @@ function CounterForm({ publicId, onDone }: { publicId: string; onDone: () => voi
         message: message || undefined,
       }),
     onSuccess: onDone,
-    onError: (e) => setError(e instanceof ApiRequestError ? e.message : "Couldn't send counter offer."),
+    onError: (e) => setError(e instanceof ApiRequestError ? e.message : "We couldn't reach the server. Please check your connection and try again."),
   });
 
   return (
@@ -42,7 +53,12 @@ function CounterForm({ publicId, onDone }: { publicId: string; onDone: () => voi
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <Label>Quantity</Label>
-          <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+          <Input type="number" placeholder="e.g. 50" hasError={!!fieldErrors.quantity} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+          {fieldErrors.quantity ? (
+            <FieldError>{fieldErrors.quantity}</FieldError>
+          ) : (
+            <FieldHint>A number greater than 0.</FieldHint>
+          )}
         </div>
         <div>
           <Label>Unit</Label>
@@ -54,14 +70,27 @@ function CounterForm({ publicId, onDone }: { publicId: string; onDone: () => voi
         </div>
         <div>
           <Label>Price per unit (₹)</Label>
-          <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
+          <Input type="number" placeholder="e.g. 2200" hasError={!!fieldErrors.price} value={price} onChange={(e) => setPrice(e.target.value)} />
+          {fieldErrors.price ? (
+            <FieldError>{fieldErrors.price}</FieldError>
+          ) : (
+            <FieldHint>The price you&apos;re countering with, per unit.</FieldHint>
+          )}
         </div>
       </div>
       <div className="mt-3">
         <Label>Message (optional)</Label>
         <Input value={message} onChange={(e) => setMessage(e.target.value)} />
       </div>
-      <Button className="mt-3 w-auto px-4" isLoading={counter.isPending} onClick={() => counter.mutate()}>
+      <Button
+        className="mt-3 w-auto px-4"
+        isLoading={counter.isPending}
+        onClick={() => {
+          setAttempted(true);
+          if (Object.keys(validate()).length > 0) return;
+          counter.mutate();
+        }}
+      >
         Send counter offer
       </Button>
     </div>

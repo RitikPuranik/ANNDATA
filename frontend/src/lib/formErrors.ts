@@ -37,3 +37,25 @@ export function applyServerFieldErrors<T extends FieldValues>(
   }
   return unmatched;
 }
+
+/**
+ * A submission can fail for reasons that aren't really about any one field
+ * being invalid — "that mobile number already has an account", "wrong
+ * password" — where the most useful thing isn't a better error message,
+ * it's telling the person the one next step that actually gets them
+ * unstuck (log in instead, reset your password, use a different number).
+ * These helpers identify those specific, well-known situations so the
+ * calling page can offer that step; anything not recognised here just
+ * falls back to the server's own message with no extra suggestion.
+ */
+export function isFieldConflict<T extends FieldValues>(err: unknown, field: keyof T & string): boolean {
+  return err instanceof ApiRequestError && err.code === "CONFLICT" && !!err.fields?.[field];
+}
+
+export function isInvalidCredentials(err: unknown): boolean {
+  return err instanceof ApiRequestError && err.code === "INVALID_CREDENTIALS";
+}
+
+export function isRateLimited(err: unknown): boolean {
+  return err instanceof ApiRequestError && err.code === "RATE_LIMITED";
+}

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calculator, Sparkles, XCircle, Truck, CheckCircle2, Undo2, PackagePlus } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageHeader } from "@/components/ui/stat-card";
-import { Card, Alert, Label } from "@/components/ui/primitives";
+import { Card, Alert, Label, FieldError, FieldHint } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -24,13 +24,23 @@ function QuoteForm({ requestId, onDone }: { requestId: string; onDone: () => voi
   const [amount, setAmount] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [attempted, setAttempted] = React.useState(false);
 
   const vehicles = vehiclesQuery.data?.items ?? vehiclesQuery.data ?? [];
+
+  function validate(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!vehicleId) errs.vehicleId = "Please select which vehicle you'll use.";
+    if (!amount.trim()) errs.amount = "Enter your quoted amount.";
+    else if (Number.isNaN(Number(amount)) || Number(amount) <= 0) errs.amount = "Enter an amount greater than 0.";
+    return errs;
+  }
+  const fieldErrors = attempted ? validate() : {};
 
   const submit = useMutation({
     mutationFn: () => logisticsQuoteApi.submit(requestId, { vehicleId, quotedAmount: Number(amount), notes: notes || undefined }),
     onSuccess: onDone,
-    onError: (e) => setError(e instanceof ApiRequestError ? e.message : "Couldn't submit quote."),
+    onError: (e) => setError(e instanceof ApiRequestError ? e.message : "We couldn't reach the server. Please check your connection and try again."),
   });
 
   return (
@@ -43,7 +53,7 @@ function QuoteForm({ requestId, onDone }: { requestId: string; onDone: () => voi
           {vehiclesQuery.isLoading ? (
             <LoadingBlock />
           ) : (
-            <Select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+            <Select hasError={!!fieldErrors.vehicleId} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
               <option value="">Select a vehicle</option>
               {vehicles.map((v: any) => (
                 <option key={v.vehicleId} value={v.vehicleId}>
@@ -52,17 +62,28 @@ function QuoteForm({ requestId, onDone }: { requestId: string; onDone: () => voi
               ))}
             </Select>
           )}
+          <FieldError>{fieldErrors.vehicleId}</FieldError>
         </div>
         <div>
           <Label>Quoted amount (₹)</Label>
-          <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Input type="number" placeholder="e.g. 3500" hasError={!!fieldErrors.amount} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          {fieldErrors.amount ? <FieldError>{fieldErrors.amount}</FieldError> : <FieldHint>A number greater than 0.</FieldHint>}
         </div>
       </div>
       <div className="mt-3">
         <Label>Notes (optional)</Label>
         <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
-      <Button className="mt-3 w-auto px-4" disabled={!vehicleId || !amount} isLoading={submit.isPending} onClick={() => submit.mutate()}>
+      <Button
+        className="mt-3 w-auto px-4"
+        isLoading={submit.isPending}
+        onClick={() => {
+          setAttempted(true);
+          setError(null);
+          if (Object.keys(validate()).length > 0) return;
+          submit.mutate();
+        }}
+      >
         Submit quote
       </Button>
     </Card>

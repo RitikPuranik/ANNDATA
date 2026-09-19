@@ -110,9 +110,25 @@
   .quick-copy small { color:#6b7280;font-size:11px;line-height:1.45; }
   .quick-arrow { margin-left:auto;color:#9aa2ad;width:16px; }
   .field-label { display:block;margin-bottom:7px;font-size:12px;font-weight:700;color:#3c3832; }
-  .field-error { margin-top:5px;color:#b43d31;font-size:11px; }
+  .field-error { display:flex;align-items:flex-start;gap:5px;margin-top:5px;color:#b43d31;font-size:11.5px;font-weight:600;line-height:1.45; }
+  .field-error svg { flex:none;margin-top:1px;width:13px;height:13px; }
+  .field-hint { display:flex;align-items:flex-start;gap:5px;margin-top:5px;color:#847c6e;font-size:11.5px;line-height:1.45; }
+  .field-hint svg { flex:none;margin-top:1px;width:12px;height:12px;opacity:.85; }
   .alert-box { padding:12px 14px;border-radius:8px;border:1px solid;font-size:12px;line-height:1.5; }
+  .alert-box-title { display:flex;align-items:center;gap:7px;font-weight:800;font-size:12.5px; }
+  .alert-box-title svg { flex:none;width:15px;height:15px; }
+  .alert-suggestion { display:block;margin-top:5px;font-weight:600; }
+  .alert-suggestion a,.alert-suggestion button { color:inherit;text-decoration:underline;text-underline-offset:2px;font-weight:800; }
   .alert-error { background:#fff0ee;color:#a3362b;border-color:#f1c8c3; }.alert-success{background:#eafbef;color:#0c831f;border-color:#bfe9c9}.alert-info{background:#faf3dc;color:#8a6d1f;border-color:#ecd68f}
+
+  /* Live password-requirements checklist shown under the password field
+     while the user types, so "what's wrong" and "what to do about it" are
+     visible before they ever hit submit. */
+  .password-checklist { margin-top:8px;padding:10px 12px;border-radius:8px;background:#faf8f3;border:1px solid #ece5d6;display:grid;gap:5px; }
+  .password-checklist-item { display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:#8a8578;transition:color .15s; }
+  .password-checklist-item svg { flex:none;width:14px;height:14px; }
+  .password-checklist-item.met { color:#0c831f; }
+  .password-checklist-item.unmet { color:#847c6e; }
   .mobile-only,.mobile-bottom-nav,.mobile-drawer-backdrop { display:none; }
   .desktop-only { display:inline-flex; }
 

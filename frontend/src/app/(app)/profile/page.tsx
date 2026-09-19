@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/stat-card";
 import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordChecklist } from "@/components/ui/PasswordChecklist";
 import { passwordSchema } from "@/features/auth/auth.schemas";
 import { authApi } from "@/services/authApi";
 import { ApiRequestError } from "@/types/api";
@@ -30,10 +31,13 @@ function ChangePasswordForm() {
   const {
     register,
     handleSubmit,
+    watch,
     reset,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<ChangePasswordValues>({ resolver: zodResolver(changePasswordSchema) });
+
+  const newPasswordValue = watch("newPassword") ?? "";
 
   async function onSubmit(values: ChangePasswordValues) {
     setServerError(null);
@@ -44,7 +48,7 @@ function ChangePasswordForm() {
       reset();
     } catch (err) {
       const message = applyServerFieldErrors(err, setError, ["currentPassword", "newPassword"] as const);
-      setServerError(message ?? (err instanceof ApiRequestError ? null : t("common.somethingWrong")));
+      setServerError(message ?? (err instanceof ApiRequestError ? null : t("common.networkError")));
     }
   }
 
@@ -74,7 +78,8 @@ function ChangePasswordForm() {
             hasError={!!errors.newPassword}
             {...register("newPassword")}
           />
-          <FieldError>{errors.newPassword && t(errors.newPassword.message!)}</FieldError>
+          {errors.newPassword && <FieldError>{t(errors.newPassword.message!)}</FieldError>}
+          <PasswordChecklist value={newPasswordValue} />
         </div>
         <Button type="submit" isLoading={isSubmitting}>
           Update password

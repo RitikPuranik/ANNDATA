@@ -7,7 +7,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Label, FieldError, FieldHint, Alert, ErrorSummary } from "@/components/ui/primitives";
 import { useDistrictsQuery, useIrrigationTypesQuery, useStatesQuery, useTalukasQuery } from "@/hooks/useReferenceData";
 import { FarmFormValues, farmFormSchema } from "@/features/farms/farm.schemas";
 import { ApiRequestError } from "@/types/api";
@@ -59,6 +59,7 @@ export function FarmForm({
 }) {
   const { t } = useI18n();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [showSummary, setShowSummary] = React.useState(false);
 
   const {
     register,
@@ -129,8 +130,19 @@ export function FarmForm({
     }
   }
 
+  const errorSummaryItems = Object.values(errors)
+    .map((e) => (e && typeof e.message === "string" ? t(e.message) : null))
+    .filter((m): m is string => !!m);
+
   return (
-    <form className="space-y-4" onSubmit={handleSubmit(handleFormSubmit)} noValidate>
+    <form
+      className="space-y-4"
+      onSubmit={handleSubmit(handleFormSubmit, () => setShowSummary(true))}
+      noValidate
+    >
+      {showSummary && errorSummaryItems.length > 1 && (
+        <ErrorSummary title={t("common.fixErrorsTitle")} items={errorSummaryItems} />
+      )}
       {serverError && <Alert variant="error">{serverError}</Alert>}
 
       <div>
@@ -223,7 +235,11 @@ export function FarmForm({
         <div>
           <Label htmlFor="farm-village">{t("farm.village")}</Label>
           <Input id="farm-village" hasError={!!errors.village} {...register("village")} />
-          <FieldError>{errors.village && t(errors.village.message!)}</FieldError>
+          {errors.village ? (
+            <FieldError>{t(errors.village.message!)}</FieldError>
+          ) : (
+            <FieldHint>{t("farm.villageHint")}</FieldHint>
+          )}
         </div>
       </div>
 
@@ -236,7 +252,11 @@ export function FarmForm({
           hasError={!!errors.pincode}
           {...register("pincode")}
         />
-        <FieldError>{errors.pincode && t(errors.pincode.message!)}</FieldError>
+        {errors.pincode ? (
+          <FieldError>{t(errors.pincode.message!)}</FieldError>
+        ) : (
+          <FieldHint>{t("farm.pincodeHint")}</FieldHint>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -251,7 +271,11 @@ export function FarmForm({
             hasError={!!errors.area}
             {...register("area")}
           />
-          <FieldError>{errors.area && t(errors.area.message!)}</FieldError>
+          {errors.area ? (
+            <FieldError>{t(errors.area.message!)}</FieldError>
+          ) : (
+            <FieldHint>{t("farm.areaHint")}</FieldHint>
+          )}
         </div>
         <div>
           <Label htmlFor="farm-area-unit">{t("farm.areaUnit")}</Label>

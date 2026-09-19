@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, ClipboardList } from "lucide-react";
 import { RoleProtectedPage } from "@/components/RoleProtectedPage";
 import { PageHeader } from "@/components/ui/stat-card";
-import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Card, Label, FieldError, FieldHint, Alert, ErrorSummary } from "@/components/ui/primitives";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -22,13 +22,15 @@ import { ApiRequestError } from "@/types/api";
 import { applyServerFieldErrors } from "@/lib/formErrors";
 
 const schema = z.object({
-  cropId: z.string().min(1, "Select a crop."),
-  title: z.string().min(3, "Give this demand a short title."),
-  requiredQuantity: z.coerce.number().positive("Enter a quantity greater than zero."),
+  cropId: z.string().min(1, "Please select which crop this demand is for."),
+  title: z.string().min(3, "Give this demand a short title (at least 3 characters)."),
+  requiredQuantity: z.coerce
+    .number({ invalid_type_error: "Enter the quantity as a number, e.g. 50." })
+    .positive("Enter a quantity greater than 0."),
   quantityUnit: z.enum(["KG", "QTL", "TONNE"]),
   targetPrice: z.coerce.number().optional(),
-  stateId: z.string().min(1, "Select a state."),
-  districtId: z.string().min(1, "Select a district."),
+  stateId: z.string().min(1, "Please select a delivery state."),
+  districtId: z.string().min(1, "Please select a delivery district."),
   description: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -36,6 +38,7 @@ type FormValues = z.infer<typeof schema>;
 function NewDemandForm({ onCreated, isFirstDemand }: { onCreated: () => void; isFirstDemand: boolean }) {
   const [open, setOpen] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [showSummary, setShowSummary] = React.useState(false);
   const cropsQuery = useCropsQuery();
   const {
     register,
@@ -81,7 +84,7 @@ function NewDemandForm({ onCreated, isFirstDemand }: { onCreated: () => void; is
         "districtId",
         "description",
       ] as const);
-      setServerError(message ?? (e instanceof ApiRequestError ? null : "Couldn't create this demand."));
+      setServerError(message ?? (e instanceof ApiRequestError ? null : "We couldn't reach the server. Please check your connection and try again."));
     },
   });
 
@@ -96,8 +99,16 @@ function NewDemandForm({ onCreated, isFirstDemand }: { onCreated: () => void; is
   return (
     <Card className="mb-6">
       <h2 className="mb-4 text-lg font-semibold">New buyer demand</h2>
+      {showSummary && Object.keys(errors).length > 1 && (
+        <ErrorSummary
+          title="Please fix the following before continuing:"
+          items={Object.values(errors)
+            .map((e) => e?.message)
+            .filter((m): m is string => !!m)}
+        />
+      )}
       {serverError && <Alert variant="error" className="mb-3">{serverError}</Alert>}
-      <form className="space-y-4" onSubmit={handleSubmit((v) => create.mutate(v))} noValidate>
+      <form className="space-y-4" onSubmit={handleSubmit((v) => create.mutate(v), () => setShowSummary(true))} noValidate>
         <div>
           <Label htmlFor="title">Title</Label>
           <Input id="title" data-tour="demand-title-field" placeholder="e.g. Wheat for flour milling — Q3" hasError={!!errors.title} {...register("title")} />
@@ -120,8 +131,12 @@ function NewDemandForm({ onCreated, isFirstDemand }: { onCreated: () => void; is
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2">
             <Label htmlFor="requiredQuantity">Required quantity</Label>
-            <Input id="requiredQuantity" data-tour="demand-quantity-field" type="number" hasError={!!errors.requiredQuantity} {...register("requiredQuantity")} />
-            <FieldError>{errors.requiredQuantity?.message}</FieldError>
+            <Input id="requiredQuantity" data-tour="demand-quantity-field" type="number" placeholder="e.g. 50" hasError={!!errors.requiredQuantity} {...register("requiredQuantity")} />
+            {errors.requiredQuantity ? (
+              <FieldError>{errors.requiredQuantity.message}</FieldError>
+            ) : (
+              <FieldHint>A number greater than 0.</FieldHint>
+            )}
           </div>
           <div>
             <Label htmlFor="quantityUnit">Unit</Label>
@@ -135,7 +150,8 @@ function NewDemandForm({ onCreated, isFirstDemand }: { onCreated: () => void; is
 
         <div>
           <Label htmlFor="targetPrice">Target price per unit (optional, ₹)</Label>
-          <Input id="targetPrice" type="number" {...register("targetPrice")} />
+          <Input id="targetPrice" type="number" placeholder="e.g. 2200" {...register("targetPrice")} />
+          <FieldHint>Leave blank if you&apos;re open to any price.</FieldHint>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

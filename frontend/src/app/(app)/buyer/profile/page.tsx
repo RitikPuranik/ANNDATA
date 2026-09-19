@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RoleProtectedPage } from "@/components/RoleProtectedPage";
 import { PageHeader } from "@/components/ui/stat-card";
-import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Card, Label, FieldError, FieldHint, Alert, ErrorSummary } from "@/components/ui/primitives";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -19,14 +19,14 @@ import { ApiRequestError } from "@/types/api";
 import { BusinessType } from "@/types/domain";
 
 const schema = z.object({
-  organizationName: z.string().min(2, "Organization name is required."),
-  businessType: z.string().min(1, "Select a business type."),
-  contactPerson: z.string().min(2, "Contact person is required."),
-  phone: z.string().min(10, "Enter a valid phone number."),
-  email: z.string().email("Enter a valid email.").optional().or(z.literal("")),
+  organizationName: z.string().min(2, "Enter your organization's name (at least 2 characters)."),
+  businessType: z.string().min(1, "Please select a business type."),
+  contactPerson: z.string().min(2, "Enter the name of your contact person."),
+  phone: z.string().min(10, "Enter a valid phone number (at least 10 digits)."),
+  email: z.string().email("Enter a valid email address, e.g. name@example.com.").optional().or(z.literal("")),
   address: z.string().optional(),
-  stateId: z.string().min(1, "Select a state."),
-  districtId: z.string().min(1, "Select a district."),
+  stateId: z.string().min(1, "Please select a state."),
+  districtId: z.string().min(1, "Please select a district."),
   website: z.string().optional(),
   description: z.string().optional(),
 });
@@ -38,6 +38,7 @@ function BuyerProfileContent() {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [saved, setSaved] = React.useState(false);
+  const [showSummary, setShowSummary] = React.useState(false);
 
   const meQuery = useQuery({ queryKey: ["buyer", "me"], queryFn: () => buyerApi.me(), retry: false });
 
@@ -93,7 +94,7 @@ function BuyerProfileContent() {
       queryClient.invalidateQueries({ queryKey: ["buyer", "me"] });
       setTimeout(() => setSaved(false), 3000);
     },
-    onError: (e) => setServerError(e instanceof ApiRequestError ? e.message : "Couldn't save your profile."),
+    onError: (e) => setServerError(e instanceof ApiRequestError ? e.message : "We couldn't reach the server. Please check your connection and try again."),
   });
 
   if (meQuery.isLoading) return <LoadingBlock />;
@@ -108,9 +109,17 @@ function BuyerProfileContent() {
 
       <Card>
         {saved && <Alert variant="success" className="mb-4">Profile saved.</Alert>}
+        {showSummary && Object.keys(errors).length > 1 && (
+          <ErrorSummary
+            title="Please fix the following before continuing:"
+            items={Object.values(errors)
+              .map((e) => e?.message)
+              .filter((m): m is string => !!m)}
+          />
+        )}
         {serverError && <Alert variant="error" className="mb-4">{serverError}</Alert>}
 
-        <form className="space-y-4" onSubmit={handleSubmit((v) => save.mutate(v))} noValidate>
+        <form className="space-y-4" onSubmit={handleSubmit((v) => save.mutate(v), () => setShowSummary(true))} noValidate>
           <div>
             <Label htmlFor="organizationName">Organization name</Label>
             <Input id="organizationName" hasError={!!errors.organizationName} {...register("organizationName")} />
@@ -138,8 +147,12 @@ function BuyerProfileContent() {
             </div>
             <div>
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" hasError={!!errors.phone} {...register("phone")} />
-              <FieldError>{errors.phone?.message}</FieldError>
+              <Input id="phone" inputMode="tel" placeholder="e.g. 9876543210" hasError={!!errors.phone} {...register("phone")} />
+              {errors.phone ? (
+                <FieldError>{errors.phone.message}</FieldError>
+              ) : (
+                <FieldHint>10-digit number, with country code if outside India.</FieldHint>
+              )}
             </div>
           </div>
 

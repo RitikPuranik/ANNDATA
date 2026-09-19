@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Label, FieldError, FieldHint, Alert } from "@/components/ui/primitives";
 import { ForgotPasswordFormValues, forgotPasswordFormSchema } from "@/features/auth/auth.schemas";
 import { authApi } from "@/services/authApi";
 import { ApiRequestError } from "@/types/api";
@@ -61,7 +61,11 @@ export default function ForgotPasswordPage() {
               hasError={!!errors.mobile}
               {...register("mobile")}
             />
-            <FieldError>{errors.mobile && t(errors.mobile.message!)}</FieldError>
+            {errors.mobile ? (
+              <FieldError>{t(errors.mobile.message!)}</FieldError>
+            ) : (
+              <FieldHint>{t("forgotPassword.mobileHint")}</FieldHint>
+            )}
           </div>
           <Button type="submit" isLoading={isSubmitting}>
             {t("forgotPassword.submit")}

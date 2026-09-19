@@ -9,7 +9,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Label, FieldError, FieldHint, Alert } from "@/components/ui/primitives";
+import { PasswordChecklist } from "@/components/ui/PasswordChecklist";
 import { ResetPasswordFormValues, resetPasswordFormSchema } from "@/features/auth/auth.schemas";
 import { authApi } from "@/services/authApi";
 import { ApiRequestError } from "@/types/api";
@@ -24,12 +25,15 @@ function ResetPasswordForm() {
   const {
     register,
     handleSubmit,
+    watch,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordFormSchema),
     defaultValues: { token: searchParams.get("token") ?? "" },
   });
+
+  const newPasswordValue = watch("newPassword") ?? "";
 
   async function onSubmit(values: ResetPasswordFormValues) {
     setServerError(null);
@@ -58,7 +62,11 @@ function ResetPasswordForm() {
         <div>
           <Label htmlFor="token">{t("resetPassword.token")}</Label>
           <Input id="token" hasError={!!errors.token} {...register("token")} />
-          <FieldError>{errors.token && t(errors.token.message!)}</FieldError>
+          {errors.token ? (
+            <FieldError>{t(errors.token.message!)}</FieldError>
+          ) : (
+            <FieldHint>{t("resetPassword.tokenHint")}</FieldHint>
+          )}
         </div>
 
         <div>
@@ -70,7 +78,8 @@ function ResetPasswordForm() {
             hasError={!!errors.newPassword}
             {...register("newPassword")}
           />
-          <FieldError>{errors.newPassword && t(errors.newPassword.message!)}</FieldError>
+          {errors.newPassword && <FieldError>{t(errors.newPassword.message!)}</FieldError>}
+          <PasswordChecklist value={newPasswordValue} />
         </div>
 
         <Button type="submit" isLoading={isSubmitting}>

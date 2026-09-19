@@ -8,7 +8,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RoleProtectedPage } from "@/components/RoleProtectedPage";
 import { PageHeader } from "@/components/ui/stat-card";
-import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Card, Label, FieldError, FieldHint, Alert, ErrorSummary } from "@/components/ui/primitives";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,15 @@ import { lotApi } from "@/services/lotApi";
 import { ApiRequestError } from "@/types/api";
 
 const lotSchema = z.object({
-  farmId: z.string().min(1, "Select a farm."),
-  cropId: z.string().min(1, "Select a crop."),
-  quantity: z.coerce.number().positive("Quantity must be greater than zero."),
+  farmId: z.string().min(1, "Please select which farm this came from."),
+  cropId: z.string().min(1, "Please select the crop."),
+  quantity: z.coerce
+    .number({ invalid_type_error: "Enter the quantity as a number, e.g. 50." })
+    .positive("Enter a quantity greater than 0."),
   unit: z.enum(["KG", "QTL", "TONNE"]),
   variety: z.string().optional(),
   harvestDate: z.string().optional(),
-  availabilityDate: z.string().min(1, "Availability date is required."),
+  availabilityDate: z.string().min(1, "Please choose when this will be available from."),
 });
 type LotFormValues = z.infer<typeof lotSchema>;
 
@@ -39,6 +41,7 @@ function NewLotContent() {
   // just to know whether this is the farmer's very first lot for tour gating.
   const lotsQuery = useQuery({ queryKey: ["lots", "mine", "ALL"], queryFn: () => lotApi.listMine() });
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [showSummary, setShowSummary] = React.useState(false);
 
   const {
     register,
@@ -62,9 +65,9 @@ function NewLotContent() {
       }),
     onSuccess: (lot) => {
       queryClient.invalidateQueries({ queryKey: ["lots"] });
-      router.push(`/lots/${lot.id}`);
+      router.push(`/lots/${lot.publicId}`);
     },
-    onError: (err) => setServerError(err instanceof ApiRequestError ? err.message : "Something went wrong."),
+    onError: (err) => setServerError(err instanceof ApiRequestError ? err.message : "We couldn't reach the server. Please check your connection and try again."),
   });
 
   if (profileQuery.isLoading || cropsQuery.isLoading) return <LoadingBlock />;
@@ -84,7 +87,15 @@ function NewLotContent() {
         </Alert>
       ) : (
         <Card>
-          <form className="space-y-4" onSubmit={handleSubmit((v) => createLot.mutate(v))} noValidate>
+          <form className="space-y-4" onSubmit={handleSubmit((v) => createLot.mutate(v), () => setShowSummary(true))} noValidate>
+            {showSummary && Object.keys(errors).length > 1 && (
+              <ErrorSummary
+                title="Please fix the following before continuing:"
+                items={Object.values(errors)
+                  .map((e) => e?.message)
+                  .filter((m): m is string => !!m)}
+              />
+            )}
             {serverError && <Alert variant="error">{serverError}</Alert>}
 
             <div>
@@ -116,8 +127,12 @@ function NewLotContent() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="quantity">Quantity</Label>
-                <Input id="quantity" data-tour="lot-quantity-field" type="number" step="any" hasError={!!errors.quantity} {...register("quantity")} />
-                <FieldError>{errors.quantity?.message}</FieldError>
+                <Input id="quantity" data-tour="lot-quantity-field" type="number" step="any" placeholder="e.g. 50" hasError={!!errors.quantity} {...register("quantity")} />
+                {errors.quantity ? (
+                  <FieldError>{errors.quantity.message}</FieldError>
+                ) : (
+                  <FieldHint>A number greater than 0.</FieldHint>
+                )}
               </div>
               <div>
                 <Label htmlFor="unit">Unit</Label>

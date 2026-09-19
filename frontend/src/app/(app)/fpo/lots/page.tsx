@@ -29,7 +29,7 @@ function LotsList({ fpoId }: { fpoId: string }) {
             <Badge tone={toneForStatus(lot.status)}>{lot.status.replace(/_/g, " ")}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {lot.quantity} {lot.unit}
+            {lot.quantity.value} {lot.quantity.unit}
           </p>
         </div>
       ))}

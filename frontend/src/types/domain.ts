@@ -22,24 +22,46 @@ export type LotStatus =
   | "CANCELLED";
 
 export interface CropLot {
-  id: string;
-  publicId?: string;
+  id?: string;
+  publicId: string;
+  lotNumber?: string;
   status: LotStatus;
-  quantity: number;
+
+  quantity: {
+    value: number;
+    unit: QuantityUnit;
+    quantityKg: number;
+  };
+
+  availableQuantity?: {
+    value: number;
+    unit: QuantityUnit;
+  };
+
   unit: QuantityUnit;
+
   variety?: string | null;
   harvestDate?: string | null;
   availabilityDate: string;
   createdAt: string;
   updatedAt?: string;
-  farmId?: string | null;
-  fpoId?: string | null;
+
+  farm?: {
+    id: string;
+  } | null;
+
+  fpo?: {
+    publicId: string;
+    name: string;
+  } | null;
+
   crop: {
     id: string;
     name: string;
     category?: string | null;
     translations?: Partial<Record<"en" | "hi" | "mr", string>>;
   };
+
   [key: string]: unknown;
 }
 

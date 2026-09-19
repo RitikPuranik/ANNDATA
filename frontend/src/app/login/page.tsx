@@ -13,20 +13,24 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Label, FieldError, FieldHint, Alert } from "@/components/ui/primitives";
 import {
   LoginFormValues,
   loginFormSchema,
 } from "@/features/auth/auth.schemas";
 import { ApiRequestError } from "@/types/api";
 import { ROLE_HOME_ROUTE } from "@/lib/roleRouting";
+import { isInvalidCredentials, isRateLimited } from "@/lib/formErrors";
 
 export default function LoginPage() {
   const { t } = useI18n();
   const { login } = useAuth();
   const router = useRouter();
 
-  const [serverError, setServerError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<{
+    message: string;
+    kind: "invalidCredentials" | "rateLimited" | "other";
+  } | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
 
   const {
@@ -49,11 +53,16 @@ export default function LoginPage() {
 
       router.push(ROLE_HOME_ROUTE[user.role]);
     } catch (err) {
-      setServerError(
-        err instanceof ApiRequestError
-          ? err.message
-          : t("common.networkError")
-      );
+      if (isInvalidCredentials(err)) {
+        setServerError({ message: (err as ApiRequestError).message, kind: "invalidCredentials" });
+      } else if (isRateLimited(err)) {
+        setServerError({ message: (err as ApiRequestError).message, kind: "rateLimited" });
+      } else {
+        setServerError({
+          message: err instanceof ApiRequestError ? err.message : t("common.networkError"),
+          kind: "other",
+        });
+      }
     }
   }
 
@@ -78,7 +87,26 @@ export default function LoginPage() {
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
-        {serverError && <Alert variant="error">{serverError}</Alert>}
+        {serverError && (
+          <Alert
+            variant="error"
+            title={
+              serverError.kind === "invalidCredentials"
+                ? t("login.invalidCredentialsTitle")
+                : serverError.kind === "rateLimited"
+                  ? t("login.rateLimitedTitle")
+                  : undefined
+            }
+          >
+            {serverError.message}
+            {serverError.kind === "invalidCredentials" && (
+              <span className="alert-suggestion">{t("login.invalidCredentialsSuggestion")}</span>
+            )}
+            {serverError.kind === "rateLimited" && (
+              <span className="alert-suggestion">{t("login.rateLimitedSuggestion")}</span>
+            )}
+          </Alert>
+        )}
 
         {/* Mobile */}
         <div className="space-y-1.5">
@@ -94,9 +122,11 @@ export default function LoginPage() {
             {...register("mobile")}
           />
 
-          <FieldError>
-            {errors.mobile && t(errors.mobile.message!)}
-          </FieldError>
+          {errors.mobile ? (
+            <FieldError>{t(errors.mobile.message!)}</FieldError>
+          ) : (
+            <FieldHint>{t("login.mobileHint")}</FieldHint>
+          )}
         </div>
 
         {/* Password */}

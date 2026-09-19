@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isPasswordValid } from "@/components/ui/PasswordChecklist";
 
 const INDIAN_MOBILE_REGEX = /^(?:\+91|91|0)?([6-9]\d{9})$/;
 
@@ -8,11 +9,16 @@ export const mobileSchema = z
   .min(1, "validation.required")
   .refine((val) => INDIAN_MOBILE_REGEX.test(val.replace(/[\s-]/g, "")), "validation.mobile");
 
+// The single message here ("validation.password") is the fallback shown if
+// the field is left blank or the resolver needs one summary line (e.g. for
+// assistive tech). The live PasswordChecklist next to the field is what
+// actually walks the person through which specific rule they're missing,
+// using the exact same rule set via `isPasswordValid` so the two can never
+// disagree with each other.
 export const passwordSchema = z
   .string()
-  .min(8, "validation.password")
-  .max(128, "validation.password")
-  .refine((val) => /[a-z]/.test(val) && /[A-Z]/.test(val) && /\d/.test(val), "validation.password");
+  .min(1, "validation.required")
+  .refine((val) => isPasswordValid(val), "validation.password");
 
 export const loginFormSchema = z.object({
   mobile: mobileSchema,
@@ -41,7 +47,7 @@ export const forgotPasswordFormSchema = z.object({
 export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordFormSchema>;
 
 export const resetPasswordFormSchema = z.object({
-  token: z.string().min(1, "validation.required"),
+  token: z.string().min(1, "validation.resetToken"),
   newPassword: passwordSchema,
 });
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordFormSchema>;

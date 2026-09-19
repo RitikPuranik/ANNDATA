@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Star, Trash2 } from "lucide-react";
 import { CropSticker } from "@/components/crops/CropSticker";
 import { useI18n } from "@/i18n/I18nProvider";
-import { Card, Label, FieldError, Alert } from "@/components/ui/primitives";
+import { Card, Label, FieldError, FieldHint, Alert } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -180,7 +180,11 @@ function AddCropForm({ farms }: { farms: Farm[] }) {
         <div>
           <Label htmlFor="crop-area">{t("crop.area")}</Label>
           <Input id="crop-area" data-tour="crop-area-field" type="number" step="0.01" inputMode="decimal" hasError={!!errors.area} {...register("area")} />
-          <FieldError>{errors.area && t(errors.area.message!)}</FieldError>
+          {errors.area ? (
+            <FieldError>{t(errors.area.message!)}</FieldError>
+          ) : (
+            <FieldHint>{t("farm.areaHint")}</FieldHint>
+          )}
         </div>
         <div>
           <Label htmlFor="crop-area-unit">{t("farm.areaUnit")}</Label>
@@ -193,8 +197,12 @@ function AddCropForm({ farms }: { farms: Farm[] }) {
 
       <div>
         <Label htmlFor="crop-yield">{t("crop.typicalYield")}</Label>
-        <Input id="crop-yield" type="number" step="0.01" inputMode="decimal" {...register("typicalYield")} />
-        <FieldError>{errors.typicalYield && t(errors.typicalYield.message!)}</FieldError>
+        <Input id="crop-yield" type="number" step="0.01" inputMode="decimal" hasError={!!errors.typicalYield} {...register("typicalYield")} />
+        {errors.typicalYield ? (
+          <FieldError>{t(errors.typicalYield.message!)}</FieldError>
+        ) : (
+          <FieldHint>{t("validation.yield")}</FieldHint>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm">

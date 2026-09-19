@@ -71,8 +71,8 @@ function LotsContent() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {lotsQuery.data!.map((lot) => (
             <Link
-              key={lot.id}
-              href={`/lots/${lot.id}`}
+              key={lot.publicId}
+              href={`/lots/${lot.publicId}`}
               className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
             >
               <div className="relative flex h-24 items-center justify-center bg-gradient-to-br from-accent/15 to-accent/5">
@@ -85,7 +85,7 @@ function LotsContent() {
                   {lot.variety ? ` · ${lot.variety}` : ""}
                 </h3>
                 <p className="mt-1 text-lg font-bold text-foreground">
-                  {lot.quantity} <span className="text-xs font-medium text-muted-foreground">{lot.unit}</span>
+                  {lot.quantity.value} <span className="text-xs font-medium text-muted-foreground">{lot.quantity.unit}</span>
                 </p>
                 <p className="mt-auto pt-2 text-xs text-muted-foreground">Available {new Date(lot.availabilityDate).toLocaleDateString()}</p>
               </div>

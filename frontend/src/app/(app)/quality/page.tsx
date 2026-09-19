@@ -56,7 +56,7 @@ function QualityContent() {
                       {lot.variety ? ` · ${lot.variety}` : ""}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {lot.quantity} {lot.unit}
+                      {lot.quantity.value} {lot.quantity.unit}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
