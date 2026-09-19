@@ -18,7 +18,6 @@ import { ApiRequestError } from "@/types/api";
 import { lotApi } from "@/services/lotApi";
 import { tradeOfferApi } from "@/services/tradeApi";
 
-
 const ACTIONS=[
  {title:"My Farms",description:"See your farms and fields.",href:"/farms",icon:<Sprout/>,kind:"crop",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=400"},
  {title:"My Crops",description:"Manage the crops you are growing.",href:"/crops",icon:<Wheat/>,kind:"crops",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Colorful%20winter%20Vegetables%20-01.jpg?width=400"},
@@ -91,7 +90,7 @@ function SaleCards(){
 
 function MarketPreview(){
  return <Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="text-base font-bold">Market at a glance</h2><p className="text-xs text-muted-foreground mt-1">Check the numbers before you decide.</p></div><Link href="/market" className="text-xs font-bold">Open market →</Link></div>
-  <div className="grid grid-cols-2 divide-x divide-border"><Link href="/market" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Today's rates</span><strong className="mt-2 block text-xl font-black">View mandi prices</strong><span className="mt-1 flex items-center gap-1 text-xs text-emerald-700"><TrendingUp className="h-3.5 w-3.5"/> Compare markets</span></Link><Link href="/forecasts" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Decision tool</span><strong className="mt-2 block text-xl font-black">Price forecast</strong><span className="mt-1 text-xs text-muted-foreground">See the outlook for your crops</span></Link></div>
+  <div className="grid grid-cols-2 divide-x divide-border"><Link href="/market" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Today&apos;s rates</span><strong className="mt-2 block text-xl font-black">View mandi prices</strong><span className="mt-1 flex items-center gap-1 text-xs text-emerald-700"><TrendingUp className="h-3.5 w-3.5"/> Compare markets</span></Link><Link href="/forecasts" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Decision tool</span><strong className="mt-2 block text-xl font-black">Price forecast</strong><span className="mt-1 text-xs text-muted-foreground">See the outlook for your crops</span></Link></div>
  </Card>;
 }
 
