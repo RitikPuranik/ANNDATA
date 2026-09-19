@@ -972,6 +972,8 @@ model CropLot {
   // Module 17 — every shipment ever created for a logistics request raised
   // against this lot.
   shipments          Shipment[]
+  // Module 18 — deliveries reconciled against this lot.
+  deliveries         Delivery[]
 
   @@index([farmerId, status])
   @@index([fpoId, status])
@@ -3009,6 +3011,8 @@ model Shipment {
 
   locations ShipmentLocation[]
   events    ShipmentEvent[]
+  // Module 18 — at most one delivery because Delivery.shipmentId is unique.
+  delivery  Delivery?
 
   @@index([status])
   @@index([transportProviderId, status])
