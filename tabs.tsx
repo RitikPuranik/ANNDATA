@@ -24,7 +24,7 @@ export function Tabs({
   return (
     <div
       className={cn(
-        "scrollbar-none -mx-1 flex gap-1 overflow-x-auto border-b border-border px-1",
+        "scrollbar-none -mx-1 flex gap-2 overflow-x-auto border-b-2 border-border px-1",
         className,
       )}
       role="tablist"
@@ -39,14 +39,14 @@ export function Tabs({
             aria-selected={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              "relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-4 py-3.5 text-base font-semibold transition-colors",
+              "relative flex shrink-0 items-center gap-2 whitespace-nowrap px-5 py-4 text-lg font-bold transition-colors",
               active ? "text-primary" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {item.icon}
             {item.label}
             {item.badge}
-            {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />}
+            {active && <span className="absolute inset-x-2 -bottom-[2px] h-1 rounded-full bg-primary" />}
           </button>
         );
       })}

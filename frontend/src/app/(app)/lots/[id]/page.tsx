@@ -24,6 +24,10 @@ import { Badge, toneForStatus } from "@/components/ui/badge";
 import { Tabs } from "@/components/ui/tabs";
 import { LoadingBlock, ErrorBlock } from "@/components/StateBlocks";
 import { InsightPanel } from "@/components/InsightPanel";
+import { TechnicalDetails } from "@/components/ui/TechnicalDetails";
+import { QualityFriendlyCard } from "@/components/lots/QualityFriendlyCard";
+import { MarketFriendlyCard, PriceSnapshotFriendlyCard } from "@/components/lots/MarketFriendlyCard";
+import { DecisionFriendlyCard } from "@/components/lots/DecisionFriendlyCard";
 import { lotApi } from "@/services/lotApi";
 import { qualityApi } from "@/services/qualityApi";
 import { marketApi } from "@/services/marketApi";
@@ -200,18 +204,23 @@ function QualityTab({ id }: { id: string }) {
       {error && <Alert variant="error">{error}</Alert>}
 
       <Card>
-        <h3 className="mb-3 text-lg font-semibold">Current quality summary</h3>
+        <h3 className="mb-3 text-xl font-bold">Current quality summary</h3>
         {summaryQuery.isLoading ? (
           <LoadingBlock />
         ) : summaryQuery.isError ? (
           <p className="text-sm text-muted-foreground">No quality summary available yet for this lot.</p>
         ) : (
-          <InsightPanel data={summaryQuery.data} />
+          <>
+            <QualityFriendlyCard summary={summaryQuery.data} />
+            <TechnicalDetails>
+              <InsightPanel data={summaryQuery.data} />
+            </TechnicalDetails>
+          </>
         )}
       </Card>
 
       <Card>
-        <h3 className="mb-4 text-lg font-semibold">Add an assessment</h3>
+        <h3 className="mb-4 text-xl font-bold">Add an assessment</h3>
         <div className="grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
           <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
             <option value="">Grade (optional)</option>
@@ -238,7 +247,7 @@ function QualityTab({ id }: { id: string }) {
       </Card>
 
       <Card>
-        <h3 className="mb-4 text-lg font-semibold">Assessment history</h3>
+        <h3 className="mb-4 text-xl font-bold">Assessment history</h3>
         {listQuery.isLoading ? (
           <LoadingBlock />
         ) : listQuery.isError || !listQuery.data?.length ? (
@@ -248,10 +257,16 @@ function QualityTab({ id }: { id: string }) {
             {listQuery.data.map((a) => (
               <div key={a.publicId} className="rounded-xl border border-border p-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <Badge tone="neutral">{a.source}</Badge>
+                  <Badge tone="neutral">{a.source === "AI" ? "AI-assisted" : "Manual"}</Badge>
                   {a.overallGrade && <Badge tone={toneForStatus(a.overallGrade)}>Grade {a.overallGrade}</Badge>}
                 </div>
-                <InsightPanel data={a} skipKeys={["source", "overallGrade", "publicId", "id", "lotId"]} />
+                {a.notes && <p className="text-sm text-muted-foreground">{a.notes}</p>}
+                {typeof a.assessedAt === "string" && (
+                  <p className="mt-1 text-xs text-muted-foreground">Checked on {new Date(a.assessedAt).toLocaleDateString()}</p>
+                )}
+                <TechnicalDetails label="Show measurements & defects">
+                  <InsightPanel data={a} skipKeys={["source", "overallGrade", "publicId", "id", "lotId"]} />
+                </TechnicalDetails>
               </div>
             ))}
           </div>
@@ -282,35 +297,45 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
   return (
     <div className="space-y-6">
       <Card>
-        <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
-          <LineChart className="h-[18px] w-[18px]" aria-hidden /> Best market for this lot
+        <h3 className="mb-3 flex items-center gap-2 text-xl font-bold">
+          <LineChart className="h-6 w-6" aria-hidden /> Best market for this lot
         </h3>
         {marketQuery.isLoading ? (
           <LoadingBlock />
         ) : marketQuery.isError ? (
           <p className="text-sm text-muted-foreground">Market recommendations aren&rsquo;t available for this lot right now.</p>
         ) : (
-          <InsightPanel data={marketQuery.data} />
+          <>
+            <MarketFriendlyCard data={marketQuery.data} />
+            <TechnicalDetails>
+              <InsightPanel data={marketQuery.data} />
+            </TechnicalDetails>
+          </>
         )}
       </Card>
 
       {cropId && (
         <Card>
-          <h3 className="mb-3 text-lg font-semibold">Price snapshot</h3>
+          <h3 className="mb-3 text-xl font-bold">Price snapshot</h3>
           {snapshotQuery.isLoading ? (
             <LoadingBlock />
           ) : snapshotQuery.isError ? (
             <p className="text-sm text-muted-foreground">No recent price data for this crop yet.</p>
           ) : (
-            <InsightPanel data={snapshotQuery.data} />
+            <>
+              <PriceSnapshotFriendlyCard data={snapshotQuery.data} />
+              <TechnicalDetails>
+                <InsightPanel data={snapshotQuery.data} />
+              </TechnicalDetails>
+            </>
           )}
         </Card>
       )}
 
       <Card>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="flex items-center gap-2 text-lg font-semibold">
-            <Scale className="h-[18px] w-[18px]" aria-hidden /> Sell now or store?
+          <h3 className="flex items-center gap-2 text-xl font-bold">
+            <Scale className="h-6 w-6" aria-hidden /> Sell now or store?
           </h3>
           <Button
             className="w-auto px-4 py-2 text-sm"
@@ -326,7 +351,12 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
           </Alert>
         )}
         {decisionMutation.data ? (
-          <InsightPanel data={decisionMutation.data} />
+          <>
+            <DecisionFriendlyCard decision={decisionMutation.data} />
+            <TechnicalDetails>
+              <InsightPanel data={decisionMutation.data} />
+            </TechnicalDetails>
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">
             Run the analysis to get a deterministic sell-now vs. store recommendation based on market conditions, quality, and storage
@@ -340,7 +370,10 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
             <div className="space-y-2">
               {historyQuery.data.map((d: any, i: number) => (
                 <div key={d.publicId ?? i} className="rounded-lg border border-border p-3 text-sm">
-                  <InsightPanel data={d} />
+                  <DecisionFriendlyCard decision={d} />
+                  <TechnicalDetails>
+                    <InsightPanel data={d} />
+                  </TechnicalDetails>
                 </div>
               ))}
             </div>
