@@ -19,7 +19,7 @@ import {
 export const FARMER_ME_QUERY_KEY = ["farmer", "me"];
 
 export function useFarmerProfileQuery() {
-  return useQuery({ queryKey: FARMER_ME_QUERY_KEY, queryFn: farmerApi.getMe, staleTime: 10_000 });
+  return useQuery({ queryKey: FARMER_ME_QUERY_KEY, queryFn: farmerApi.getMe, staleTime: 300_000 });
 }
 
 function useInvalidateFarmerProfile() {

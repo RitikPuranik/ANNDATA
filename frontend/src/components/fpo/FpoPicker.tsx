@@ -20,7 +20,7 @@ export function FpoPicker({ onSelect }: { onSelect: (fpoId: string, name: string
 
   return (
     <Card>
-      <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+      <h2 className="mb-4 flex items-center gap-2 section-title">
         <Building2 className="h-[18px] w-[18px]" aria-hidden /> Which FPO do you manage?
       </h2>
       <div className="relative">

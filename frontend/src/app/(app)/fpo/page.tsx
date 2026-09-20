@@ -28,7 +28,7 @@ function FpoOverview({ fpoId, onSwitch }: { fpoId: string; onSwitch: () => void 
       <Card className="mb-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold">{fpo.name}</h2>
+            <h2 className="section-title">{fpo.name}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{fpo.organizationType}</p>
           </div>
           <div className="flex items-center gap-2">

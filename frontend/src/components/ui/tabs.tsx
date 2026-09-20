@@ -39,14 +39,14 @@ export function Tabs({
             aria-selected={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              "relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-4 py-3.5 text-base font-semibold transition-colors",
+              "relative flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3.5 text-base font-bold transition-colors sm:px-6 sm:py-4 sm:text-xl",
               active ? "text-primary" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {item.icon}
             {item.label}
             {item.badge}
-            {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />}
+            {active && <span className="absolute inset-x-2 -bottom-px h-[3px] rounded-full bg-primary" />}
           </button>
         );
       })}

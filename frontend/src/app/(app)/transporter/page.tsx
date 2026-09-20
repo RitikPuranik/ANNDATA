@@ -77,7 +77,7 @@ function Content() {
               <Truck className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="font-semibold">Transporter profile</h2>
+              <h2 className="section-title">Transporter profile</h2>
               <p className="text-sm text-muted-foreground">Verification is controlled by the platform admin.</p>
             </div>
           </div>
@@ -93,7 +93,7 @@ function Content() {
           </Button>
         </Card>
         <Card>
-          <h2 className="mb-3 font-semibold">Service areas</h2>
+          <h2 className="mb-3 section-title">Service areas</h2>
           {areas.isLoading ? (
             <LoadingBlock />
           ) : (
@@ -121,7 +121,7 @@ function Content() {
       <Card className="mt-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="font-semibold">Vehicle registry</h2>
+            <h2 className="section-title">Vehicle registry</h2>
             <p className="text-sm text-muted-foreground">Register vehicles and keep availability accurate.</p>
           </div>
           <Plus className="h-5 w-5" />

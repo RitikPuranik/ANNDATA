@@ -54,7 +54,7 @@ function ChangePasswordForm() {
 
   return (
     <Card>
-      <h2 className="mb-4 text-lg font-medium">Change password</h2>
+      <h2 className="mb-4 section-title">Change password</h2>
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
         {serverError && <Alert variant="error">{serverError}</Alert>}
         {success && <Alert variant="success">Password changed successfully.</Alert>}
@@ -105,7 +105,7 @@ function SessionsCard() {
 
   return (
     <Card className="mt-6">
-      <h2 className="mb-2 text-lg font-medium">Sessions</h2>
+      <h2 className="mb-2 section-title">Sessions</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Log out of Anndata on every device where you&rsquo;re currently signed in.
       </p>
@@ -132,7 +132,7 @@ function ProfileContent() {
       {user.role === "FARMER" ? (
         <>
           <FarmerProfileSection />
-          <h2 className="mb-4 mt-10 text-xl font-semibold">Account & security</h2>
+          <h2 className="mb-4 mt-10 section-title">Account & security</h2>
           <ChangePasswordForm />
           <SessionsCard />
         </>

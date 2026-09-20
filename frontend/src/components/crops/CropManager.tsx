@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Star, Trash2 } from "lucide-react";
-import { CropSticker } from "@/components/crops/CropSticker";
+import { CropVisual } from "@/components/crops/CropVisual";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Card, Label, FieldError, FieldHint, Alert } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
@@ -57,8 +57,10 @@ function CropRow({ crop, farms }: { crop: FarmerCrop; farms: Farm[] }) {
   }
 
   return (
-    <div className="item-tile">
-      <CropSticker name={localizedCropName(crop.crop, language)} size="lg" />
+    <div className="item-tile has-cover">
+      <div className="item-tile-cover">
+        <CropVisual name={crop.crop.name} category={crop.crop.category} imageUrl={crop.imageUrl} variant="cover" />
+      </div>
       <div className="item-tile-body">
         <h3>{localizedCropName(crop.crop, language)}</h3>
         {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
@@ -226,7 +228,7 @@ export function CropManager({ crops, farms }: { crops: FarmerCrop[]; farms: Farm
 
   return (
     <Card>
-      <h2 className="mb-1 text-lg font-medium">{t("crop.myCrops")}</h2>
+      <h2 className="mb-1 section-title">{t("crop.myCrops")}</h2>
       {crops.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{t("crop.empty")}</p>
       ) : (

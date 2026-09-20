@@ -172,7 +172,7 @@ function ShipmentDetailContent({ id }: { id: string }) {
       </Card>
 
       <Card className="mt-6">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <h3 className="mb-4 flex items-center gap-2 section-title">
           <History className="h-[18px] w-[18px]" aria-hidden /> Location history
         </h3>
         {locationsQuery.isLoading ? (

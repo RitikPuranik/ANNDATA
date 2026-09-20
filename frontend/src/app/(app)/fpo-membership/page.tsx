@@ -33,7 +33,7 @@ function MyFpoCard() {
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">{fpo?.name ?? "Your FPO"}</h2>
+          <h2 className="section-title">{fpo?.name ?? "Your FPO"}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{fpo?.organizationType ?? ""}</p>
         </div>
         {fpo?.membershipStatus && <Badge tone={toneForStatus(fpo.membershipStatus)}>{fpo.membershipStatus}</Badge>}
@@ -65,7 +65,7 @@ function FindFpoCard() {
 
   return (
     <Card>
-      <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+      <h2 className="mb-4 flex items-center gap-2 section-title">
         <Search className="h-[18px] w-[18px]" aria-hidden /> Find an FPO to join
       </h2>
       {error && <Alert variant="error" className="mb-3">{error}</Alert>}

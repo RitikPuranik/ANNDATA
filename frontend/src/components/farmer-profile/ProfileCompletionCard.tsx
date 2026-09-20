@@ -20,7 +20,7 @@ export function ProfileCompletionCard({
   return (
     <Card>
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">{t("completion.title")}</h2>
+        <h2 className="section-title">{t("completion.title")}</h2>
         {isComplete && (
           <span className="flex items-center gap-1 text-sm font-medium text-primary">
             <CheckCircle2 className="h-4 w-4" aria-hidden />

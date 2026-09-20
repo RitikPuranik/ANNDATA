@@ -69,7 +69,7 @@ function Content({ fpoId }: { fpoId: string }) {
         <Card>
           <div className="mb-3 flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            <h2 className="font-semibold">Crop aggregation</h2>
+            <h2 className="section-title">Crop aggregation</h2>
           </div>
           {agg.isLoading ? (
             <LoadingBlock />
@@ -78,7 +78,7 @@ function Content({ fpoId }: { fpoId: string }) {
           )}
         </Card>
         <Card>
-          <h2 className="mb-3 font-semibold">Analytics overview</h2>
+          <h2 className="mb-3 section-title">Analytics overview</h2>
           {analytics.isLoading ? (
             <LoadingBlock />
           ) : (
@@ -89,7 +89,7 @@ function Content({ fpoId }: { fpoId: string }) {
       <Card>
         <div className="mb-4 flex items-center gap-2">
           <Plus className="h-5 w-5" />
-          <h2 className="font-semibold">Create aggregation target</h2>
+          <h2 className="section-title">Create aggregation target</h2>
         </div>
         {serverError && <Alert variant="error" className="mb-3">{serverError}</Alert>}
         <div className="grid gap-3 sm:grid-cols-3">
@@ -129,7 +129,7 @@ function Content({ fpoId }: { fpoId: string }) {
         </Button>
       </Card>
       <Card>
-        <h2 className="mb-3 font-semibold">Aggregation targets</h2>
+        <h2 className="mb-3 section-title">Aggregation targets</h2>
         {groups.isLoading ? (
           <LoadingBlock />
         ) : (

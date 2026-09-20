@@ -82,7 +82,7 @@ function OverviewTab({ id }: { id: string }) {
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">
+            <h2 className="section-title">
               {lot.crop?.name}
               {lot.variety ? ` · ${lot.variety}` : ""}
             </h2>
@@ -142,7 +142,7 @@ function OverviewTab({ id }: { id: string }) {
       </Card>
 
       <Card>
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <h3 className="mb-4 flex items-center gap-2 section-title">
           <History className="h-[18px] w-[18px]" aria-hidden /> Status history
         </h3>
         {historyQuery.isLoading ? (
@@ -204,7 +204,7 @@ function QualityTab({ id }: { id: string }) {
       {error && <Alert variant="error">{error}</Alert>}
 
       <Card>
-        <h3 className="mb-3 text-xl font-bold">Current quality summary</h3>
+        <h3 className="mb-3 section-title">Current quality summary</h3>
         {summaryQuery.isLoading ? (
           <LoadingBlock />
         ) : summaryQuery.isError ? (
@@ -220,7 +220,7 @@ function QualityTab({ id }: { id: string }) {
       </Card>
 
       <Card>
-        <h3 className="mb-4 text-xl font-bold">Add an assessment</h3>
+        <h3 className="mb-4 section-title">Add an assessment</h3>
         <div className="grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
           <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
             <option value="">Grade (optional)</option>
@@ -247,7 +247,7 @@ function QualityTab({ id }: { id: string }) {
       </Card>
 
       <Card>
-        <h3 className="mb-4 text-xl font-bold">Assessment history</h3>
+        <h3 className="mb-4 section-title">Assessment history</h3>
         {listQuery.isLoading ? (
           <LoadingBlock />
         ) : listQuery.isError || !listQuery.data?.length ? (
@@ -297,7 +297,7 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
   return (
     <div className="space-y-6">
       <Card>
-        <h3 className="mb-3 flex items-center gap-2 text-xl font-bold">
+        <h3 className="mb-3 flex items-center gap-2 section-title">
           <LineChart className="h-6 w-6" aria-hidden /> Best market for this lot
         </h3>
         {marketQuery.isLoading ? (
@@ -316,7 +316,7 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
 
       {cropId && (
         <Card>
-          <h3 className="mb-3 text-xl font-bold">Price snapshot</h3>
+          <h3 className="mb-3 section-title">Price snapshot</h3>
           {snapshotQuery.isLoading ? (
             <LoadingBlock />
           ) : snapshotQuery.isError ? (
@@ -334,7 +334,7 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
 
       <Card>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="flex items-center gap-2 text-xl font-bold">
+          <h3 className="flex items-center gap-2 section-title">
             <Scale className="h-6 w-6" aria-hidden /> Sell now or store?
           </h3>
           <Button
@@ -366,7 +366,7 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
 
         {!!historyQuery.data?.length && (
           <div className="mt-5 border-t border-border pt-4">
-            <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Past decisions</h4>
+            <h4 className="mb-2 text-muted-foreground sub-title">Past decisions</h4>
             <div className="space-y-2">
               {historyQuery.data.map((d: any, i: number) => (
                 <div key={d.publicId ?? i} className="rounded-lg border border-border p-3 text-sm">
@@ -417,7 +417,7 @@ function WarehousesTab({ cropId }: { cropId?: string }) {
 
   return (
     <Card>
-      <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+      <h3 className="mb-3 flex items-center gap-2 section-title">
         <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Storage recommendations
       </h3>
       {locError && <Alert variant="info" className="mb-3">{locError} Showing results without location bias.</Alert>}
@@ -442,7 +442,7 @@ function BuyerMatchesTab({ id }: { id: string }) {
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+        <h3 className="mb-3 flex items-center gap-2 section-title">
           <Handshake className="h-[18px] w-[18px]" aria-hidden /> Matched buyers
         </h3>
         {matchesQuery.isLoading ? (
@@ -531,7 +531,7 @@ function SendOfferCard({
 
   return (
     <Card>
-      <h3 className="mb-4 text-lg font-semibold">Send a trade offer</h3>
+      <h3 className="mb-4 section-title">Send a trade offer</h3>
       {error && <Alert variant="error" className="mb-3">{error}</Alert>}
       <div className="grid gap-3 sm:grid-cols-3">
         <div>

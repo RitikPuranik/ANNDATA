@@ -77,7 +77,7 @@ function Content() {
             <WarehouseIcon className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="font-semibold">Warehouse detail</h2>
+            <h2 className="section-title">Warehouse detail</h2>
             <p className="text-sm text-muted-foreground">Enter a warehouse public ID to inspect its current state.</p>
           </div>
         </div>

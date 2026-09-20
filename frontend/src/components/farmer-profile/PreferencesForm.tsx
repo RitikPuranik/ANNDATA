@@ -56,7 +56,7 @@ export function PreferencesForm({ profile, farms }: { profile: FarmerProfile; fa
 
   return (
     <Card>
-      <h2 className="mb-4 text-lg font-medium">{t("preferences.title")}</h2>
+      <h2 className="mb-4 section-title">{t("preferences.title")}</h2>
       <form className="space-y-6" onSubmit={handleSave}>
         {error && <Alert variant="error">{error}</Alert>}
         {saved && <Alert variant="success">{t("preferences.saved")}</Alert>}

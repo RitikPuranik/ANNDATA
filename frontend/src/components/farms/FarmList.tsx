@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Pencil, Trash2, Sprout, Droplets, Plus } from "lucide-react";
+import { MapPin, Pencil, Trash2, Droplets, Plus } from "lucide-react";
+import { FarmVisual } from "@/components/crops/CropVisual";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Card, Alert } from "@/components/ui/primitives";
 import { EmptyState } from "@/components/EmptyState";
@@ -54,7 +55,7 @@ function FarmCard({ farm, showName }: { farm: Farm; showName: boolean }) {
   if (isEditing) {
     return (
       <Card>
-        <h3 className="mb-4 font-medium">{t("farm.editTitle")}</h3>
+        <h3 className="mb-4 section-title">{t("farm.editTitle")}</h3>
         <FarmForm
           initialValues={{
             name: farm.name ?? "",
@@ -76,8 +77,10 @@ function FarmCard({ farm, showName }: { farm: Farm; showName: boolean }) {
   }
 
   return (
-    <div className="item-tile">
-      <span className="item-tile-icon"><Sprout className="h-6 w-6" aria-hidden /></span>
+    <div className="item-tile has-cover">
+      <div className="item-tile-cover">
+        <FarmVisual seed={farm.id} name={farm.name} imageUrl={farm.imageUrl} />
+      </div>
       <div className="item-tile-body">
         <h3>{showName ? farm.name || t("farm.unnamed") : t("farm.myFarm")}</h3>
         {deleteError && (

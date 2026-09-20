@@ -976,8 +976,8 @@ model CropLot {
   // Module 17 — every shipment ever created for a logistics request raised
   // against this lot.
   shipments          Shipment[]
-  // Back-relation required by Delivery.lot (added so the schema validates).
-  Delivery           Delivery[]
+  // Module 18 — deliveries reconciled against this lot.
+  deliveries         Delivery[]
 
   @@index([farmerId, status])
   @@index([fpoId, status])
@@ -2864,8 +2864,8 @@ model LogisticsQuote {
   // above — singular (not `[]`) because those FK columns are @unique, so
   // at most one LogisticsRequest can ever point at a given quote as its
   // accepted/recommended choice.
-  acceptedForRequest    LogisticsRequest?  @relation("AcceptedQuote")
-  recommendedForRequest LogisticsRequest?  @relation("RecommendedQuote")
+  acceptedForRequest    LogisticsRequest? @relation("AcceptedQuote")
+  recommendedForRequest LogisticsRequest? @relation("RecommendedQuote")
   shipment              Shipment?
 
   @@index([logisticsRequestId, status])
@@ -3015,8 +3015,8 @@ model Shipment {
 
   locations ShipmentLocation[]
   events    ShipmentEvent[]
-  // Back-relation required by Delivery.shipment (added so the schema validates).
-  Delivery  Delivery?
+  // Module 18 — at most one delivery because Delivery.shipmentId is unique.
+  delivery  Delivery?
 
   @@index([status])
   @@index([transportProviderId, status])

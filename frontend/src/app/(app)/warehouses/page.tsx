@@ -75,7 +75,7 @@ function WarehousesContent() {
       </Card>
 
       <Card>
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+        <h2 className="mb-3 flex items-center gap-2 section-title">
           <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Results
         </h2>
         {!coords ? (

@@ -29,7 +29,7 @@ function AdminWarehousesContent() {
             <Warehouse className="h-5 w-5" aria-hidden />
           </span>
           <div className="flex-1">
-            <h3 className="font-semibold">Warehouse data sync</h3>
+            <h3 className="section-title">Warehouse data sync</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Pulls the latest capacity, availability, and pricing information from the warehouse provider integration.
             </p>
@@ -43,7 +43,7 @@ function AdminWarehousesContent() {
 
         {sync.data && (
           <div className="mt-5 border-t border-border pt-4">
-            <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Sync result</h4>
+            <h4 className="mb-2 text-muted-foreground sub-title">Sync result</h4>
             <InsightPanel data={sync.data} />
           </div>
         )}
