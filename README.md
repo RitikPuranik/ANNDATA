@@ -28,8 +28,8 @@ FarmLink is a modular backend platform built with **Express, TypeScript, Prisma,
 | 16 | Logistics Quote & Optimization |✅ Complete |
 | 17 | Shipment & GPS Tracking | ✅ Complete |
 | 18 | Delivery & Quality Reconciliation | ✅ Complete |
-| 19 | Payment Status Tracking | ⏳ Next |
-| 20 | Digital Transaction Ledger | ❌ Planned |
+| 19 | Payment Status Tracking | ✅ Complete |
+| 20 | Digital Transaction Ledger | ⏳ Next |
 | 21 | Dispute & Grievance Management | ❌ Planned |
 | 22 | Notifications & Alerts | 🟡 Infrastructure/hooks exist; full module pending |
 | 23 | Multilingual / Voice / Low-Connectivity | ❌ Planned |

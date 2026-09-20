@@ -18,13 +18,6 @@ import { ApiRequestError } from "@/types/api";
 import { lotApi } from "@/services/lotApi";
 import { tradeOfferApi } from "@/services/tradeApi";
 
-
-/**
- * Real photos so a farmer recognises each card at a glance — flat cards,
- * no gradients, same dark/gold palette the app already uses.
- * Source: Wikimedia Commons, freely licensed — swap for your own brand
- * photography whenever you have it.
- */
 const ACTIONS=[
  {title:"My Farms",description:"See your farms and fields.",href:"/farms",icon:<Sprout/>,kind:"crop",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=400"},
  {title:"My Crops",description:"Manage the crops you are growing.",href:"/crops",icon:<Wheat/>,kind:"crops",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Colorful%20winter%20Vegetables%20-01.jpg?width=400"},
@@ -32,9 +25,6 @@ const ACTIONS=[
  {title:"Sell Produce",description:"List your crop for buyers.",href:"/lots/new",icon:<Package/>,kind:"sell",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Farmers%27%20Market%20%28Apni%20Mandi%29%20in%20Chandigarh.jpg?width=400"},
 ];
 
-/** Flat, solid-colour promo banners — same idea as Blinkit's "Pharmacy / Pet
- * care / Diaper run" row — but only using the app's own dark + gold tones,
- * no gradients, no new colours. */
 const SALE_CARDS=[
  {title:"Sell your produce today",description:"List a lot in under two minutes and reach buyers directly.",cta:"Sell now",href:"/lots/new",bg:"bg-[#171714]",text:"text-white",sub:"text-[#c9c4b4]",btn:"bg-[#e1bd4f] text-[#171714]",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Farmers%27%20Market%20%28Apni%20Mandi%29%20in%20Chandigarh.jpg?width=360"},
  {title:"Check today's mandi price",description:"Compare rates across nearby markets before you decide.",cta:"Open market",href:"/market",bg:"bg-[#e1bd4f]",text:"text-[#171714]",sub:"text-[#5a4a1c]",btn:"bg-[#171714] text-white",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Vegetable%20market%2C%20Ahmedabad.jpg?width=360"},
@@ -65,8 +55,6 @@ function RecentProduce(){
  </Card>;
 }
 
-/** Flat category card: photo on top (zoom on hover + gradient for depth),
- * white footer below. */
 function CategoryCard({title,description,image,href,ribbon}:{title:string;description:string;image:string;href:string;ribbon?:string}){
  return <Link href={href} className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition hover:border-[#a8842f] hover:shadow-lg">
   <div className="img-zoom img-gradient h-[130px] w-full bg-[#f1f3f6]">
@@ -87,7 +75,6 @@ function MarketplaceShortcuts(){
  </section>;
 }
 
-/** Flat solid-colour promo cards — photo (zoomed + gradient) + headline + one button. */
 function SaleCards(){
  return <section className="mt-6 grid gap-4 sm:grid-cols-3 fade-in-up d2">
   {SALE_CARDS.map(s=><Link href={s.href} key={s.href} className={`group flex items-center justify-between gap-3 overflow-hidden rounded-lg p-5 transition hover:shadow-lg ${s.bg}`}>
@@ -102,7 +89,11 @@ function SaleCards(){
 }
 
 function MarketPreview(){
+<<<<<<< HEAD
  return <Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="section-title">Market at a glance</h2><p className="text-xs text-muted-foreground mt-1">Check the numbers before you decide.</p></div><Link href="/market" className="text-xs font-bold">Open market →</Link></div>
+=======
+ return <Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="text-base font-bold">Market at a glance</h2><p className="text-xs text-muted-foreground mt-1">Check the numbers before you decide.</p></div><Link href="/market" className="text-xs font-bold">Open market →</Link></div>
+>>>>>>> 41b51a91a7ff3f3704653280dc76e6649c947448
   <div className="grid grid-cols-2 divide-x divide-border"><Link href="/market" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Today&apos;s rates</span><strong className="mt-2 block text-xl font-black">View mandi prices</strong><span className="mt-1 flex items-center gap-1 text-xs text-emerald-700"><TrendingUp className="h-3.5 w-3.5"/> Compare markets</span></Link><Link href="/forecasts" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Decision tool</span><strong className="mt-2 block text-xl font-black">Price forecast</strong><span className="mt-1 text-xs text-muted-foreground">See the outlook for your crops</span></Link></div>
  </Card>;
 }

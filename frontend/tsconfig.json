@@ -15,7 +15,10 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "baseUrl": ".",
+<<<<<<< HEAD
     
+=======
+>>>>>>> 41b51a91a7ff3f3704653280dc76e6649c947448
     "paths": {
       "@/*": ["src/*"]
     }
