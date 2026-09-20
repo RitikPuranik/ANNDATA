@@ -32,14 +32,14 @@ export default function DocsPage() {
             <h2 className="text-xl font-bold">Market intelligence</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Market information is presented with its source and freshness context where available.
-              Reference mandi prices are not the same thing as a buyer's target price or a negotiated offer.
+              Reference mandi prices are not the same thing as a buyer&apos;s target price or a negotiated offer.
             </p>
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6">
             <h2 className="text-xl font-bold">Buyer matching</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Matching uses FarmLink's domain services and considers factors such as crop compatibility,
+              Matching uses FarmLink&apos;s domain services and considers factors such as crop compatibility,
               quality, quantity and location. Buyer demand shown to visitors is not a guarantee of a sale.
             </p>
           </section>
