@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Leaf } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 import { useI18n } from "@/i18n/I18nProvider";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { cn } from "@/lib/utils";
@@ -20,8 +20,8 @@ export function SiteHeader({ right, className }: { right?: React.ReactNode; clas
   return (
     <header className={cn("border-b border-border bg-card", className)}>
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-          <Leaf className="h-5 w-5" aria-hidden />
+        <Link href="/" className="group flex items-center gap-2.5 font-bold text-primary">
+          <LogoMark className="h-9 w-9 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3" />
           {t("app.name")}
         </Link>
         <div className="flex items-center gap-3">
