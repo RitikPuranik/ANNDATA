@@ -6,6 +6,7 @@ import { prisma } from "./config/prisma";
 import { registerMarketSeedJob } from "./jobs/market-seed.job";
 import { registerMarketSyncJob } from "./jobs/market-sync.job";
 import { registerWarehouseSyncJob } from "./jobs/warehouse-sync.job";
+import { registerWhatsAppRecoveryJob } from "./jobs/whatsapp-recovery.job";
 import { PrismaAuthRepository } from "./modules/auth/auth.repository";
 import { PrismaAuditService } from "./modules/audit/audit.service";
 import { PrismaReferenceDataRepository } from "./modules/reference-data/reference-data.repository";
@@ -64,6 +65,7 @@ async function main() {
   const marketSeedTask: ScheduledTask | null = registerMarketSeedJob({ prisma, auditService });
   const marketSyncTask: ScheduledTask | null = registerMarketSyncJob({ prisma, auditService });
   const warehouseSyncTask: ScheduledTask | null = registerWarehouseSyncJob({ prisma, auditService });
+  const whatsappRecoveryTask: ScheduledTask | null = registerWhatsAppRecoveryJob(app.locals.whatsapp);
 
   const server = app.listen(env.PORT, () => {
     logger.info(`FarmLink auth service listening on ${env.BACKEND_URL} (port ${env.PORT})`);
@@ -75,6 +77,7 @@ async function main() {
     marketSeedTask?.stop();
     marketSyncTask?.stop();
     warehouseSyncTask?.stop();
+    whatsappRecoveryTask?.stop();
     server.close(async () => {
       await prisma.$disconnect();
       process.exit(0);

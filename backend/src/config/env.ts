@@ -1,7 +1,14 @@
 import "dotenv/config";
 import { z } from "zod";
 
-const envSchema = z.object({
+// Feature flags that gate outbound network calls must parse "false" as false.
+// (z.coerce.boolean() would turn the string "false" into `true`.)
+const strictBoolean = z
+  .enum(["true", "false", "1", "0"])
+  .default("false")
+  .transform((v) => v === "true" || v === "1");
+
+const envObjectSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(4000),
 
@@ -90,6 +97,67 @@ const envSchema = z.object({
 
   // Module 18 — Delivery & Quality Reconciliation
   DELIVERY_QUANTITY_TOLERANCE_PERCENT: z.coerce.number().min(0).max(100).default(2),
+
+  // WhatsApp Farmer Assistant (Meta WhatsApp Business Cloud API). Disabled by
+  // default: with WHATSAPP_ENABLED=false no credentials are required, the
+  // webhook answers 503, and no external WhatsApp/AI call is ever made.
+  WHATSAPP_ENABLED: strictBoolean,
+  WHATSAPP_PROVIDER: z.enum(["meta"]).default("meta"),
+  WHATSAPP_API_BASE_URL: z.string().url().default("https://graph.facebook.com"),
+  WHATSAPP_API_VERSION: z.string().regex(/^v\d+\.\d+$/, "e.g. v21.0").default("v21.0"),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional().default(""),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(""),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional().default(""),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional().default(""),
+  // The Meta *App Secret* — used only to verify the X-Hub-Signature-256 header
+  // on incoming webhooks. Distinct from the access token.
+  WHATSAPP_APP_SECRET: z.string().optional().default(""),
+  WHATSAPP_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  WHATSAPP_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(3),
+  WHATSAPP_CONVERSATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1_440).default(30),
+  // Webhook events older than this are acknowledged but not answered.
+  WHATSAPP_MAX_MESSAGE_AGE_SECONDS: z.coerce.number().int().positive().default(21_600),
+  WHATSAPP_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(20),
+  WHATSAPP_AI_RATE_LIMIT_PER_HOUR: z.coerce.number().int().min(0).default(30),
+  WHATSAPP_MATCHING_RATE_LIMIT_PER_HOUR: z.coerce.number().int().min(0).default(20),
+  // Optional natural-language layer. "none" = deterministic rules only.
+  WHATSAPP_AI_PROVIDER: z.enum(["none", "gemini"]).default("none"),
+  GEMINI_API_KEY: z.string().optional().default(""),
+  GEMINI_MODEL: z.string().default("gemini-2.0-flash"),
+  GEMINI_API_BASE_URL: z.string().url().default("https://generativelanguage.googleapis.com"),
+  WHATSAPP_AI_TIMEOUT_MS: z.coerce.number().int().positive().default(6_000),
+  // DEV/DEMO ONLY. When true (and NODE_ENV !== "production") a WhatsApp number
+  // that equals a FARMER's registered mobile is auto-linked without the
+  // website-issued code. Ignored in production, because User.mobile is not
+  // OTP-verified and phone equality alone is not proof of identity.
+  WHATSAPP_DEV_AUTO_LINK_BY_MOBILE: strictBoolean,
+});
+
+const envSchema = envObjectSchema.superRefine((value, ctx) => {
+  if (value.WHATSAPP_ENABLED) {
+    const required = [
+      "WHATSAPP_ACCESS_TOKEN",
+      "WHATSAPP_PHONE_NUMBER_ID",
+      "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
+      "WHATSAPP_APP_SECRET",
+    ] as const;
+    for (const key of required) {
+      if (!value[key]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when WHATSAPP_ENABLED=true`,
+        });
+      }
+    }
+  }
+  if (value.WHATSAPP_ENABLED && value.WHATSAPP_AI_PROVIDER === "gemini" && !value.GEMINI_API_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["GEMINI_API_KEY"],
+      message: "GEMINI_API_KEY is required when WHATSAPP_AI_PROVIDER=gemini",
+    });
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);

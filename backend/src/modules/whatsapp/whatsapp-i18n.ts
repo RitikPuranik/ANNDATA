@@ -1,0 +1,409 @@
+import type { Lang } from "./whatsapp.types";
+
+type Entry = { en: string; hi: string; hinglish: string };
+
+/**
+ * Short, farmer-friendly messages. `{placeholders}` are substituted by `t()`.
+ * Crop names are passed in as-is (never translated by us) so they cannot be
+ * mistranslated; Hindi names come from CropTranslation in the database.
+ */
+const M = {
+  help: {
+    en: "🌾 FarmLink Farmer Assistant\n\nYou can ask me:\n\n👨‍🌾 \"buyer\"\nFind buyers for your crop\n\n💰 \"bhav\"\nCheck mandi prices\n\n📦 \"my lot\"\nView your active lots\n\n🤝 \"offers\"\nView buyer offers\n\n💳 \"payment\"\nCheck payment status\n\n🚚 \"shipment\"\nTrack your shipment\n\nYou can also type naturally.\nExample: \"I have 20 quintal wheat, find buyer\"",
+    hi: "🌾 FarmLink किसान सहायक\n\nआप मुझसे पूछ सकते हैं:\n\n👨‍🌾 \"buyer\"\nअपनी फसल के लिए खरीदार खोजें\n\n💰 \"bhav\"\nमंडी भाव देखें\n\n📦 \"my lot\"\nअपने सक्रिय लॉट देखें\n\n🤝 \"offers\"\nखरीदारों के ऑफर देखें\n\n💳 \"payment\"\nभुगतान की स्थिति देखें\n\n🚚 \"shipment\"\nअपनी शिपमेंट ट्रैक करें\n\nआप सामान्य भाषा में भी लिख सकते हैं।\nउदाहरण: \"मेरे पास 20 क्विंटल गेहूं है, खरीदार ढूंढो\"",
+    hinglish: "🌾 FarmLink Farmer Assistant\n\nAap mujhse ye puch sakte hain:\n\n👨‍🌾 \"buyer\"\nApni fasal ke liye buyer dhoondhein\n\n💰 \"bhav\"\nMandi bhav dekhein\n\n📦 \"my lot\"\nApne active lot dekhein\n\n🤝 \"offers\"\nBuyer offers dekhein\n\n💳 \"payment\"\nPayment status dekhein\n\n🚚 \"shipment\"\nShipment track karein\n\nAap aam bhasha mein bhi likh sakte hain.\nExample: \"Mere paas 20 quintal wheat hai, buyer dhoondho\"",
+  },
+  welcomeUnlinked: {
+    en: "🌾 Welcome to FarmLink.\n\nYour WhatsApp number is not linked to a FarmLink farmer account yet.\n\nIf you are already registered: open FarmLink → Profile, get your WhatsApp link code, then send:\nLINK <code>\n\nIf not, please register on FarmLink first. Once linked, you can manage your crops, buyers, offers, payments and shipments here.",
+    hi: "🌾 FarmLink में आपका स्वागत है।\n\nआपका WhatsApp नंबर अभी किसी FarmLink किसान खाते से जुड़ा नहीं है।\n\nअगर आप रजिस्टर हैं: FarmLink → प्रोफाइल में जाकर WhatsApp लिंक कोड लें, फिर भेजें:\nLINK <कोड>\n\nअगर नहीं, तो पहले FarmLink पर रजिस्टर करें। जुड़ने के बाद आप यहीं अपनी फसल, खरीदार, ऑफर, भुगतान और शिपमेंट देख सकेंगे।",
+    hinglish: "🌾 FarmLink mein aapka swagat hai.\n\nAapka WhatsApp number abhi kisi FarmLink farmer account se linked nahi hai.\n\nAgar aap registered hain: FarmLink → Profile mein jaakar WhatsApp link code lein, phir bhejein:\nLINK <code>\n\nNahi to pehle FarmLink par register karein. Link hone ke baad aap yahin apni fasal, buyer, offers, payment aur shipment dekh sakte hain.",
+  },
+  linkOk: {
+    en: "✅ Done! Your WhatsApp is now linked to FarmLink.\n\nType \"help\" to see what I can do.",
+    hi: "✅ हो गया! आपका WhatsApp अब FarmLink से जुड़ गया है।\n\n\"help\" लिखें और देखें मैं क्या कर सकता हूँ।",
+    hinglish: "✅ Ho gaya! Aapka WhatsApp ab FarmLink se link ho gaya hai.\n\n\"help\" likhein aur dekhein main kya kar sakta hoon.",
+  },
+  linkBad: {
+    en: "⚠️ That link code is not valid or has expired.\n\nPlease get a new code from FarmLink → Profile and send:\nLINK <code>",
+    hi: "⚠️ यह लिंक कोड सही नहीं है या समाप्त हो गया है।\n\nFarmLink → प्रोफाइल से नया कोड लें और भेजें:\nLINK <कोड>",
+    hinglish: "⚠️ Ye link code sahi nahi hai ya expire ho gaya hai.\n\nFarmLink → Profile se naya code lein aur bhejein:\nLINK <code>",
+  },
+  linkTooMany: {
+    en: "⚠️ Too many wrong attempts. Please try again after some time.",
+    hi: "⚠️ बहुत ज़्यादा गलत प्रयास। कृपया कुछ देर बाद कोशिश करें।",
+    hinglish: "⚠️ Bahut zyada galat koshish. Kripya kuch der baad try karein.",
+  },
+  askCrop: {
+    en: "🌾 What do you want to sell?\n\nReply with a number, or type the crop name.",
+    hi: "🌾 आप क्या बेचना चाहते हैं?\n\nनंबर भेजें या फसल का नाम लिखें।",
+    hinglish: "🌾 Aap kya bechna chahte hain?\n\nNumber bhejein ya fasal ka naam likhein.",
+  },
+  askCropPrice: {
+    en: "🌾 Which crop's mandi price do you want?\n\nReply with a number, or type the crop name.",
+    hi: "🌾 किस फसल का मंडी भाव चाहिए?\n\nनंबर भेजें या फसल का नाम लिखें।",
+    hinglish: "🌾 Kis fasal ka mandi bhav chahiye?\n\nNumber bhejein ya fasal ka naam likhein.",
+  },
+  askCropName: {
+    en: "Please type the crop name. Example: Bajra",
+    hi: "कृपया फसल का नाम लिखें। उदाहरण: बाजरा",
+    hinglish: "Fasal ka naam likhein. Example: Bajra",
+  },
+  cropNotFound: {
+    en: "I couldn't find \"{text}\" in FarmLink's crop list.\n\nTry another spelling, or add it on FarmLink.",
+    hi: "\"{text}\" FarmLink की फसल सूची में नहीं मिला।\n\nदूसरी वर्तनी लिखें, या FarmLink पर जोड़ें।",
+    hinglish: "\"{text}\" FarmLink ki crop list mein nahi mila.\n\nDusri spelling likhein, ya FarmLink par add karein.",
+  },
+  askQuantity: {
+    en: "How much {crop} do you want to sell?\n\nExample: 20 quintal",
+    hi: "कितना {crop} बेचना है?\n\nउदाहरण: 20 क्विंटल",
+    hinglish: "Kitna {crop} bechna hai?\n\nExample: 20 quintal",
+  },
+  badQuantity: {
+    en: "I didn't get the quantity. Please write it like: 20 quintal",
+    hi: "मात्रा समझ नहीं आई। ऐसे लिखें: 20 क्विंटल",
+    hinglish: "Quantity samajh nahi aayi. Aise likhein: 20 quintal",
+  },
+  quantityNoted: {
+    en: "🌾 {crop}: {qty} noted.",
+    hi: "🌾 {crop}: {qty} नोट किया।",
+    hinglish: "🌾 {crop}: {qty} note kiya.",
+  },
+  askLocation: {
+    en: "📍 Where is your {crop} located?\n\nExample: Sehore",
+    hi: "📍 आपका {crop} कहाँ है?\n\nउदाहरण: सीहोर",
+    hinglish: "📍 Aapka {crop} kahan pada hai?\n\nExample: Sehore",
+  },
+  askLocationPrice: {
+    en: "📍 Which district or mandi area?\n\nExample: Sehore",
+    hi: "📍 कौन सा जिला या मंडी क्षेत्र?\n\nउदाहरण: सीहोर",
+    hinglish: "📍 Kaun sa district ya mandi area?\n\nExample: Sehore",
+  },
+  locationNotFound: {
+    en: "I couldn't find \"{text}\". Please type your district or nearby mandi name.",
+    hi: "\"{text}\" नहीं मिला। कृपया अपना जिला या नज़दीकी मंडी का नाम लिखें।",
+    hinglish: "\"{text}\" nahi mila. Apna district ya nazdeeki mandi ka naam likhein.",
+  },
+  askQuality: {
+    en: "What is the quality?\n\n1️⃣ Grade A\n2️⃣ Grade B\n3️⃣ Don't know",
+    hi: "क्वालिटी कैसी है?\n\n1️⃣ ग्रेड A\n2️⃣ ग्रेड B\n3️⃣ पता नहीं",
+    hinglish: "Quality kya hai?\n\n1️⃣ Grade A\n2️⃣ Grade B\n3️⃣ Pata nahi",
+  },
+  askFarm: {
+    en: "Which farm is this {crop} from?",
+    hi: "यह {crop} किस खेत का है?",
+    hinglish: "Ye {crop} kis khet ka hai?",
+  },
+  noFarm: {
+    en: "🌱 To list a lot, you first need a farm on FarmLink. Please add your farm and crop on the website.",
+    hi: "🌱 लॉट बनाने के लिए पहले FarmLink पर अपना खेत जोड़ना होगा। कृपया वेबसाइट पर खेत और फसल जोड़ें।",
+    hinglish: "🌱 Lot banane ke liye pehle FarmLink par apna khet add karna hoga. Kripya website par khet aur fasal add karein.",
+  },
+  cropNotOnFarm: {
+    en: "🌱 {crop} isn't added to that farm yet. Please add it on FarmLink, then come back.",
+    hi: "🌱 {crop} अभी उस खेत में जुड़ा नहीं है। FarmLink पर जोड़ें, फिर वापस आएं।",
+    hinglish: "🌱 {crop} abhi us khet mein add nahi hai. FarmLink par add karein, phir wapas aayein.",
+  },
+  reuseLot: {
+    en: "You already have this lot:\n\n🌾 {crop}\n📦 {qty}\n📍 {place}\n🟢 {status}\n\nUse it, or create a new lot?",
+    hi: "आपके पास यह लॉट पहले से है:\n\n🌾 {crop}\n📦 {qty}\n📍 {place}\n🟢 {status}\n\nइसे इस्तेमाल करें या नया लॉट बनाएं?",
+    hinglish: "Aapke paas ye lot pehle se hai:\n\n🌾 {crop}\n📦 {qty}\n📍 {place}\n🟢 {status}\n\nIse use karein ya naya lot banayein?",
+  },
+  confirmLot: {
+    en: "Please confirm your lot:\n\n🌾 {crop}\n📦 {qty}\n📍 {place}\n⭐ Quality: {grade}\n\nCreate this lot on FarmLink?",
+    hi: "कृपया अपना लॉट कन्फर्म करें:\n\n🌾 {crop}\n📦 {qty}\n📍 {place}\n⭐ क्वालिटी: {grade}\n\nक्या FarmLink पर यह लॉट बनाएं?",
+    hinglish: "Apna lot confirm karein:\n\n🌾 {crop}\n📦 {qty}\n📍 {place}\n⭐ Quality: {grade}\n\nFarmLink par ye lot banayein?",
+  },
+  lotCreated: {
+    en: "✅ Lot created and listed for buyers.",
+    hi: "✅ लॉट बन गया और खरीदारों के लिए लिस्ट हो गया।",
+    hinglish: "✅ Lot ban gaya aur buyers ke liye list ho gaya.",
+  },
+  searching: {
+    en: "🔎 Looking for buyers...",
+    hi: "🔎 खरीदार ढूंढ रहा हूँ...",
+    hinglish: "🔎 Buyer dhoond raha hoon...",
+  },
+  buyersFound: {
+    en: "🌾 I found {n} relevant buyer(s) for your {crop}.",
+    hi: "🌾 आपके {crop} के लिए {n} खरीदार मिले।",
+    hinglish: "🌾 Aapke {crop} ke liye {n} relevant buyer mile.",
+  },
+  buyersRefPrice: {
+    en: "💰 Mandi reference: {price}/Q (market price, not a buyer's offer)",
+    hi: "💰 मंडी संदर्भ भाव: {price}/Q (बाज़ार भाव, खरीदार का ऑफर नहीं)",
+    hinglish: "💰 Mandi reference: {price}/Q (market price, buyer ka offer nahi)",
+  },
+  buyersDisclaimer: {
+    en: "ℹ️ These are buyers with open demand. A buyer is not guaranteed to purchase until they accept an offer.",
+    hi: "ℹ️ ये खुली मांग वाले खरीदार हैं। ऑफर स्वीकार करने तक खरीदारी की गारंटी नहीं है।",
+    hinglish: "ℹ️ Ye open demand wale buyers hain. Offer accept hone tak kharidari ki guarantee nahi hai.",
+  },
+  noBuyers: {
+    en: "😔 No matching buyers right now for your {crop}.\n\nNew buyers post demand often — try again soon.",
+    hi: "😔 अभी आपके {crop} के लिए कोई मेल खाता खरीदार नहीं है।\n\nनई मांग आती रहती है — थोड़ी देर बाद फिर कोशिश करें।",
+    hinglish: "😔 Abhi aapke {crop} ke liye koi matching buyer nahi hai.\n\nNayi demand aati rehti hai — thodi der baad phir try karein.",
+  },
+  noMoreBuyers: {
+    en: "That's all the buyers I have for now.",
+    hi: "अभी के लिए इतने ही खरीदार हैं।",
+    hinglish: "Abhi ke liye itne hi buyers hain.",
+  },
+  whichBuyerDetails: {
+    en: "Which buyer? Reply with the number.",
+    hi: "कौन सा खरीदार? नंबर भेजें।",
+    hinglish: "Kaun sa buyer? Number bhejein.",
+  },
+  whichBuyerOffer: {
+    en: "Which buyer do you want to send an offer to? Reply with the number.",
+    hi: "किस खरीदार को ऑफर भेजना है? नंबर भेजें।",
+    hinglish: "Kis buyer ko offer bhejna hai? Number bhejein.",
+  },
+  askOfferPrice: {
+    en: "At what rate do you want to sell to {buyer}?\n\nType price {per}. Example: 2500",
+    hi: "{buyer} को किस रेट पर बेचना है?\n\nभाव लिखें {per}। उदाहरण: 2500",
+    hinglish: "{buyer} ko kis rate par bechna hai?\n\nRate likhein {per}. Example: 2500",
+  },
+  badPrice: {
+    en: "I didn't get the price. Please type a number, like 2500",
+    hi: "भाव समझ नहीं आया। संख्या लिखें, जैसे 2500",
+    hinglish: "Rate samajh nahi aaya. Number likhein, jaise 2500",
+  },
+  confirmOffer: {
+    en: "Please confirm your offer:\n\n🏢 {buyer}\n🌾 {crop}\n📦 {qty}\n💰 {price} {per}\n🧾 Total: {total}\n\nSend this offer?",
+    hi: "कृपया अपना ऑफर कन्फर्म करें:\n\n🏢 {buyer}\n🌾 {crop}\n📦 {qty}\n💰 {price} {per}\n🧾 कुल: {total}\n\nयह ऑफर भेजें?",
+    hinglish: "Apna offer confirm karein:\n\n🏢 {buyer}\n🌾 {crop}\n📦 {qty}\n💰 {price} {per}\n🧾 Total: {total}\n\nYe offer bhejein?",
+  },
+  offerSent: {
+    en: "✅ Offer sent to {buyer}. This is an *offer request* — the buyer has not accepted yet. I'll show its status under \"offers\".",
+    hi: "✅ {buyer} को ऑफर भेज दिया गया। यह सिर्फ *ऑफर* है — खरीदार ने अभी स्वीकार नहीं किया। स्थिति \"offers\" में देखें।",
+    hinglish: "✅ {buyer} ko offer bhej diya. Ye sirf *offer* hai — buyer ne abhi accept nahi kiya. Status \"offers\" mein dekhein.",
+  },
+  buyerDetails: {
+    en: "🏢 {buyer}\n📍 {place}\n📦 Demand: {qty}\n✅ Verified buyer\n\nThis is the buyer's open demand — not an offer or a guarantee to buy.",
+    hi: "🏢 {buyer}\n📍 {place}\n📦 मांग: {qty}\n✅ सत्यापित खरीदार\n\nयह खरीदार की खुली मांग है — ऑफर या खरीदारी की गारंटी नहीं।",
+    hinglish: "🏢 {buyer}\n📍 {place}\n📦 Demand: {qty}\n✅ Verified buyer\n\nYe buyer ki open demand hai — offer ya kharidari ki guarantee nahi.",
+  },
+  lotsHeader: {
+    en: "🌾 Your Active Lots",
+    hi: "🌾 आपके सक्रिय लॉट",
+    hinglish: "🌾 Aapke Active Lots",
+  },
+  noLots: {
+    en: "You have no active lots yet.\n\nType \"buyer\" to list your crop and find buyers.",
+    hi: "आपका अभी कोई सक्रिय लॉट नहीं है।\n\n\"buyer\" लिखें और अपनी फसल लिस्ट करें।",
+    hinglish: "Aapka abhi koi active lot nahi hai.\n\n\"buyer\" likhein aur apni fasal list karein.",
+  },
+  offersHeader: {
+    en: "💰 Your Buyer Offers",
+    hi: "💰 आपके खरीदार ऑफर",
+    hinglish: "💰 Aapke Buyer Offers",
+  },
+  noOffers: {
+    en: "You have no offers yet.\n\nType \"buyer\" to find buyers and send an offer.",
+    hi: "अभी कोई ऑफर नहीं है।\n\n\"buyer\" लिखें, खरीदार खोजें और ऑफर भेजें।",
+    hinglish: "Abhi koi offer nahi hai.\n\n\"buyer\" likhein, buyer dhoondhein aur offer bhejein.",
+  },
+  offerAskCounter: {
+    en: "What is your counter rate {per}? Example: 2600",
+    hi: "आपका काउंटर रेट क्या है {per}? उदाहरण: 2600",
+    hinglish: "Aapka counter rate kya hai {per}? Example: 2600",
+  },
+  confirmOfferAction: {
+    en: "{action} this offer?\n\n🏢 {buyer}\n🌾 {crop}\n📦 {qty}\n💰 {price} {per}\n🧾 Total: {total}",
+    hi: "{action} इस ऑफर को?\n\n🏢 {buyer}\n🌾 {crop}\n📦 {qty}\n💰 {price} {per}\n🧾 कुल: {total}",
+    hinglish: "Is offer ko {action}?\n\n🏢 {buyer}\n🌾 {crop}\n📦 {qty}\n💰 {price} {per}\n🧾 Total: {total}",
+  },
+  offerDone: {
+    en: "✅ Done — offer {result}.",
+    hi: "✅ हो गया — ऑफर {result}।",
+    hinglish: "✅ Ho gaya — offer {result}.",
+  },
+  ownOfferNote: {
+    en: "This is your offer — waiting for the buyer.",
+    hi: "यह आपका ऑफर है — खरीदार के जवाब का इंतज़ार है।",
+    hinglish: "Ye aapka offer hai — buyer ke jawab ka intezaar hai.",
+  },
+  paymentHeader: {
+    en: "💰 Payment Status",
+    hi: "💰 भुगतान की स्थिति",
+    hinglish: "💰 Payment Status",
+  },
+  noPayments: {
+    en: "No payments to show yet. Payments appear here once a sale is accepted and delivered.",
+    hi: "अभी कोई भुगतान नहीं है। सौदा स्वीकार और डिलीवर होने पर भुगतान यहाँ दिखेगा।",
+    hinglish: "Abhi koi payment nahi hai. Deal accept aur deliver hone par payment yahan dikhega.",
+  },
+  paymentNote: {
+    en: "ℹ️ FarmLink tracks payments — the buyer pays you directly, outside FarmLink.",
+    hi: "ℹ️ FarmLink भुगतान को ट्रैक करता है — खरीदार सीधे आपको भुगतान करता है।",
+    hinglish: "ℹ️ FarmLink payment track karta hai — buyer seedha aapko payment karta hai.",
+  },
+  shipmentHeader: {
+    en: "🚚 Shipment Status",
+    hi: "🚚 शिपमेंट की स्थिति",
+    hinglish: "🚚 Shipment Status",
+  },
+  noShipments: {
+    en: "No shipments yet. Shipments appear here once a sale is being delivered.",
+    hi: "अभी कोई शिपमेंट नहीं है। डिलीवरी शुरू होने पर यहाँ दिखेगी।",
+    hinglish: "Abhi koi shipment nahi hai. Delivery shuru hone par yahan dikhegi.",
+  },
+  noLiveLocation: {
+    en: "📍 Live location is currently unavailable.",
+    hi: "📍 लाइव लोकेशन अभी उपलब्ध नहीं है।",
+    hinglish: "📍 Live location abhi available nahi hai.",
+  },
+  mandiHeader: {
+    en: "🌾 {crop} Mandi Prices",
+    hi: "🌾 {crop} मंडी भाव",
+    hinglish: "🌾 {crop} Mandi Bhav",
+  },
+  mandiStale: {
+    en: "⚠️ These prices are not fresh (last updated {date}). Please check again later.",
+    hi: "⚠️ ये भाव ताज़ा नहीं हैं (आखिरी अपडेट {date})। कृपया बाद में फिर देखें।",
+    hinglish: "⚠️ Ye bhav fresh nahi hain (last update {date}). Baad mein phir dekhein.",
+  },
+  mandiUnavailable: {
+    en: "⚠️ I couldn't get fresh mandi prices right now.\n\nPlease try again later.",
+    hi: "⚠️ अभी ताज़ा मंडी भाव नहीं मिल पाए।\n\nकृपया बाद में फिर कोशिश करें।",
+    hinglish: "⚠️ Abhi fresh mandi bhav nahi mil paaye.\n\nKripya baad mein phir try karein.",
+  },
+  mandiTimestamp: {
+    en: "Data timestamp:\n{date}",
+    hi: "डेटा की तारीख:\n{date}",
+    hinglish: "Data timestamp:\n{date}",
+  },
+  lowConfidence: {
+    en: "I can help you find buyers, check prices, view lots, offers, payments, or shipments.\n\nWhat would you like to do?",
+    hi: "मैं खरीदार खोजने, भाव देखने, लॉट, ऑफर, भुगतान या शिपमेंट देखने में मदद कर सकता हूँ।\n\nआप क्या करना चाहते हैं?",
+    hinglish: "Main buyer dhoondhne, bhav dekhne, lot, offers, payment ya shipment dekhne mein madad kar sakta hoon.\n\nAap kya karna chahte hain?",
+  },
+  smartFallback: {
+    en: "🌾 I can help with buyers, prices, lots, offers, payments and shipments.\n\nFor your complete FarmLink dashboard:",
+    hi: "🌾 मैं खरीदार, भाव, लॉट, ऑफर, भुगतान और शिपमेंट में मदद कर सकता हूँ।\n\nपूरे FarmLink डैशबोर्ड के लिए:",
+    hinglish: "🌾 Main buyer, bhav, lot, offers, payment aur shipment mein madad kar sakta hoon.\n\nPoore FarmLink dashboard ke liye:",
+  },
+  websiteGeneric: {
+    en: "📊 This is easier to view on FarmLink.\n\nYou can see the full details there.",
+    hi: "📊 इसे FarmLink पर देखना आसान है।\n\nपूरी जानकारी वहाँ मिलेगी।",
+    hinglish: "📊 Ye FarmLink par dekhna aasan hai.\n\nPoori jaankari wahan milegi.",
+  },
+  websiteForm: {
+    en: "📄 This needs a few more details.\n\nPlease continue on FarmLink:",
+    hi: "📄 इसके लिए कुछ और जानकारी चाहिए।\n\nकृपया FarmLink पर जारी रखें:",
+    hinglish: "📄 Iske liye kuch aur details chahiye.\n\nKripya FarmLink par continue karein:",
+  },
+  websiteLogistics: {
+    en: "🚜 Advanced transport planning is available on FarmLink.",
+    hi: "🚜 उन्नत परिवहन योजना FarmLink पर उपलब्ध है।",
+    hinglish: "🚜 Advanced transport planning FarmLink par available hai.",
+  },
+  websitePayments: {
+    en: "💳 You can see full payment details on your FarmLink dashboard.",
+    hi: "💳 पूरा भुगतान विवरण आप अपने FarmLink डैशबोर्ड पर देख सकते हैं।",
+    hinglish: "💳 Poora payment detail aap apne FarmLink dashboard par dekh sakte hain.",
+  },
+  moreOnWebsite: {
+    en: "See everything on FarmLink:",
+    hi: "सब कुछ FarmLink पर देखें:",
+    hinglish: "Sab kuch FarmLink par dekhein:",
+  },
+  cancelled: {
+    en: "Okay, cancelled. Type \"help\" anytime to see what I can do.",
+    hi: "ठीक है, रद्द कर दिया। कभी भी \"help\" लिखें।",
+    hinglish: "Theek hai, cancel kar diya. Kabhi bhi \"help\" likhein.",
+  },
+  nothingToGoBack: {
+    en: "Nothing to go back to. Type \"help\" to see the menu.",
+    hi: "पीछे जाने के लिए कुछ नहीं है। \"help\" लिखें।",
+    hinglish: "Peeche jaane ke liye kuch nahi hai. \"help\" likhein.",
+  },
+  genericError: {
+    en: "⚠️ I couldn't complete that right now.\n\nPlease try again in a moment.",
+    hi: "⚠️ अभी यह पूरा नहीं हो पाया।\n\nकृपया थोड़ी देर में फिर कोशिश करें।",
+    hinglish: "⚠️ Abhi ye complete nahi ho paya.\n\nKripya thodi der mein phir try karein.",
+  },
+  unsupportedMedia: {
+    en: "I can currently process text messages.\n\nTry:\nbuyer\nbhav\nmy lot\noffers\npayment\nshipment\nhelp",
+    hi: "मैं अभी सिर्फ़ टेक्स्ट संदेश समझ सकता हूँ।\n\nकोशिश करें:\nbuyer\nbhav\nmy lot\noffers\npayment\nshipment\nhelp",
+    hinglish: "Main abhi sirf text messages samajh sakta hoon.\n\nTry karein:\nbuyer\nbhav\nmy lot\noffers\npayment\nshipment\nhelp",
+  },
+  slowDown: {
+    en: "⏳ You're sending messages too fast. Please wait a minute and try again.",
+    hi: "⏳ आप बहुत तेज़ संदेश भेज रहे हैं। कृपया एक मिनट रुककर फिर कोशिश करें।",
+    hinglish: "⏳ Aap bahut tez messages bhej rahe hain. Ek minute ruk kar phir try karein.",
+  },
+  limitReached: {
+    en: "⏳ You've reached the limit for this request for now. Please try again a little later.",
+    hi: "⏳ अभी इस अनुरोध की सीमा पूरी हो गई है। कृपया थोड़ी देर बाद फिर कोशिश करें।",
+    hinglish: "⏳ Abhi is request ki limit poori ho gayi hai. Thodi der baad phir try karein.",
+  },
+  offerExpired: {
+    en: "⚠️ This offer has expired.",
+    hi: "⚠️ यह ऑफर समाप्त हो गया है।",
+    hinglish: "⚠️ Ye offer expire ho gaya hai.",
+  },
+  offerNotActionable: {
+    en: "⚠️ This offer can't be changed in its current status.",
+    hi: "⚠️ यह ऑफर अभी इस स्थिति में बदला नहीं जा सकता।",
+    hinglish: "⚠️ Ye offer abhi is status mein badla nahi ja sakta.",
+  },
+  quantityUnavailable: {
+    en: "⚠️ Not enough quantity is available in that lot for this action.",
+    hi: "⚠️ इस काम के लिए उस लॉट में पर्याप्त मात्रा उपलब्ध नहीं है।",
+    hinglish: "⚠️ Is kaam ke liye us lot mein enough quantity available nahi hai.",
+  },
+  lotNotReady: {
+    en: "⚠️ This lot can't be listed for buyers right now. Please check it on FarmLink.",
+    hi: "⚠️ यह लॉट अभी खरीदारों के लिए लिस्ट नहीं हो सकता। FarmLink पर देखें।",
+    hinglish: "⚠️ Ye lot abhi buyers ke liye list nahi ho sakta. FarmLink par dekhein.",
+  },
+  invalidChoice: {
+    en: "Please reply with one of the numbers shown, or type \"help\".",
+    hi: "कृपया दिखाए गए नंबरों में से एक भेजें, या \"help\" लिखें।",
+    hinglish: "Dikhaye gaye numbers mein se ek bhejein, ya \"help\" likhein.",
+  },
+  yes: { en: "Yes", hi: "हाँ", hinglish: "Haan" },
+  no: { en: "No", hi: "नहीं", hinglish: "Nahi" },
+  useLot: { en: "Use this lot", hi: "यही लॉट लें", hinglish: "Yehi lot lein" },
+  newLot: { en: "New lot", hi: "नया लॉट", hinglish: "Naya lot" },
+  other: { en: "Other", hi: "अन्य", hinglish: "Other" },
+  gradeA: { en: "Grade A", hi: "ग्रेड A", hinglish: "Grade A" },
+  gradeB: { en: "Grade B", hi: "ग्रेड B", hinglish: "Grade B" },
+  gradeUnknown: { en: "Don't know", hi: "पता नहीं", hinglish: "Pata nahi" },
+  btnDetails: { en: "Buyer details", hi: "खरीदार विवरण", hinglish: "Buyer details" },
+  btnOffer: { en: "Request offer", hi: "ऑफर भेजें", hinglish: "Offer bhejein" },
+  btnMore: { en: "More buyers", hi: "और खरीदार", hinglish: "Aur buyers" },
+  btnView: { en: "View offer", hi: "ऑफर देखें", hinglish: "Offer dekhein" },
+  btnAccept: { en: "Accept", hi: "स्वीकार", hinglish: "Accept" },
+  btnReject: { en: "Reject", hi: "अस्वीकार", hinglish: "Reject" },
+  btnCounter: { en: "Counter", hi: "काउंटर", hinglish: "Counter" },
+  btnWithdraw: { en: "Withdraw", hi: "वापस लें", hinglish: "Withdraw" },
+  btnViewBuyers: { en: "View buyers", hi: "खरीदार देखें", hinglish: "Buyers dekhein" },
+  btnViewOffers: { en: "View offers", hi: "ऑफर देखें", hinglish: "Offers dekhein" },
+  btnChoose: { en: "Choose", hi: "चुनें", hinglish: "Chunein" },
+  btnMoreItems: { en: "Show more", hi: "और दिखाएं", hinglish: "Aur dikhayein" },
+  btnBackMenu: { en: "Menu", hi: "मेनू", hinglish: "Menu" },
+  ctaOpen: { en: "🌐 Open FarmLink", hi: "🌐 FarmLink खोलें", hinglish: "🌐 Open FarmLink" },
+  ctaDashboard: { en: "📊 Open Dashboard", hi: "📊 डैशबोर्ड खोलें", hinglish: "📊 Open Dashboard" },
+  ctaLot: { en: "📦 View Lot", hi: "📦 लॉट देखें", hinglish: "📦 View Lot" },
+  ctaOffers: { en: "💰 View Offers", hi: "💰 ऑफर देखें", hinglish: "💰 View Offers" },
+  ctaShipment: { en: "🚚 Track Shipment", hi: "🚚 शिपमेंट ट्रैक करें", hinglish: "🚚 Track Shipment" },
+  ctaContinue: { en: "Continue on FarmLink", hi: "FarmLink पर जारी रखें", hinglish: "Continue on FarmLink" },
+  ctaLogistics: { en: "🚜 Open Logistics", hi: "🚜 लॉजिस्टिक्स खोलें", hinglish: "🚜 Open Logistics" },
+  ctaAddFarm: { en: "🌱 Add Farm", hi: "🌱 खेत जोड़ें", hinglish: "🌱 Add Farm" },
+  ctaProblem: { en: "Report a problem", hi: "समस्या बताएं", hinglish: "Problem batayein" },
+} satisfies Record<string, Entry>;
+
+export type MsgKey = keyof typeof M;
+
+export function t(key: MsgKey, lang: Lang, params: Record<string, string | number> = {}): string {
+  const entry: Entry = M[key];
+  const template = entry[lang] || entry.hinglish || entry.en;
+  return template.replace(/\{(\w+)\}/g, (_m, name: string) => (name in params ? String(params[name]) : `{${name}}`));
+}
+
+export const ALL_MESSAGE_KEYS = Object.keys(M) as MsgKey[];
+export function rawEntry(key: MsgKey): Entry {
+  return M[key];
+}

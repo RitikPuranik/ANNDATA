@@ -127,6 +127,10 @@ const ALLOWED_EVENTS = new Set([
   // Module 17 — Shipment & GPS Tracking
   "shipment_created",
   "shipment_delivered",
+  // WhatsApp Farmer Assistant (counts/intents only — never message content)
+  "whatsapp_message_received",
+  "whatsapp_command_handled",
+  "whatsapp_account_linked",
 ]);
 
 // Defense in depth: even if a caller accidentally passes a sensitive key in

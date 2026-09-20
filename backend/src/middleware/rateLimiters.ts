@@ -59,3 +59,16 @@ export function changePasswordRateLimiter() {
     keyGenerator: (req) => `pwchange:${req.ip}`,
   });
 }
+
+/**
+ * WhatsApp link-code issuance. A code is a credential that binds a WhatsApp
+ * number to the farmer's account, so issuing is tightly limited per user.
+ */
+export function whatsappLinkCodeRateLimiter() {
+  return rateLimit({
+    ...commonOptions,
+    windowMs: 60 * 60 * 1000,
+    limit: 5,
+    keyGenerator: (req: Request) => `wa-link:${req.user?.id ?? req.ip ?? "anon"}`,
+  });
+}

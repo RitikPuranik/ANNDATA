@@ -19,6 +19,7 @@ import { FarmerProfileResolver } from "./modules/farmers/farmer-profile.resolver
 import { FarmersService } from "./modules/farmers/farmers.service";
 import { createFarmersRouter } from "./modules/farmers/farmers.routes";
 import { FarmsRepository } from "./modules/farms/farms.repository";
+import { createWhatsAppModule } from "./modules/whatsapp";
 import { FarmsService } from "./modules/farms/farms.service";
 import { createFarmsRouter } from "./modules/farms/farms.routes";
 import { FarmerCropRepository } from "./modules/crops/farmer-crop.repository";
@@ -202,9 +203,21 @@ export function createApp(deps: AppDependencies): Express {
 
   app.use(securityHeaders);
   app.use(corsMiddleware);
-  app.use(express.json({ limit: "100kb" }));
-  app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+  // The WhatsApp webhook verifies an HMAC over the EXACT raw bytes, so its
+  // route parses its own body (express.raw) — skip the global body parsers there.
+  const jsonParser = express.json({ limit: "100kb" });
+  const urlencodedParser = express.urlencoded({ extended: true, limit: "100kb" });
+  const isWhatsAppWebhook = (path: string) => path === "/api/whatsapp/webhook";
+  app.use((req, res, next) => (isWhatsAppWebhook(req.path) ? next() : jsonParser(req, res, next)));
+  app.use((req, res, next) => (isWhatsAppWebhook(req.path) ? next() : urlencodedParser(req, res, next)));
   app.use(cookieParser());
+
+  // WhatsApp routes are mounted HERE, before any feature router. Several
+  // modules mount a blanket `router.use(authenticate)` at "/api", which would
+  // otherwise answer 401 for the (unauthenticated, signature-verified) Meta
+  // webhook. The router is populated further down, once services exist.
+  const whatsappRoutes = express.Router();
+  app.use(whatsappRoutes);
 
   const authService = new AuthService(deps.authRepository, deps.auditService);
 
@@ -747,6 +760,27 @@ export function createApp(deps: AppDependencies): Express {
   );
 
   app.use("/api", createPaymentRouter(paymentService, deps.authRepository, deps.auditService));
+
+  // WhatsApp Farmer Assistant — a thin channel on top of the services above.
+  // Disabled by default (WHATSAPP_ENABLED=false): the webhook answers 503 and
+  // no WhatsApp/AI network call can happen.
+  const whatsapp = createWhatsAppModule({
+    prisma: deps.prisma,
+    auditService: deps.auditService,
+    authRepository: deps.authRepository,
+    referenceDataService,
+    farmsRepository: deps.farmsRepository,
+    farmerCropRepository: deps.farmerCropRepository,
+    farmerProfileResolver,
+    lotsService,
+    qualityService,
+    buyerMatchingService,
+    paymentService,
+    shipmentService,
+  });
+  whatsappRoutes.use(whatsapp.webhookRouter);
+  whatsappRoutes.use(whatsapp.accountRouter);
+  app.locals.whatsapp = whatsapp;
 
   app.use(notFoundHandler);
   app.use(errorHandler);

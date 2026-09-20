@@ -287,6 +287,10 @@ model User {
   // record's history down with them.
   paymentsRecorded PaymentRecord[]
 
+  // WhatsApp Farmer Assistant — at most one linked WhatsApp number per user
+  // (see WhatsAppLink). Additive back-relation only; no Module 1 column changes.
+  whatsAppLink WhatsAppLink?
+
   @@index([mobile])
   @@index([email])
   @@index([publicId])
@@ -972,6 +976,8 @@ model CropLot {
   // Module 17 — every shipment ever created for a logistics request raised
   // against this lot.
   shipments          Shipment[]
+  // Back-relation required by Delivery.lot (added so the schema validates).
+  Delivery           Delivery[]
 
   @@index([farmerId, status])
   @@index([fpoId, status])
@@ -2858,8 +2864,8 @@ model LogisticsQuote {
   // above — singular (not `[]`) because those FK columns are @unique, so
   // at most one LogisticsRequest can ever point at a given quote as its
   // accepted/recommended choice.
-  acceptedForRequest    LogisticsRequest?
-  recommendedForRequest LogisticsRequest?
+  acceptedForRequest    LogisticsRequest?  @relation("AcceptedQuote")
+  recommendedForRequest LogisticsRequest?  @relation("RecommendedQuote")
   shipment              Shipment?
 
   @@index([logisticsRequestId, status])
@@ -3009,6 +3015,8 @@ model Shipment {
 
   locations ShipmentLocation[]
   events    ShipmentEvent[]
+  // Back-relation required by Delivery.shipment (added so the schema validates).
+  Delivery  Delivery?
 
   @@index([status])
   @@index([transportProviderId, status])
@@ -3496,3 +3504,143 @@ model PaymentRecord {
   @@index([status])
   @@map("payment_records")
 }
+
+// ---------------------------------------------------------------------------
+// WhatsApp Farmer Assistant
+//
+// Three additive tables. Everything else the assistant needs (farmers, lots,
+// buyers, demands, offers, payments, shipments, mandi prices, audit, OTP
+// challenges) is reused from the existing modules — nothing is duplicated.
+// Link codes reuse the existing OtpChallenge table (purpose =
+// "WHATSAPP_LINK") instead of adding a fourth table.
+// ---------------------------------------------------------------------------
+
+// Verified binding between a FarmLink user and a WhatsApp number. A row exists
+// only after the farmer proved control of BOTH the FarmLink account (they were
+// logged in on the website when the one-time code was issued) and the WhatsApp
+// number (they sent that code from it). Phone-number equality alone is never
+// treated as proof of identity — User.mobile is not OTP-verified today.
+model WhatsAppLink {
+  id String @id @default(uuid())
+
+  userId String @unique
+  // Digits only, with country code, exactly as Meta reports it in `wa_id`
+  // (e.g. "919876543210").
+  phoneNumber String @unique
+
+  linkedAt      DateTime  @default(now())
+  lastInboundAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_links")
+}
+
+enum WhatsAppConversationState {
+  IDLE
+  COLLECTING_CROP
+  COLLECTING_QUANTITY
+  COLLECTING_LOCATION
+  COLLECTING_QUALITY
+  COLLECTING_FARM
+  COLLECTING_PRICE
+  AWAITING_CONFIRMATION
+  MATCHING
+  SHOWING_BUYERS
+  SHOWING_OFFERS
+  SHOWING_LOTS
+  SHOWING_PAYMENT
+  SHOWING_SHIPMENT
+}
+
+// One row per WhatsApp number (reset in place when it expires). `userId` is
+// null until the number is linked. `collectedEntities` holds what the farmer
+// has told us so far; `context` holds server-side option maps (e.g. "reply 2
+// = this buyer") so button/list replies never carry — or trust — database ids.
+model WhatsAppConversation {
+  id String @id @default(uuid())
+
+  phoneNumber String  @unique
+  userId      String?
+
+  state  WhatsAppConversationState @default(IDLE)
+  intent String?
+
+  collectedEntities Json @default("{}")
+  context           Json @default("{}")
+
+  // "en" | "hi" | "hinglish"
+  language String @default("hinglish")
+
+  lastInboundAt DateTime?
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages WhatsAppMessage[]
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("whatsapp_conversations")
+}
+
+enum WhatsAppMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum WhatsAppMessageStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  IGNORED
+  FAILED
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+}
+
+// Inbound rows use Meta's message id (wamid) as externalMessageId, so the
+// UNIQUE constraint is the idempotency guard for webhook retries. Outbound
+// rows use a deterministic "out:<inbound id>:<n>" key created BEFORE sending,
+// so re-processing the same inbound event can never re-send a reply.
+// Outbound bodies are deliberately NOT stored (they can contain payment and
+// offer details) — only their kind.
+model WhatsAppMessage {
+  id String @id @default(uuid())
+
+  externalMessageId String  @unique
+  providerMessageId String?
+
+  conversationId String?
+  userId         String?
+  phoneNumber    String
+
+  direction   WhatsAppMessageDirection
+  messageType String
+  // Inbound text only, truncated to 1000 chars. Null for outbound.
+  text        String?
+  payload     Json?
+  status      WhatsAppMessageStatus
+
+  attempts  Int     @default(0)
+  errorCode String?
+
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  conversation WhatsAppConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([status, receivedAt])
+  @@index([createdAt])
+  @@map("whatsapp_messages")
+}
+
