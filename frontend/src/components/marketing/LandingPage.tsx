@@ -131,52 +131,7 @@ export default function LandingPage() {
           CUSTOM TYPOGRAPHY
       ===================================================== */}
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Yellowtail&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-        :root {
-          --sticker-stroke: 5px;
-          --script-stroke: 3px;
-        }
-
-        @media (min-width: 640px) {
-          :root {
-            --sticker-stroke: 8px;
-            --script-stroke: 5px;
-          }
-        }
-
-        @media (min-width: 1024px) {
-          :root {
-            --sticker-stroke: 12px;
-            --script-stroke: 8px;
-          }
-        }
-
-        .brand-sticker {
-          font-family: 'Fredoka', cursive, sans-serif;
-          font-weight: 700;
-          color: #242424;
-          -webkit-text-stroke: var(--sticker-stroke) #f8f4e9;
-          paint-order: stroke fill;
-          stroke-linejoin: round;
-          stroke-linecap: round;
-          letter-spacing: -0.02em;
-          filter:
-            drop-shadow(0px 5px 12px rgba(0, 0, 0, 0.45));
-        }
-
-        .brand-script-yellow {
-          font-family: 'Yellowtail', cursive;
-          color: #d6b841;
-          -webkit-text-stroke: var(--script-stroke) #f8f4e9;
-          paint-order: stroke fill;
-          stroke-linejoin: round;
-          stroke-linecap: round;
-          filter:
-            drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.35));
-        }
-      `}</style>
 
       {/* =====================================================
           NAVBAR

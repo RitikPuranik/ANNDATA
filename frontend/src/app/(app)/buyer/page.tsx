@@ -58,7 +58,7 @@ function ProfileStatusCard() {
     <Card>
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold">{buyer.organizationName}</h3>
+          <h3 className="item-title">{buyer.organizationName}</h3>
           <p className="text-sm text-muted-foreground">{buyer.businessType.replace(/_/g, " ")}</p>
         </div>
         {buyer.verificationStatus && <Badge tone={toneForStatus(buyer.verificationStatus)}>{buyer.verificationStatus}</Badge>}
@@ -81,14 +81,14 @@ function BuyerDashboardContent() {
     <div>
       <PageHeader title={<>Welcome back, <span translate="no">{user.fullName.split(" ")[0]}</span></>} description="Manage your sourcing demand and trade offers." />
       <div className="mb-6"><PromoTileStrip /></div>
-      <div className="mb-6"><h2 className="mb-3 text-lg font-bold text-foreground">Browse by category</h2><CategoryGrid /></div>
+      <div className="mb-6"><h2 className="mb-3 text-foreground section-title">Browse by category</h2><CategoryGrid /></div>
       <div className="mb-6">
         <BuyerStats />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <div>
-            <h2 className="mb-3 text-lg font-bold text-foreground">Explore</h2>
+            <h2 className="mb-3 text-foreground section-title">Explore</h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {QUICK_LINKS.map((l) => (
                 <QuickLinkCard key={l.href} {...l} />

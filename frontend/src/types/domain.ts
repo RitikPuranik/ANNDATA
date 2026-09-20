@@ -41,6 +41,8 @@ export interface CropLot {
   unit: QuantityUnit;
 
   variety?: string | null;
+  /** Photo of this lot, when one has been uploaded. */
+  imageUrl?: string | null;
   harvestDate?: string | null;
   availabilityDate: string;
   createdAt: string;

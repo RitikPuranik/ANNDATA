@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Yellowtail&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -396,9 +397,7 @@
   .app-frame .stat-card .stat-icon{background:#f5f0df;color:#8a6d1e;border-radius:6px}
   .app-frame .stat-card.accent{background:#1c1c16;border-color:#1c1c16}.app-frame .stat-card.accent .stat-top span:first-child,.app-frame .stat-card.accent small{color:#aaa99f}.app-frame .stat-card.accent strong{color:#fff}.app-frame .stat-card.accent .stat-icon{background:#29291f;color:#e2c25c}
   .app-frame .tabs-list,.app-frame [role="tablist"]{border-bottom-color:#deded8!important}
-  .app-frame .tabs-list button,.app-frame [role="tab"]{font-size:10px!important;font-weight:800!important}
   .dashboard-hero + .alert-box{margin-top:16px}
-  .dashboard-hero ~ div h2{font-size:16px;font-weight:800}
 }
 
 /* Farmer-first visual layer: larger type, clearer labels, visual shortcuts. */
@@ -601,7 +600,14 @@
   .item-tile:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(20,20,15,.09); border-color: #d8cfa8; }
   .item-tile-icon { flex: none; width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; font-size: 26px; background: linear-gradient(160deg,#faf3dc,#f1e5bb); color: #8a6d1f; }
   .item-tile-body { min-width: 0; flex: 1; }
-  .item-tile-body h3 { font-size: 15px; font-weight: 800; color: #171714; }
+  .item-tile-body h3 { font-size: 19px; line-height: 1.25; font-weight: 800; letter-spacing: -.02em; color: #171714; }
+  /* Card with a photo / illustrated cover on top */
+  .item-tile.has-cover { flex-direction: column; gap: 0; padding: 0; overflow: hidden; }
+  .item-tile-cover { position: relative; height: 132px; flex: none; overflow: hidden; }
+  .item-tile.has-cover .item-tile-body { padding: 16px 18px 18px; }
+  .item-tile.has-cover .item-tile-actions button { background: rgba(255,255,255,.92); border-color: transparent; box-shadow: 0 2px 8px rgba(0,0,0,.14); }
+  .item-tile.has-cover:hover .item-tile-cover > * { transform: scale(1.03); }
+  .item-tile-cover > * { transition: transform .5s ease; }
   .item-tile-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .item-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; background: #f4f0e8; color: #5c574f; font-size: 11px; font-weight: 700; }
   .item-chip.gold { background: #faf3dc; color: #8a6d1f; }
@@ -1169,4 +1175,97 @@
       border: 1px solid rgba(255,255,255,.42) !important;
     }
   }
+}
+
+/* ================================================================
+   SHARED HEADING SCALE  (one size for the whole website)
+   .section-title  -> card / section headings  (Quality, Market, Storage ...)
+   .sub-title      -> smaller heading inside a section
+   .item-title     -> name of a single item in a list (lot, buyer, FPO ...)
+   Tabs use the same scale (see components/ui/tabs.tsx).
+   ================================================================ */
+.section-title,
+.app-frame .section-title {
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+.section-title svg,
+.app-frame .section-title svg { width: 26px; height: 26px; flex: none; }
+
+.sub-title,
+.app-frame .sub-title {
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -.015em;
+}
+
+.item-title,
+.app-frame .item-title {
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+/* Tabs: bigger, bolder, gold underline, soft hover */
+.app-frame [role="tablist"] { gap: 6px; }
+.app-frame [role="tab"] { letter-spacing: -.01em; border-radius: 10px 10px 0 0; }
+.app-frame [role="tab"]:hover { background: #f4f1e6; }
+.app-frame [role="tab"][aria-selected="true"] { color: #171714; background: #faf6e6; }
+.app-frame [role="tab"][aria-selected="true"] > span:last-child { background: #d6b841; }
+
+@media (max-width: 760px) {
+  .section-title, .app-frame .section-title { font-size: 21px; }
+  .section-title svg, .app-frame .section-title svg { width: 23px; height: 23px; }
+  .sub-title, .app-frame .sub-title { font-size: 16px; }
+  .item-title, .app-frame .item-title { font-size: 17px; }
+}
+
+/* Brand sticker / hand-drawn script styling — outlined "sticker" text
+   used for the marketing/landing brand mark. Stroke widths scale up on
+   larger screens via the --sticker-stroke / --script-stroke variables. */
+:root {
+  --sticker-stroke: 5px;
+  --script-stroke: 3px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --sticker-stroke: 8px;
+    --script-stroke: 5px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --sticker-stroke: 12px;
+    --script-stroke: 8px;
+  }
+}
+
+.brand-sticker {
+  font-family: 'Fredoka', cursive, sans-serif;
+  font-weight: 700;
+  color: #242424;
+  -webkit-text-stroke: var(--sticker-stroke) #f8f4e9;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  letter-spacing: -0.02em;
+  filter:
+    drop-shadow(0px 5px 12px rgba(0, 0, 0, 0.45));
+}
+
+.brand-script-yellow {
+  font-family: 'Yellowtail', cursive;
+  color: #d6b841;
+  -webkit-text-stroke: var(--script-stroke) #f8f4e9;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter:
+    drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.35));
 }

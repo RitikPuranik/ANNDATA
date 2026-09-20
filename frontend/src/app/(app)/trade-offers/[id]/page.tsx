@@ -48,7 +48,7 @@ function CounterForm({ publicId, onDone }: { publicId: string; onDone: () => voi
 
   return (
     <div className="mt-4 rounded-xl border border-border bg-secondary/40 p-4">
-      <h4 className="mb-3 text-sm font-semibold">Send a counter offer</h4>
+      <h4 className="mb-3 sub-title">Send a counter offer</h4>
       {error && <Alert variant="error" className="mb-3">{error}</Alert>}
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
@@ -188,7 +188,7 @@ function TradeOfferDetailContent({ id }: { id: string }) {
       </Card>
 
       <Card className="mt-6">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <h3 className="mb-4 flex items-center gap-2 section-title">
           <History className="h-[18px] w-[18px]" aria-hidden /> Negotiation history
         </h3>
         {historyQuery.isLoading ? (

@@ -79,7 +79,7 @@ export function InsightPanel({ data, skipKeys = [] }: { data: unknown; skipKeys?
 
       {objectEntries.map(([key, value]) => (
         <div key={key} className="rounded-xl border border-border bg-secondary/40 p-4">
-          <h4 className="mb-2 text-sm font-semibold text-foreground">{humanize(key)}</h4>
+          <h4 className="mb-2 text-foreground sub-title">{humanize(key)}</h4>
           <InsightPanel data={value} />
         </div>
       ))}
@@ -89,14 +89,14 @@ export function InsightPanel({ data, skipKeys = [] }: { data: unknown; skipKeys?
         if (arr.length === 0) {
           return (
             <div key={key}>
-              <h4 className="mb-1 text-sm font-semibold text-foreground">{humanize(key)}</h4>
+              <h4 className="mb-1 text-foreground sub-title">{humanize(key)}</h4>
               <p className="text-sm text-muted-foreground">None.</p>
             </div>
           );
         }
         return (
           <div key={key}>
-            <h4 className="mb-2 text-sm font-semibold text-foreground">
+            <h4 className="mb-2 text-foreground sub-title">
               {humanize(key)} <span className="text-muted-foreground">({arr.length})</span>
             </h4>
             <div className="space-y-2">

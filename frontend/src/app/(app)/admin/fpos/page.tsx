@@ -58,7 +58,7 @@ function AdminFposContent() {
                     <Building2 className="h-5 w-5" aria-hidden />
                   </span>
                   <div>
-                    <h3 className="font-semibold">{fpo.name}</h3>
+                    <h3 className="item-title">{fpo.name}</h3>
                     <p className="text-sm text-muted-foreground">{fpo.organizationType}</p>
                   </div>
                 </div>

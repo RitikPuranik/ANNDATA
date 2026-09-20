@@ -18,7 +18,7 @@ function PersonalInfoCard() {
 
   return (
     <Card>
-      <h2 className="mb-4 text-lg font-medium">{t("farmerProfile.personal")}</h2>
+      <h2 className="mb-4 section-title">{t("farmerProfile.personal")}</h2>
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <dt className="text-sm text-muted-foreground">{t("farmerProfile.name")}</dt>
@@ -66,7 +66,7 @@ export function FarmerProfileSection() {
       <PersonalInfoCard />
 
       <Card>
-        <h2 className="mb-1 text-lg font-medium">{t("farm.sectionTitle")}</h2>
+        <h2 className="mb-1 section-title">{t("farm.sectionTitle")}</h2>
         <p className="mb-4 text-sm text-muted-foreground">{t("farm.sectionSubtitle")}</p>
         <FarmList farms={data.farms} />
       </Card>

@@ -61,7 +61,7 @@ function AdminBuyersContent() {
                     <ShieldAlert className="h-5 w-5" aria-hidden />
                   </span>
                   <div>
-                    <h3 className="font-semibold">{buyerQuery.data.organizationName}</h3>
+                    <h3 className="item-title">{buyerQuery.data.organizationName}</h3>
                     <p className="text-sm text-muted-foreground">
                       {buyerQuery.data.businessType.replace(/_/g, " ")} · {buyerQuery.data.district}, {buyerQuery.data.state}
                     </p>

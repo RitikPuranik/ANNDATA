@@ -69,6 +69,8 @@ export interface Farm {
   area: number;
   areaUnit: AreaUnit;
   irrigationType: IrrigationType;
+  /** Photo of this farm, when one has been uploaded. */
+  imageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -77,6 +79,8 @@ export interface FarmerCrop {
   id: string;
   farmId: string;
   crop: CropOption;
+  /** Photo of this crop on the farm, when one has been uploaded. */
+  imageUrl?: string | null;
   area: number;
   areaUnit: AreaUnit;
   isPrimary: boolean;

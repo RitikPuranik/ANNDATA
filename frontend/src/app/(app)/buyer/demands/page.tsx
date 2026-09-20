@@ -98,7 +98,7 @@ function NewDemandForm({ onCreated, isFirstDemand }: { onCreated: () => void; is
 
   return (
     <Card className="mb-6">
-      <h2 className="mb-4 text-lg font-semibold">New buyer demand</h2>
+      <h2 className="mb-4 section-title">New buyer demand</h2>
       {showSummary && Object.keys(errors).length > 1 && (
         <ErrorSummary
           title="Please fix the following before continuing:"
@@ -258,7 +258,7 @@ function DemandsContent() {
             <Card key={d.publicId}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold">{d.title}</h3>
+                  <h3 className="item-title">{d.title}</h3>
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     {d.requiredQuantity} {d.quantityUnit} · {d.district}, {d.state}
                     {d.targetPrice ? ` · ₹${d.targetPrice}/unit target` : ""}

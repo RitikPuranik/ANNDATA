@@ -91,7 +91,7 @@ function Content() {
       </Card>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 font-semibold">Calculation</h2>
+          <h2 className="mb-3 section-title">Calculation</h2>
           {calc.isPending ? (
             <LoadingBlock />
           ) : calc.data ? (
@@ -101,7 +101,7 @@ function Content() {
           )}
         </Card>
         <Card>
-          <h2 className="mb-3 font-semibold">Saved calculations</h2>
+          <h2 className="mb-3 section-title">Saved calculations</h2>
           {hist.isLoading ? (
             <LoadingBlock />
           ) : hist.isError ? (

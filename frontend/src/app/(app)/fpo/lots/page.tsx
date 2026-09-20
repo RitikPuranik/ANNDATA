@@ -22,7 +22,7 @@ function LotsList({ fpoId }: { fpoId: string }) {
       {lotsQuery.data!.map((lot) => (
         <div key={lot.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold">
+            <h3 className="item-title">
               {lot.crop?.name}
               {lot.variety ? ` · ${lot.variety}` : ""}
             </h3>

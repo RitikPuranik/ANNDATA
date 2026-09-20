@@ -24,7 +24,7 @@ function QualityContent() {
       />
 
       <Card>
-        <h2 className="mb-3 text-lg font-semibold">Overview</h2>
+        <h2 className="mb-3 section-title">Overview</h2>
         {summaryQuery.isLoading ? (
           <LoadingBlock />
         ) : summaryQuery.isError ? (
@@ -35,7 +35,7 @@ function QualityContent() {
       </Card>
 
       <Card>
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <h2 className="mb-4 flex items-center gap-2 section-title">
           <ShieldCheck className="h-[18px] w-[18px]" aria-hidden /> Assess a lot
         </h2>
         {lotsQuery.isLoading ? (

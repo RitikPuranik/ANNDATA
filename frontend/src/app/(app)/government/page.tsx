@@ -19,7 +19,7 @@ function GovernmentContent() {
         description="A read-only overview of Farmer Producer Organisations across the region — verification status, membership, and activity."
       />
       <Card>
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+        <h2 className="mb-3 flex items-center gap-2 section-title">
           <Landmark className="h-[18px] w-[18px]" aria-hidden /> Summary
         </h2>
         {summaryQuery.isLoading ? (

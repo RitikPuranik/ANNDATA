@@ -45,7 +45,7 @@ function QuoteForm({ requestId, onDone }: { requestId: string; onDone: () => voi
 
   return (
     <Card className="mt-4">
-      <h3 className="mb-3 font-semibold">Submit a quote</h3>
+      <h3 className="mb-3 section-title">Submit a quote</h3>
       {error && <Alert variant="error" className="mb-3">{error}</Alert>}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -247,7 +247,7 @@ function LogisticsDetailContent({ id }: { id: string }) {
       )}
 
       <Card className="mt-6">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <h3 className="mb-4 flex items-center gap-2 section-title">
           <Truck className="h-[18px] w-[18px]" aria-hidden /> Quotes
         </h3>
         {quotesQuery.isLoading ? (
