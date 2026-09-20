@@ -4,6 +4,15 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+    ],
+  },
   // Only pulls in the icon components actually used on each page instead of
   // bundling the whole lucide-react library into every route's JS chunk.
   experimental: {
