@@ -41,7 +41,12 @@ export function createNetRealizationRouter(
   // that can plausibly own or manage a lot may reach these handlers.
   // Per-lot ownership/FPO-management is still separately enforced in the
   // controller (ensureAuthorizedForLot) for every request.
-  router.use(authMw, requireAnyRole("FARMER", "FPO_ADMIN", "ADMIN"));
+  // IMPORTANT: scoped to this module's own paths. This router is mounted at
+  // the bare "/api" prefix, so a path-less router.use() would run for EVERY
+  // /api/* request that reaches it — including requests meant for routers
+  // mounted after it (transporters, logistics, shipments, deliveries,
+  // payments) — and 403 any role not listed here (BUYER, TRANSPORTER, ...).
+  router.use(["/net-realization", "/lots/:lotPublicId/net-realizations"], authMw, requireAnyRole("FARMER", "FPO_ADMIN", "ADMIN"));
 
   /**
    * @openapi

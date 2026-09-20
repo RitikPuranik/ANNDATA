@@ -34,7 +34,14 @@ export function createVehicleRouter(
   // Every route below is owner-scoped: a TRANSPORTER only ever reaches
   // their own vehicles (loadOwnedOrThrow in vehicle.service.ts), an ADMIN
   // may reach any. No other role manages vehicles directly.
-  router.use(authMw, requireAnyRole("TRANSPORTER", "ADMIN"));
+  //
+  // IMPORTANT: this guard MUST be scoped to "/vehicles". This router is
+  // mounted at the bare "/api" prefix, and a path-less router.use() runs for
+  // EVERY /api/* request that reaches this router — including requests meant
+  // for routers mounted after it (logistics, shipments, deliveries,
+  // payments). An unscoped guard here returned 403 to every FARMER /
+  // FPO_ADMIN / BUYER hitting those endpoints.
+  router.use("/vehicles", authMw, requireAnyRole("TRANSPORTER", "ADMIN"));
 
   /**
    * @openapi
