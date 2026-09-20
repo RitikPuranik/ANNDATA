@@ -40,6 +40,8 @@ export class FarmLinkUrlService {
   newFarm(): string { return this.url("/farms/new"); }
   crops(): string { return this.url("/crops"); }
   register(): string { return this.url("/login"); }
+  /** Where a number that is not registered yet is sent ("Continue on FarmLink"). */
+  signup(): string { return this.url("/register"); }
   /** No payments page exists in the frontend yet → the dashboard is the closest page. */
   payments(): string { return this.dashboard(); }
   /** No transactions page exists → net realization is the closest earnings view. */
@@ -63,7 +65,7 @@ export class FarmLinkUrlService {
   /** Every static path this service can emit (used by the route-existence test). */
   static readonly STATIC_PATHS = [
     "/dashboard", "/lots", "/lots/new", "/trade-offers", "/shipments", "/market", "/profile", "/farms", "/farms/new",
-    "/crops", "/login", "/net-realization", "/warehouses", "/sell-vs-store", "/forecasts", "/logistics",
+    "/crops", "/login", "/register", "/net-realization", "/warehouses", "/sell-vs-store", "/forecasts", "/logistics",
   ] as const;
   static readonly DYNAMIC_PATHS = ["/lots/[id]", "/trade-offers/[id]", "/shipments/[id]"] as const;
 }

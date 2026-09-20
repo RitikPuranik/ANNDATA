@@ -21,10 +21,15 @@ const K = {
   yes: ["yes", "y", "haan", "han", "ha", "haa", "ji", "ok", "okay", "sahi", "confirm", "theek", "thik", "हाँ", "हां", "जी", "ठीक"],
   no: ["no", "n", "nahi", "nahin", "nai", "nope", "नहीं", "ना"],
   have: ["hai", "hain", "have", "hoon", "है", "हैं"],
-  sell: ["sell", "bechna", "bechni", "bech", "bikri", "बेचना", "बेचनी", "बेच"],
+  sell: ["sell", "bechna", "bechni", "bech", "bechu", "bechun", "bechoon", "bikri", "बेचना", "बेचनी", "बेच", "बेचूं", "बेचूँ"],
   where: ["kaha", "kahan", "कहाँ", "कहां", "where", "status", "kab", "कब"],
   maal: ["maal", "mal", "माल"],
+  about: ["about", "process", "explain", "explanation", "samjhao", "samjhaiye", "intro", "introduction", "जानकारी", "परिचय"],
 };
+
+/** "How does FarmLink work" phrasings (matched on normalized text: lowercase, punctuation → space). */
+const ABOUT_PHRASES =
+  /(how (does|do|it|farmlink|this|to use)|how .{0,20} works?|kaise (kaam|kam|chalta|chalti|karta|kare|use)|what is farmlink|what s farmlink|about farmlink|farmlink (kya|kaise|ke bare|ke baare)|कैसे (काम|चलता|चलती)|फार्मलिंक (क्या|कैसे))/u;
 
 const WEBSITE_KEYWORDS: Array<{ words: string[]; target: WebsiteTarget }> = [
   { words: ["warehouse", "warehouses", "godown", "storage", "गोदाम"], target: "warehouses" },
@@ -68,8 +73,12 @@ export const CROP_ALIASES: Record<string, string> = {
  * crop name is only ever matched exactly ("rice" must never fuzzy-match the
  * keyword "price").
  */
+// Common words that sit one typo away from a command keyword ("kaise" = how, vs
+// "paise" = money) and must therefore only ever match exactly.
+const NEVER_FUZZY = new Set(["kaise", "kaisa", "kaisi", "kese"]);
+
 function hasKeyword(tokens: string[], keywords: readonly string[]): boolean {
-  return tokens.some((tok) => keywords.includes(tok) || (!CROP_ALIASES[tok] && keywords.some((k) => fuzzyEquals(tok, k))));
+  return tokens.some((tok) => keywords.includes(tok) || (!CROP_ALIASES[tok] && !NEVER_FUZZY.has(tok) && keywords.some((k) => fuzzyEquals(tok, k))));
 }
 
 const UNIT_MAP: Record<string, QuantityUnitCode> = {
@@ -192,6 +201,10 @@ export function parseMessage(raw: string): DetectedIntent {
   const hasHave = hasKeyword(tokens, K.have) || /(mere paas|i have|mere pas)/.test(n);
   if ((hasSell || hasHave) && (entities.crop || entities.quantity)) return done("FIND_BUYER", 0.85, "rules");
   if (hasSell) return done("FIND_BUYER", 0.8, "rules");
+
+  // "How does FarmLink work?" — after every action command so "payment kaise milega"
+  // or "how to sell wheat" keep their own meaning.
+  if (ABOUT_PHRASES.test(n) || hasKeyword(tokens, K.about)) return done("ABOUT", cmdConf, cmdSource);
 
   // Website-fallback vocabulary (understood, but not doable inside WhatsApp).
   for (const w of WEBSITE_KEYWORDS) {

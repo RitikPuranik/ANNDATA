@@ -15,7 +15,7 @@ import type { WhatsAppRateLimiter } from "./whatsapp-rate-limiter";
 import { detectLanguage } from "./whatsapp-text";
 import { WhatsAppProviderError, type WhatsAppProvider } from "./providers/whatsapp-provider.interface";
 import type { SpeechToTextProvider } from "./providers/speech-to-text.provider";
-import type { FlowInput, InboundMessage, InboundType, Lang, OutboundMessage } from "./whatsapp.types";
+import type { AnyFlowInput, InboundMessage, InboundType, Lang, OutboundMessage } from "./whatsapp.types";
 
 export interface IngestResult {
   accepted: number;
@@ -235,24 +235,22 @@ export class WhatsAppWebhookService {
         return;
       }
 
+      // Linked farmer → full assistant. Anyone else is a GUEST: not turned away, but
+      // limited to public data (mandi prices, open buyer demand, "how it works") —
+      // anything that needs an account answers "Continue on FarmLink".
       const identity = await this.d.farmers.resolve(inbound.from, meta);
+      const farmer = identity.status === "linked" ? identity.farmer : null;
+      userId = farmer ? farmer.user.id : null;
+      if (farmer) logger.info({ event: "farmer_identified" }, "[WhatsApp] farmer_identified");
+      else logger.info({ event: "guest_session" }, "[WhatsApp] guest_session");
 
-      if (identity.status === "unlinked") {
-        const out = await this.handleUnlinked(inbound, lang, meta);
-        await this.deliver(row, null, null, inbound.from, out);
-        await repo.markInbound(row.id, "PROCESSED");
-        return;
-      }
-
-      userId = identity.farmer.user.id;
-      logger.info({ event: "farmer_identified" }, "[WhatsApp] farmer_identified");
       const { conv } = await this.d.conversations.load(inbound.from, userId, lang);
       conversationId = conv.id;
       const detected = inbound.type === "text" ? detectLanguage(inbound.text ?? "", conv.language) : null;
       if (detected) conv.language = detected;
       lang = conv.language;
 
-      const input: FlowInput = { inbound, conv, farmer: identity.farmer };
+      const input: AnyFlowInput = farmer ? { inbound, conv, farmer } : { inbound, conv };
       const messages = await this.d.router.handle(input);
       await this.d.conversations.save(conv);
       await this.deliver(row, conv.id, userId, inbound.from, messages);
@@ -266,11 +264,6 @@ export class WhatsAppWebhookService {
       }
       await repo.markInbound(row.id, "FAILED", { errorCode: "PROCESSING_ERROR" }).catch(() => undefined);
     }
-  }
-
-  private async handleUnlinked(_inbound: InboundMessage, lang: Lang, _meta: RequestMeta): Promise<OutboundMessage[]> {
-    // No farmer data of any kind is exposed before the number is linked.
-    return [{ kind: "text", text: t("welcomeUnlinked", lang) }];
   }
 
   private async handleLink(inbound: InboundMessage, lang: Lang, meta: RequestMeta): Promise<OutboundMessage[]> {

@@ -6,7 +6,7 @@ import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, textMsg } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { formatDate, inr } from "./whatsapp-text";
-import type { FlowInput, OutboundMessage } from "./whatsapp.types";
+import { isLinked, type AnyFlowInput, type OutboundMessage } from "./whatsapp.types";
 
 const MAX_MANDIS = 3;
 
@@ -23,7 +23,7 @@ export class WhatsAppMarketService {
     private readonly urls: FarmLinkUrlService,
   ) {}
 
-  async prices(input: FlowInput, crop: CropDTO, opts: { locationText?: string; coords?: { latitude: number; longitude: number } } = {}): Promise<OutboundMessage[]> {
+  async prices(input: AnyFlowInput, crop: CropDTO, opts: { locationText?: string; coords?: { latitude: number; longitude: number } } = {}): Promise<OutboundMessage[]> {
     const { conv } = input;
     const lang = conv.language;
     conv.entities.crop = { id: crop.id, name: crop.name };
@@ -34,8 +34,9 @@ export class WhatsAppMarketService {
 
     if (!coords) {
       let loc = opts.locationText ? await this.catalog.resolveLocation(opts.locationText) : null;
-      if (!loc && !opts.locationText) {
+      if (!loc && !opts.locationText && isLinked(input)) {
         // Prefer the farmer's own farm location when they didn't say where.
+        // (A guest has no farms — they are simply asked for a district.)
         const farms = await this.catalog.farmsOf(input.farmer.user.id).catch(() => []);
         if (farms[0]) loc = await this.catalog.resolveLocation(`${farms[0].district.name}, ${farms[0].state.name}`);
       }
@@ -67,7 +68,11 @@ export class WhatsAppMarketService {
     conv.intent = null;
     conv.entities = {};
 
-    if (chosen.length === 0) return [ctaMsg(t("mandiUnavailable", lang), t("ctaOpen", lang), this.urls.market())];
+    // Prices are public data, but the full market page needs a login: a guest's
+    // button leads to sign-up ("Continue on FarmLink"), a farmer's to the page.
+    const cta = isLinked(input) ? { text: t("ctaOpen", lang), url: this.urls.market() } : { text: t("ctaContinue", lang), url: this.urls.signup() };
+
+    if (chosen.length === 0) return [ctaMsg(t("mandiUnavailable", lang), cta.text, cta.url)];
 
     const cropName = this.catalog.displayName(crop, lang);
     const blocks = chosen.map(
@@ -77,7 +82,7 @@ export class WhatsAppMarketService {
     const isStale = freshness(newest) === "STALE" || freshness(newest) === "OUTDATED";
     const lines = [t("mandiHeader", lang, { crop: cropName }), "", blocks.join("\n\n"), "", t("mandiTimestamp", lang, { date: formatDate(newest) })];
     if (isStale) lines.push("", t("mandiStale", lang, { date: formatDate(newest) }));
-    return [ctaMsg(lines.join("\n"), t("ctaOpen", lang), this.urls.market())];
+    return [ctaMsg(lines.join("\n"), cta.text, cta.url)];
   }
 
   /**

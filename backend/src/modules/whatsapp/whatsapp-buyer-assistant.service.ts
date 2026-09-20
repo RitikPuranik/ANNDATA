@@ -1,3 +1,5 @@
+import { logger } from "../../config/logger";
+import { trackEvent } from "../../config/posthog";
 import type { AuditService } from "../audit/audit.service";
 import type { BuyerMatchingService } from "../buyer-matching/buyer-matching.service";
 import { offerBody } from "../buyer-matching/buyer-matching.schemas";
@@ -8,14 +10,14 @@ import type { CropDTO } from "../reference-data/reference-data.service";
 import { extractBareQuantity, extractGrade, isDontKnow, isOther } from "./nlu/whatsapp-command-parser";
 import type { WhatsAppCatalogService } from "./whatsapp-catalog.service";
 import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
-import { ctaMsg, optionsMessage, textMsg, WHATSAPP_META, type OptionSpec } from "./whatsapp-flow-helpers";
+import { ctaMsg, guestGate, optionsMessage, textMsg, WHATSAPP_META, type GateReason, type OptionSpec } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { lotStatusLabel, type WhatsAppLotService } from "./whatsapp-lot-service";
 import type { WhatsAppMarketService } from "./whatsapp-market-service";
 import type { WhatsAppRateLimiter } from "./whatsapp-rate-limiter";
 import { extractNumber } from "./nlu/whatsapp-command-parser";
 import { inr, normalizeText, num, parseBareNumber, unitLong, unitShort } from "./whatsapp-text";
-import type { BuyerCard, ConversationRecord, FlowInput, GradeCode, OutboundMessage, QuantityUnitCode, RawEntities } from "./whatsapp.types";
+import { isLinked, type AnyFlowInput, type BuyerCard, type ConversationRecord, type FlowInput, type GradeCode, type GuestFlowInput, type OutboundMessage, type QuantityUnitCode, type RawEntities } from "./whatsapp.types";
 
 const BUYERS_PER_PAGE = 3;
 const usable = new Set(["AVAILABLE", "PARTIALLY_COMMITTED"]);
@@ -37,6 +39,12 @@ const gradeLabel = (g: GradeCode | undefined, lang: "en" | "hi" | "hinglish"): s
  *   offers   → BuyerMatchingService.createOffer (existing state machine)
  * Nothing here decides who the "best" buyer is beyond presenting the
  * engine's own score order.
+ *
+ * The same collection + presentation code also serves GUESTS (numbers not
+ * linked to an account). A guest gets the read-only part only — crop, quantity,
+ * location, then open buyer demand from BuyerMatchingService.searchOpenDemand.
+ * Everything that creates or publishes something (lot, offer) takes a
+ * FlowInput, so it cannot be reached without a linked farmer.
  */
 export class WhatsAppBuyerAssistantService {
   constructor(
@@ -57,7 +65,7 @@ export class WhatsAppBuyerAssistantService {
   // ---------------------------------------------------------------------
 
   /** Begin (or resume) the flow with whatever the farmer already told us. */
-  async start(input: FlowInput, raw: RawEntities): Promise<OutboundMessage[]> {
+  async start(input: AnyFlowInput, raw: RawEntities): Promise<OutboundMessage[]> {
     const { conv } = input;
     conv.intent = "FIND_BUYER";
     conv.entities = {};
@@ -66,7 +74,7 @@ export class WhatsAppBuyerAssistantService {
     return this.advance(input, noted);
   }
 
-  private async mergeEntities(input: FlowInput, raw: RawEntities): Promise<boolean> {
+  private async mergeEntities(input: AnyFlowInput, raw: RawEntities): Promise<boolean> {
     const e = input.conv.entities;
     let noted = false;
     if (raw.crop) {
@@ -83,7 +91,7 @@ export class WhatsAppBuyerAssistantService {
     return noted;
   }
 
-  private async advance(input: FlowInput, quantityJustNoted = false): Promise<OutboundMessage[]> {
+  private async advance(input: AnyFlowInput, quantityJustNoted = false): Promise<OutboundMessage[]> {
     const { conv } = input;
     const lang = conv.language;
     const e = conv.entities;
@@ -110,17 +118,18 @@ export class WhatsAppBuyerAssistantService {
         ]),
       ];
     }
-    return this.resolveLotAndSearch(input);
+    // Registered farmer → a real lot; guest → read-only search of open demand.
+    return isLinked(input) ? this.resolveLotAndSearch(input) : this.searchAsGuest(input);
   }
 
   private displayCrop(englishName: string, conv: ConversationRecord): string {
     return englishName && conv.language === "hi" ? englishName : englishName;
   }
 
-  async askCrop(input: FlowInput, intent: "FIND_BUYER" | "CHECK_MANDI_PRICE" = "FIND_BUYER"): Promise<OutboundMessage[]> {
+  async askCrop(input: AnyFlowInput, intent: "FIND_BUYER" | "CHECK_MANDI_PRICE" = "FIND_BUYER"): Promise<OutboundMessage[]> {
     const { conv } = input;
     const lang = conv.language;
-    const crops = await this.catalog.cropMenu(input.farmer.user.id, 9);
+    const crops = await this.catalog.cropMenu(input.farmer?.user.id ?? null, 9);
     conv.state = "COLLECTING_CROP";
     conv.intent = intent;
     delete conv.context.awaitingCropName;
@@ -130,12 +139,12 @@ export class WhatsAppBuyerAssistantService {
   }
 
   /** Farmer chose/typed a crop (buyer OR bhav flow). Returns null if the text isn't a crop. */
-  async resolveCropAnswer(input: FlowInput, text: string): Promise<CropDTO | "other" | null> {
+  async resolveCropAnswer(input: AnyFlowInput, text: string): Promise<CropDTO | "other" | null> {
     if (isOther(text)) return "other";
     return this.catalog.resolveCrop(text);
   }
 
-  async handleCollecting(input: FlowInput, text: string): Promise<OutboundMessage[]> {
+  async handleCollecting(input: AnyFlowInput, text: string): Promise<OutboundMessage[]> {
     const { conv } = input;
     const lang = conv.language;
     const e = conv.entities;
@@ -179,9 +188,10 @@ export class WhatsAppBuyerAssistantService {
   // Option/button actions
   // ---------------------------------------------------------------------
 
-  async handleAction(input: FlowInput, action: string, ref?: string): Promise<OutboundMessage[] | null> {
+  async handleAction(input: AnyFlowInput, action: string, ref?: string): Promise<OutboundMessage[] | null> {
     const { conv } = input;
     const e = conv.entities;
+    const linked = isLinked(input) ? input : null;
     switch (action) {
       case "crop:pick": {
         const crops = await this.catalog.listCrops();
@@ -201,29 +211,39 @@ export class WhatsAppBuyerAssistantService {
         e.qualityGrade = action.split(":")[1] as GradeCode;
         return this.advance(input);
       case "farm:pick":
+        if (!linked) return null;
         e.farmId = ref;
-        return this.resolveLotAndSearch(input);
+        return this.resolveLotAndSearch(linked);
       case "lot:reuse":
+        if (!linked) return null;
         e.lotPublicId = ref;
         conv.context.confirm = undefined;
-        return this.searchBuyers(input, ref!);
+        return this.searchBuyers(linked, ref!);
       case "lot:new":
+        if (!linked) return null;
         conv.context.declinedReuse = true;
-        return this.resolveLotAndSearch(input);
+        return this.resolveLotAndSearch(linked);
       case "lot:buyers":
-        return this.showBuyersForLot(input, ref!);
+        return linked ? this.showBuyersForLot(linked, ref!) : null;
       case "buyers:more":
         return this.buyersPage(input, (conv.context.buyerPage ?? 1) + 1);
       case "buyers:details":
+        return this.chooseBuyer(input, "details");
       case "buyers:offer":
-        return this.chooseBuyer(input, action === "buyers:offer" ? "offer" : "details");
+        // A guest can browse buyers, but sending an offer needs an account.
+        return linked ? this.chooseBuyer(linked, "offer") : [this.gate(input, "sendOffer")];
       case "buyer:offer-for":
-        return this.startOffer(input, Number(ref));
+        return linked ? this.startOffer(linked, Number(ref)) : [this.gate(input, "sendOffer")];
       case "buyer:pick":
-        return conv.context.pendingBuyerAction === "offer" ? this.startOffer(input, Number(ref)) : this.buyerDetails(input, Number(ref));
+        if (conv.context.pendingBuyerAction === "offer") return linked ? this.startOffer(linked, Number(ref)) : [this.gate(input, "sendOffer")];
+        return this.buyerDetails(input, Number(ref));
       default:
         return null;
     }
+  }
+
+  private gate(input: AnyFlowInput, reason: GateReason): OutboundMessage {
+    return guestGate(input.conv.language, this.urls.signup(), reason);
   }
 
   // ---------------------------------------------------------------------
@@ -345,17 +365,7 @@ export class WhatsAppBuyerAssistantService {
     }
     conv.state = "MATCHING";
     const result = (await this.matching.matches(user, lotPublicId)) as { matches: MatchRow[] };
-    const cards: BuyerCard[] = [...result.matches]
-      .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0)) // the engine's own score, best first
-      .map((m) => ({
-        demandPublicId: m.demand.publicId,
-        organizationName: m.buyer.organizationName,
-        district: m.demand.district,
-        state: m.demand.state,
-        requiredQuantity: m.demand.requiredQuantity,
-        quantityUnit: m.demand.quantityUnit,
-        matchScore: m.matchScore ?? 0,
-      }));
+    const cards = this.toCards(result.matches, { sortByScore: true }); // the engine's own score, best first
 
     conv.entities.lotPublicId = lotPublicId;
     conv.context.buyers = cards;
@@ -369,7 +379,56 @@ export class WhatsAppBuyerAssistantService {
     return this.buyersPage(input, 1);
   }
 
-  private async buyersPage(input: FlowInput, page: number): Promise<OutboundMessage[]> {
+  private toCards(rows: MatchRow[], opts: { sortByScore: boolean }): BuyerCard[] {
+    const ordered = opts.sortByScore ? [...rows].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0)) : rows;
+    return ordered.map((m) => ({
+      demandPublicId: m.demand.publicId,
+      organizationName: m.buyer.organizationName,
+      district: m.demand.district,
+      state: m.demand.state,
+      requiredQuantity: m.demand.requiredQuantity,
+      quantityUnit: m.demand.quantityUnit,
+      matchScore: m.matchScore ?? 0,
+    }));
+  }
+
+  /**
+   * Guest (unregistered) search: crop + quantity + location → open demand from
+   * verified buyers. Read-only and public: no lot, farm or offer is created and
+   * nothing is stored except this conversation's own context. Rate-limited per
+   * number, because there is no account to hold accountable.
+   */
+  private async searchAsGuest(input: GuestFlowInput): Promise<OutboundMessage[]> {
+    const { conv } = input;
+    const lang = conv.language;
+    const e = conv.entities;
+    const phone = input.inbound.from;
+    if (!e.crop || !e.quantity || !e.unit) return [textMsg(t("genericError", lang))];
+
+    if (!(await this.limiter.allow(`guest-matching:${phone}`, this.matchingLimitPerHour, 3600))) {
+      this.finish(conv);
+      return [textMsg(t("limitReached", lang))];
+    }
+    conv.state = "MATCHING";
+    // Location only ranks results (see searchOpenDemand); an unresolvable place
+    // (e.g. a village) simply means no ranking, never an error.
+    const loc = e.location ? await this.catalog.resolveLocation(e.location) : null;
+    const result = (await this.matching.searchOpenDemand({ cropId: e.crop.id, quantity: e.quantity, unit: e.unit, state: loc?.state, district: loc?.district })) as { matches: MatchRow[] };
+    // searchOpenDemand already orders by location, then score: keep that order.
+    const cards = this.toCards(result.matches, { sortByScore: false });
+    conv.context.buyers = cards;
+    logger.info({ event: "guest_buyer_search", matches: cards.length }, "[WhatsApp] guest_buyer_search");
+    trackEvent("whatsapp_guest_buyer_search", `wa:${phone.slice(-4)}`, { matches: cards.length });
+
+    if (cards.length === 0) {
+      const crop = e.crop.name;
+      this.finish(conv);
+      return [ctaMsg(t("guestNoBuyers", lang, { crop }), t("ctaContinue", lang), this.urls.signup())];
+    }
+    return this.buyersPage(input, 1);
+  }
+
+  private async buyersPage(input: AnyFlowInput, page: number): Promise<OutboundMessage[]> {
     const { conv } = input;
     const lang = conv.language;
     const cards = conv.context.buyers ?? [];
@@ -388,6 +447,7 @@ export class WhatsAppBuyerAssistantService {
     const lines = [t("buyersFound", lang, { n: cards.length, crop }), "", blocks.join("\n\n")];
     if (ref) lines.push("", t("buyersRefPrice", lang, { price: inr(ref) }));
     lines.push("", t("buyersDisclaimer", lang));
+    if (!isLinked(input)) lines.push("", t("guestBuyersNote", lang));
 
     const specs: OptionSpec[] = [
       { action: "buyers:details", title: t("btnDetails", lang) },
@@ -397,7 +457,7 @@ export class WhatsAppBuyerAssistantService {
     return [optionsMessage(conv, lines.join("\n"), specs)];
   }
 
-  private chooseBuyer(input: FlowInput, action: "details" | "offer"): OutboundMessage[] {
+  private chooseBuyer(input: AnyFlowInput, action: "details" | "offer"): OutboundMessage[] {
     const { conv } = input;
     const lang = conv.language;
     const cards = conv.context.buyers ?? [];
@@ -409,7 +469,7 @@ export class WhatsAppBuyerAssistantService {
     return [optionsMessage(conv, t(action === "offer" ? "whichBuyerOffer" : "whichBuyerDetails", lang), specs, { layout: "list", listButton: t("btnChoose", lang) })];
   }
 
-  private buyerDetails(input: FlowInput, idx: number): OutboundMessage[] {
+  private buyerDetails(input: AnyFlowInput, idx: number): OutboundMessage[] {
     const { conv } = input;
     const lang = conv.language;
     const b = conv.context.buyers?.[idx];
@@ -422,7 +482,7 @@ export class WhatsAppBuyerAssistantService {
   // Offer request (asks price → confirms → BuyerMatchingService.createOffer)
   // ---------------------------------------------------------------------
 
-  startOffer(input: FlowInput, idx: number): OutboundMessage[] {
+  startOffer(input: AnyFlowInput, idx: number): OutboundMessage[] {
     const { conv } = input;
     const lang = conv.language;
     const b = conv.context.buyers?.[idx];

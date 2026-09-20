@@ -82,8 +82,11 @@ export class WhatsAppCatalogService {
     return null;
   }
 
-  /** Up to `max` crops for the menu: farmer's own crops, then the most-listed, then A→Z. */
-  async cropMenu(userId: string, max = 9): Promise<CropDTO[]> {
+  /**
+   * Up to `max` crops for the menu: the farmer's own crops (linked farmers only —
+   * pass null for a guest), then the most-listed, then A→Z.
+   */
+  async cropMenu(userId: string | null, max = 9): Promise<CropDTO[]> {
     const all = await this.listCrops();
     const byId = new Map(all.map((c) => [c.id, c]));
     const picked: CropDTO[] = [];
@@ -91,12 +94,14 @@ export class WhatsAppCatalogService {
       const c = byId.get(id);
       if (c && !picked.includes(c)) picked.push(c);
     };
-    try {
-      const profile = await this.profileResolver.ensure(userId);
-      const mine = await this.farmerCropRepo.findManyByFarmerProfileId(profile.id);
-      mine.forEach((fc) => add(fc.cropId));
-    } catch {
-      /* menu still works without personalisation */
+    if (userId) {
+      try {
+        const profile = await this.profileResolver.ensure(userId);
+        const mine = await this.farmerCropRepo.findManyByFarmerProfileId(profile.id);
+        mine.forEach((fc) => add(fc.cropId));
+      } catch {
+        /* menu still works without personalisation */
+      }
     }
     try {
       const popular = await this.prisma.cropLot.groupBy({ by: ["cropId"], _count: { _all: true }, orderBy: { _count: { cropId: "desc" } }, take: 12 });

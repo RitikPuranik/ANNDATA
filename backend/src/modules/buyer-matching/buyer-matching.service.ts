@@ -6,7 +6,7 @@ import { AuditService } from "../audit/audit.service";
 import { FarmerProfileResolver } from "../farmers/farmer-profile.resolver";
 import { CropLotRepository } from "../lots/lots.repository";
 import { LotAuthorizationService } from "../lots/lot.authorization";
-import { convertQuantityToKg } from "../fpo/unit-conversion";
+import { convertQuantityToKg, type QuantityUnit } from "../fpo/unit-conversion";
 import { demandTransitions, offerTransitions, requireTransition } from "./buyer-matching.types";
 import { scoreMatch } from "./matching";
 import { getLotMatchesCache, invalidateBuyerMatchingCache, setLotMatchesCache } from "./buyer-matching-cache";
@@ -79,4 +79,55 @@ export class BuyerMatchingService {
   const action={REJECTED:"TRADE_OFFER_REJECTED",WITHDRAWN:"TRADE_OFFER_WITHDRAWN"} as const;await this.audit.record({actorUserId:user.id,action:action[to],entityType:"TradeOffer",entityId:o.id,metadata:{}});if(to==="REJECTED")trackEvent("trade_offer_rejected",user.id,{});return this.publicOffer(updated);}
   async offers(user:AuthenticatedUserContext){const include={buyer:true,demand:true,lot:{include:{crop:true}}};let offers:any[]=[];if(user.role==="BUYER"){const b=await this.buyer(user.id);offers=await this.prisma.tradeOffer.findMany({where:{buyerId:b.id},include,orderBy:{createdAt:"desc"}});}else if(user.role==="FARMER"){const farmer=await this.farmers.ensure(user.id);offers=await this.prisma.tradeOffer.findMany({where:{lot:{farmerId:farmer.id}},include,orderBy:{createdAt:"desc"}});}else if(user.role==="FPO_ADMIN"){const managed=await this.prisma.fpoAdmin.findMany({where:{userId:user.id,status:"ACTIVE"},select:{fpoId:true}});if(managed.length)offers=await this.prisma.tradeOffer.findMany({where:{lot:{fpoId:{in:managed.map(x=>x.fpoId)}}},include,orderBy:{createdAt:"desc"}});}else if(user.role==="ADMIN")offers=await this.prisma.tradeOffer.findMany({include,orderBy:{createdAt:"desc"},take:200});return offers.map(offer=>this.publicOffer(offer));}
   async buyerByPublicId(publicId:string){const p=await this.prisma.buyerProfile.findUnique({where:{publicId}});if(!p)throw domain("Buyer profile not found.","BUYER_PROFILE_NOT_FOUND",404);return this.publicBuyer(p);} async offer(user:AuthenticatedUserContext,id:string){return this.publicOffer(await this.offerForUser(user,id));} async history(user:AuthenticatedUserContext,id:string){const o=await this.offerForUser(user,id);return this.prisma.tradeOfferRevision.findMany({where:{offerId:o.id},orderBy:{revisionNumber:"asc"}});}
+
+  /**
+   * Account-less, lot-less search over the SAME public demand pool that
+   * matches() scores a lot against: ACTIVE, unexpired demands of VERIFIED
+   * buyers for one crop, scored by the same deterministic scoreMatch().
+   *
+   * Used by the WhatsApp guest flow, where the seller has no account and
+   * therefore no lot. Consequences, all deliberate:
+   *  - nothing personal is read or written, and no lot/offer is created;
+   *  - the seller's grade is NOT scored (it is unverified, and matches() only
+   *    weighs verified assessments too);
+   *  - the buyer's target price is never returned (same as matches());
+   *  - location only RANKS (same district → same state → elsewhere), it never
+   *    excludes a buyer, because a farmer can sell across districts.
+   */
+  async searchOpenDemand(input: { cropId: string; quantity: number; unit: QuantityUnit; state?: string | null; district?: string | null; limit?: number }) {
+    const quantityKg = convertQuantityToKg(input.quantity, input.unit);
+    const demands = await this.prisma.buyerDemand.findMany({
+      where: {
+        cropId: input.cropId,
+        status: "ACTIVE",
+        OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
+        buyer: { verificationStatus: "VERIFIED" },
+      },
+      take: 100,
+      include: { buyer: true },
+    });
+    const norm = (v?: string | null) => (v ?? "").trim().toLowerCase();
+    const rank = (d: { state: string; district: string }): number => {
+      if (input.district && norm(d.district) === norm(input.district)) return 0;
+      if (input.state && norm(d.state) === norm(input.state)) return 1;
+      return 2;
+    };
+    const rows = demands.map((d: any) => {
+      const scored = scoreMatch({
+        quantityKg,
+        minimumQuantityKg: d.minimumQuantity ? convertQuantityToKg(toNum(d.minimumQuantity), d.quantityUnit) : null,
+        requiredQuantityKg: convertQuantityToKg(toNum(d.requiredQuantity), d.quantityUnit),
+        grade: d.grade,
+        verification: d.buyer.verificationStatus,
+      });
+      return {
+        buyer: this.publicBuyer(d.buyer),
+        demand: { publicId: d.publicId, title: d.title, requiredQuantity: toNum(d.requiredQuantity), quantityUnit: d.quantityUnit, state: d.state, district: d.district },
+        locationRank: rank(d),
+        ...scored,
+      };
+    });
+    rows.sort((a: any, b: any) => a.locationRank - b.locationRank || b.matchScore - a.matchScore);
+    return { matches: rows.slice(0, input.limit ?? 30) };
+  }
 }

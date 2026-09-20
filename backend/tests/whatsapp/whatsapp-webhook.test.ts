@@ -73,14 +73,27 @@ describe("WhatsApp webhook — verification, signature, payload, idempotency", (
     expect(h.repo.inbound()).toHaveLength(0);
   });
 
-  it("6. an unknown phone number gets the welcome text and no farmer data", async () => {
+  it("6. an unknown phone number is a guest: private requests hit the sign-up gate, no farmer data, no service call", async () => {
     const h = buildHarness();
+    h.fakes.lots.push({ publicId: "lot-x", crop: { id: "crop-wheat", name: "Wheat" }, status: "AVAILABLE" });
     const res = await h.send("my lot", { from: OTHER_PHONE });
     expect(res.status).toBe(200);
     const out = h.provider.all(OTHER_PHONE);
-    expect(out).toContain("not linked to a FarmLink farmer account");
+    expect(out).toContain("you need a FarmLink account");
+    expect(h.provider.last(OTHER_PHONE)!.kind).toBe("cta_url");
+    expect((h.provider.last(OTHER_PHONE)!.extra as any).text).toBe("Continue on FarmLink");
     expect(out).not.toContain("Wheat");
     expect(h.fakes.serviceUsers).toHaveLength(0); // no FarmLink service was called
+  });
+
+  it("6c. an unknown number's first 'hi' gets the guest menu, not a dead end", async () => {
+    const h = buildHarness();
+    await h.send("hi", { from: OTHER_PHONE });
+    const out = h.provider.all(OTHER_PHONE);
+    expect(out).toContain("No registration needed");
+    expect(out).toContain("buyer");
+    expect(out).toContain("bhav");
+    expect(h.conv(OTHER_PHONE)!.userId).toBeNull(); // a guest conversation, tied to no account
   });
 
   it("outbound bodies are never stored; phone identity comes from the link, not the message", async () => {

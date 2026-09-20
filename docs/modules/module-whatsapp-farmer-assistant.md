@@ -10,7 +10,7 @@ Farmer ─ WhatsApp ─▶ Meta ─▶ POST /api/whatsapp/webhook
         signature check → validate → persist (idempotent) → 200 OK
                                         │  (async, one message per phone at a time)
                                         ▼
-        identify farmer (link) → conversation state → command router
+        identify farmer (link) OR guest → conversation state → command router
              │ deterministic commands / rules (no LLM)
              │ else optional LLM → Zod → confidence gate
              ▼
@@ -31,11 +31,14 @@ Farmer ─ WhatsApp ─▶ Meta ─▶ POST /api/whatsapp/webhook
 | `payment`, `paisa kab milega` | VIEW_PAYMENT | Payment Status Tracking (read-only) |
 | `shipment`, `mera maal kaha hai` | VIEW_SHIPMENT | Shipment & GPS Tracking (read-only) |
 | `help`, `menu`, `madad`, `hi` | HELP | – |
+| `how it works`, `farmlink kaise kaam karta hai`, `about` | ABOUT | – (static explanation of the FarmLink process) |
 | `cancel`, `back` | CANCEL / BACK | – |
 | anything else understood-but-unsupported (transactions, warehouse, transport, profile…) | WEBSITE | deep link to the FarmLink website |
 
 English, Hindi (Devanagari) and Hinglish are understood; replies follow the
 language the farmer writes in (English until a message shows otherwise).
+Everything above works for linked farmers. **Numbers that are not linked to an
+account ("guests") get a subset** — see [Guest mode](#guest-mode-no-registration).
 Adding a command = one `router.register(intent, handler)` call, or one row in the
 parser's `WEBSITE_KEYWORDS` table for website-only features.
 
@@ -46,8 +49,8 @@ parser's `WEBSITE_KEYWORDS` table for website-only features.
   farmer calls `POST /api/whatsapp/link/code` (one-time, 8 chars, 10 min,
   hash-only storage, 5/hour) and sends `LINK <code>` from WhatsApp. Every
   service call afterwards uses the user id from that link — never anything in
-  the message. Unlinked numbers get a generic welcome (no account enumeration,
-  no data). `WHATSAPP_DEV_AUTO_LINK_BY_MOBILE` exists for demos and is ignored in production.
+  the message. Unlinked numbers are **guests**: they are never
+  told whether an account exists for their number, and they only reach public data (see Guest mode). `WHATSAPP_DEV_AUTO_LINK_BY_MOBILE` exists for demos and is ignored in production.
 * **Deep links use the real frontend routes** (`/dashboard`, `/lots/[id]`,
   `/trade-offers`, `/shipments/[id]`, `/market`, `/farms/new`, …). There is no
   payments or transactions page yet, so those link to `/dashboard` and
@@ -77,6 +80,52 @@ parser's `WEBSITE_KEYWORDS` table for website-only features.
 * **Rate limiting** reuses `config/redis.ts` (in-memory fallback) — per phone
   (messages/minute), per farmer (AI calls/hour, matching searches/hour), plus
   link-attempt limits.
+
+## Guest mode (no registration)
+
+A number that is not linked to a FarmLink farmer account is not turned away. It
+becomes a **guest** and can use everything that reads *public* data; anything that
+creates or reads *account-owned* data answers with a sign-up card
+(**🌐 Continue on FarmLink** → `/register`).
+
+| Guest can | How |
+|---|---|
+| Be understood (English / Hindi / Hinglish) | same deterministic parser; optional LLM is rate-limited per phone |
+| Describe what they want to sell | crop → quantity → location → grade (same collection flow as farmers) |
+| See mandi prices | `MarketIntelligenceRepository` (district is asked, since a guest has no farms) |
+| Search buyer demand | `BuyerMatchingService.searchOpenDemand()` — open demand of VERIFIED buyers for the crop, scored by the same `scoreMatch()` |
+| See buyer options / details | organisation, district, demand quantity. No contact details, no target price |
+| Learn how FarmLink works | `ABOUT` |
+| Get the website link | `register` / `website` |
+
+| Needs an account → "Continue on FarmLink" | Typical message |
+|---|---|
+| create or publish a lot | (guests never reach lot creation) |
+| send an offer | the "Request offer" button |
+| see private offers, payments, shipments | `offers`, `payment`, `shipment` |
+| see / manage lots, farms, crops, profile, other website tools | `my lot`, `farm`, `warehouse`… |
+
+How the boundary is enforced (not just by convention):
+
+* **Types.** A guest message is a `GuestFlowInput` (no `farmer`). Every service that
+  needs an account takes a `FlowInput`, so passing it a guest is a *compile error*;
+  `isLinked()` is the only way to narrow. Handlers for private intents are wrapped
+  in `linkedOnly()`.
+* **State.** A guest can never answer a farm / price / confirmation step
+  (`COLLECTING_FARM`, `COLLECTING_PRICE`, `AWAITING_CONFIRMATION`); such state found
+  on a guest is dropped. When the identity behind a number changes (guest → linked
+  via `LINK`, linked → guest after unlinking, or the number moves to another
+  account) the conversation is reset, so a half-finished flow never carries over.
+* **Data.** `searchOpenDemand` takes no user, lot or farmer, reads only demand of
+  verified buyers, and never returns the buyer's target price or contact data.
+  A guest's self-declared grade is *not* scored (it is unverified — the same rule
+  as for farmers).
+* **Abuse.** Buyer searches are limited per number
+  (`WHATSAPP_MATCHING_RATE_LIMIT_PER_HOUR`), on top of the per-minute message limit.
+  This is per WhatsApp number; there is no account to hold accountable.
+* **Privacy.** A guest gets a `whatsapp_conversations` row (`userId` is null) and
+  their inbound text is stored like any other message — include both in the
+  retention policy.
 
 ## API
 
@@ -145,8 +194,11 @@ To test against real WhatsApp locally, expose the port with a tunnel (e.g. ngrok
 ## Known limitations
 
 * **Voice notes**: the STT provider interface and download path exist, but no STT implementation is configured (FarmLink has none). Voice notes currently get the "text only" hint.
+* **The guest → registered loop is not closed in the UI.** The sign-up card tells a guest to register and then link the number from Profile, but the frontend has no "Link WhatsApp" screen yet (next item).
 * **No "Link WhatsApp" screen** in the frontend yet — the API is ready (`POST /api/whatsapp/link/code`); a button on the profile page needs to call it.
 * Location matching uses FarmLink's mandi districts/states and the farmer's own farms; **pincodes are not resolved** (no pincode dataset) — the farmer is asked for a district.
+* Guest buyer results show the buyer's organisation name (as they do for farmers). To hide names until registration, mask `organizationName` in `WhatsAppBuyerAssistantService.toCards()` for guests.
+* WhatsApp caps CTA / button labels at 20 characters (Meta truncates longer ones); a test now checks every label in every language.
 * Creating a lot needs an existing farm + crop on the website (complex forms are intentionally not reproduced in chat).
 * Payment disputes/escalation are not filed from WhatsApp (needs a reason and evidence); overdue/disputed payments link to the website.
 * Verified against fakes and Meta's documented payload/limits. **Not yet exercised against live Meta, or a live PostgreSQL** (the sandbox could not download Prisma engines; the migration is hand-written — run `prisma migrate deploy`).

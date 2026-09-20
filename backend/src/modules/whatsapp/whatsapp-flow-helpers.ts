@@ -48,6 +48,28 @@ export function ctaMsg(body: string, displayText: string, url: string): Outbound
   return { kind: "cta_url", body, displayText, url };
 }
 
+export type GateReason = "lots" | "offers" | "payments" | "shipments" | "sendOffer" | "farms" | "generic";
+
+const GATE_WHAT: Record<GateReason, MsgKey> = {
+  lots: "gateLots",
+  offers: "gateOffers",
+  payments: "gatePayments",
+  shipments: "gateShipments",
+  sendOffer: "gateSendOffer",
+  farms: "gateFarms",
+  generic: "gateGeneric",
+};
+
+/**
+ * The single "this needs a FarmLink account" reply for numbers that aren't
+ * linked to one. Everything that creates, publishes or reads account-owned data
+ * ends up here → "🌐 Continue on FarmLink". (The button label is capped at 20
+ * characters by WhatsApp, so the globe lives in the body, not on the button.)
+ */
+export function guestGate(lang: Lang, signupUrl: string, reason: GateReason): OutboundMessage {
+  return ctaMsg(t("guestGate", lang, { what: t(GATE_WHAT[reason], lang) }), t("ctaContinue", lang), signupUrl);
+}
+
 export function clearOptions(conv: ConversationRecord): void {
   delete conv.context.options;
 }

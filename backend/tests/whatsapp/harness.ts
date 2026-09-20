@@ -157,6 +157,8 @@ export interface Fakes {
   publishCalls: number;
   qualityCalls: number;
   matchesCalls: number;
+  /** Guest (lot-less) searches of open buyer demand: the arguments each call received. */
+  openDemandCalls: Array<Record<string, any>>;
   offerCalls: Array<Record<string, any>>;
   acceptCalls: string[];
   farms: any[];
@@ -201,7 +203,7 @@ export function buildHarness(opts: { config?: Partial<WhatsAppConfig>; nlu?: Wha
   const provider = new FakeProvider();
 
   const f: Fakes = {
-    lots: [], createLotCalls: 0, publishCalls: 0, qualityCalls: 0, matchesCalls: 0, offerCalls: [], acceptCalls: [],
+    lots: [], createLotCalls: 0, publishCalls: 0, qualityCalls: 0, matchesCalls: 0, openDemandCalls: [], offerCalls: [], acceptCalls: [],
     farms: [farm], farmerCrops: [{ farmId: "farm-1", cropId: "crop-wheat" }, { farmId: "farm-1", cropId: "crop-soy" }],
     offers: [], ownOfferIds: [], payments: { items: [], records: [] }, shipments: [], mandiRows: [], matches: [],
     failures: {}, auditActions: [], serviceUsers: [],
@@ -232,6 +234,8 @@ export function buildHarness(opts: { config?: Partial<WhatsAppConfig>; nlu?: Wha
   };
   const matchingService: any = {
     matches: async (u: any) => { track(u); guard("matches"); f.matchesCalls++; return { matches: f.matches }; },
+    // Public, account-less search: deliberately takes NO user (so it can never be tracked as one).
+    searchOpenDemand: async (input: any) => { guard("matches"); f.openDemandCalls.push(input); return { matches: f.matches }; },
     offers: async (u: any) => { track(u); guard("offers"); return f.offers; },
     accept: async (u: any, id: string) => { track(u); guard("accept"); f.acceptCalls.push(id); },
     offerAction: async (u: any) => { track(u); },

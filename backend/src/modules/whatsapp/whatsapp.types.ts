@@ -11,6 +11,7 @@ export const INTENTS = [
   "VIEW_PAYMENT",
   "VIEW_SHIPMENT",
   "HELP",
+  "ABOUT",
   "CANCEL",
   "CONFIRM",
   "BACK",
@@ -182,8 +183,26 @@ export interface LinkedFarmer {
   phoneNumber: string;
 }
 
+/** A message from a number that is linked to a FarmLink farmer account. */
 export interface FlowInput {
   inbound: InboundMessage;
   conv: ConversationRecord;
   farmer: LinkedFarmer;
 }
+
+/**
+ * A message from a number that is NOT linked to any FarmLink account ("guest").
+ * There is deliberately no `farmer` here: guest flows can only reach public
+ * data (mandi prices, open buyer demand) and can never call a user-scoped
+ * service. Anything that needs an account must narrow with `isLinked()` first,
+ * so the compiler enforces the registered/unregistered boundary.
+ */
+export interface GuestFlowInput {
+  inbound: InboundMessage;
+  conv: ConversationRecord;
+  farmer?: undefined;
+}
+
+export type AnyFlowInput = FlowInput | GuestFlowInput;
+
+export const isLinked = (input: AnyFlowInput): input is FlowInput => input.farmer !== undefined;

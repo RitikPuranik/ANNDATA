@@ -139,7 +139,7 @@ describe("i18n catalog", () => {
     }
   });
   it("Hindi messages are written in Devanagari", () => {
-    for (const k of ["help", "askCrop", "askQuantity", "genericError", "welcomeUnlinked"] as const) expect(rawEntry(k).hi).toMatch(/[\u0900-\u097F]/);
+    for (const k of ["help", "askCrop", "askQuantity", "genericError", "guestHelp", "aboutFarmLink", "guestGate"] as const) expect(rawEntry(k).hi).toMatch(/[\u0900-\u097F]/);
   });
   it("substitutes params and leaves unknown placeholders visible", () => {
     expect(t("askQuantity", "en", { crop: "Wheat" })).toContain("Wheat");

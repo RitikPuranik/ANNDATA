@@ -69,8 +69,10 @@ describe("account linking controller (website side)", () => {
     expect(JSON.stringify(st)).not.toContain("919800000002");
 
     expect((await request(a).delete("/link")).body.data).toEqual({ unlinked: true });
+    // Unlinked → the number becomes a guest again (public features only), not a dead end.
     await h.send("help", { from: "919800000002" });
-    expect(h.provider.all("919800000002")).toContain("not linked");
+    expect(h.provider.last("919800000002")!.body).toContain("No registration needed");
+    expect(h.provider.last("919800000002")!.body).not.toContain("Farmer Assistant");
   });
 
   it("a newer code invalidates the previous one", async () => {

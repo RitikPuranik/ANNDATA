@@ -16,12 +16,29 @@ describe("deterministic command parser", () => {
     ["VIEW_PAYMENT", ["payment", "payments", "mera payment", "payment status", "paisa kab milega", "payment kab aayega", "mera paisa kab milega?", "भुगतान", "peyment"]],
     ["VIEW_SHIPMENT", ["shipment", "my shipment", "delivery", "meri shipment", "mera maal kaha hai", "delivery status", "Meri shipment kaha hai?", "mera maal kaha pahucha?", "शिपमेंट", "shipmnt"]],
     ["HELP", ["help", "menu", "options", "madad", "kya kar sakte ho", "hi", "namaste", "मदद", "HELP!!"]],
+    ["ABOUT", ["how it works", "How does FarmLink work?", "what is farmlink", "about farmlink", "farmlink kya hai", "farmlink kaise kaam karta hai", "kaise kaam karta hai", "explain the process", "samjhao", "फार्मलिंक कैसे काम करता है"]],
   ];
   for (const [expected, inputs] of table) {
     it.each(inputs)(`"%s" → ${expected}`, (text) => {
       expect(intent(text)).toBe(expected);
     });
   }
+
+  it("ABOUT never steals a real action: 'kaise' / 'how' / 'process' beside an action word keep that action", () => {
+    expect(intent("payment kaise milega")).toBe("VIEW_PAYMENT");
+    expect(intent("payment process")).toBe("VIEW_PAYMENT");
+    expect(intent("how to sell wheat")).toBe("FIND_BUYER");
+    expect(intent("kaise bechu gehu")).toBe("FIND_BUYER");
+    expect(intent("bhav kaise dekhu")).toBe("CHECK_MANDI_PRICE");
+    expect(intent("how much is the price")).toBe("CHECK_MANDI_PRICE");
+    expect(intent("mera maal kaha hai")).toBe("VIEW_SHIPMENT");
+  });
+
+  it("'kaise' (how) is never fuzzy-matched to 'paise' (money)", () => {
+    expect(intent("kaise")).not.toBe("VIEW_PAYMENT");
+    expect(intent("paise")).toBe("VIEW_PAYMENT"); // the real word still works
+    expect(intent("paisa kab milega")).toBe("VIEW_PAYMENT");
+  });
 
   it("cancel and back are controlled intents", () => {
     expect(intent("cancel")).toBe("CANCEL");

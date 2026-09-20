@@ -505,11 +505,13 @@ describe("security (20) and identity", () => {
     expect(new Set(h.fakes.serviceUsers)).toEqual(new Set(["u-1"]));
   });
 
-  it("6b. a suspended farmer is treated as unlinked", async () => {
+  it("6b. a suspended farmer is treated as a guest (public features only)", async () => {
     const h = buildHarness();
     h.repo.users.get("u-1")!.accountStatus = "SUSPENDED";
+    h.fakes.lots.push(wheatLot({ publicId: "lot-a" }));
     await h.send("my lot");
-    expect(h.provider.all()).toContain("not linked");
+    expect(h.provider.all()).toContain("you need a FarmLink account");
+    expect(h.provider.all()).not.toContain("lot-a");
     expect(h.fakes.serviceUsers).toHaveLength(0);
   });
 
@@ -549,7 +551,7 @@ describe("security (20) and identity", () => {
   it("dev auto-link by mobile works only when explicitly enabled", async () => {
     const off = buildHarness();
     await off.send("help", { from: OTHER_PHONE });
-    expect(off.provider.all(OTHER_PHONE)).toContain("not linked");
+    expect(off.provider.last(OTHER_PHONE)!.body).toContain("No registration needed"); // a guest, not the farmer menu
     const on = buildHarness({ config: { devAutoLinkByMobile: true } });
     await on.send("help", { from: OTHER_PHONE });
     expect(on.provider.last(OTHER_PHONE)!.body).toContain("FarmLink Farmer Assistant");

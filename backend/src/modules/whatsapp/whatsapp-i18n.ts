@@ -13,10 +13,80 @@ const M = {
     hi: "🌾 FarmLink किसान सहायक\n\nआप मुझसे पूछ सकते हैं:\n\n👨‍🌾 \"buyer\"\nअपनी फसल के लिए खरीदार खोजें\n\n💰 \"bhav\"\nमंडी भाव देखें\n\n📦 \"my lot\"\nअपने सक्रिय लॉट देखें\n\n🤝 \"offers\"\nखरीदारों के ऑफर देखें\n\n💳 \"payment\"\nभुगतान की स्थिति देखें\n\n🚚 \"shipment\"\nअपनी शिपमेंट ट्रैक करें\n\nआप सामान्य भाषा में भी लिख सकते हैं।\nउदाहरण: \"मेरे पास 20 क्विंटल गेहूं है, खरीदार ढूंढो\"",
     hinglish: "🌾 FarmLink Farmer Assistant\n\nAap mujhse ye puch sakte hain:\n\n👨‍🌾 \"buyer\"\nApni fasal ke liye buyer dhoondhein\n\n💰 \"bhav\"\nMandi bhav dekhein\n\n📦 \"my lot\"\nApne active lot dekhein\n\n🤝 \"offers\"\nBuyer offers dekhein\n\n💳 \"payment\"\nPayment status dekhein\n\n🚚 \"shipment\"\nShipment track karein\n\nAap aam bhasha mein bhi likh sakte hain.\nExample: \"Mere paas 20 quintal wheat hai, buyer dhoondho\"",
   },
-  welcomeUnlinked: {
-    en: "🌾 Welcome to FarmLink.\n\nYour WhatsApp number is not linked to a FarmLink farmer account yet.\n\nIf you are already registered: open FarmLink → Profile, get your WhatsApp link code, then send:\nLINK <code>\n\nIf not, please register on FarmLink first. Once linked, you can manage your crops, buyers, offers, payments and shipments here.",
-    hi: "🌾 FarmLink में आपका स्वागत है।\n\nआपका WhatsApp नंबर अभी किसी FarmLink किसान खाते से जुड़ा नहीं है।\n\nअगर आप रजिस्टर हैं: FarmLink → प्रोफाइल में जाकर WhatsApp लिंक कोड लें, फिर भेजें:\nLINK <कोड>\n\nअगर नहीं, तो पहले FarmLink पर रजिस्टर करें। जुड़ने के बाद आप यहीं अपनी फसल, खरीदार, ऑफर, भुगतान और शिपमेंट देख सकेंगे।",
-    hinglish: "🌾 FarmLink mein aapka swagat hai.\n\nAapka WhatsApp number abhi kisi FarmLink farmer account se linked nahi hai.\n\nAgar aap registered hain: FarmLink → Profile mein jaakar WhatsApp link code lein, phir bhejein:\nLINK <code>\n\nNahi to pehle FarmLink par register karein. Link hone ke baad aap yahin apni fasal, buyer, offers, payment aur shipment dekh sakte hain.",
+  guestHelp: {
+    en: "🌾 Welcome to FarmLink!\n\nNo registration needed for these — try them right here:\n\n👨‍🌾 \"buyer\"\nTell me your crop and I'll show buyers with open demand\n\n💰 \"bhav\"\nCheck mandi prices\n\nℹ️ \"how it works\"\nSee how FarmLink works\n\n🌐 \"register\"\nGet the FarmLink website link\n\nYou can also type naturally.\nExample: \"I have 20 quintal wheat, find buyer\"\n\nTo publish a lot, send offers, or track payments and shipments, register on FarmLink (free).\nAlready registered? Open FarmLink → Profile, get your WhatsApp link code, then send:\nLINK <code>",
+    hi: "🌾 FarmLink में आपका स्वागत है!\n\nइनके लिए रजिस्ट्रेशन की ज़रूरत नहीं — यहीं आज़माएं:\n\n👨‍🌾 \"buyer\"\nअपनी फसल बताएं, मैं खुली मांग वाले खरीदार दिखाऊँगा\n\n💰 \"bhav\"\nमंडी भाव देखें\n\nℹ️ \"how it works\"\nजानें FarmLink कैसे काम करता है\n\n🌐 \"register\"\nFarmLink वेबसाइट का लिंक पाएं\n\nआप सामान्य भाषा में भी लिख सकते हैं।\nउदाहरण: \"मेरे पास 20 क्विंटल गेहूं है, खरीदार ढूंढो\"\n\nलॉट पब्लिश करने, ऑफर भेजने या भुगतान और शिपमेंट ट्रैक करने के लिए FarmLink पर रजिस्टर करें (मुफ़्त)।\nपहले से रजिस्टर हैं? FarmLink → प्रोफाइल से WhatsApp लिंक कोड लें, फिर भेजें:\nLINK <कोड>",
+    hinglish: "🌾 FarmLink mein aapka swagat hai!\n\nIn sab ke liye registration ki zaroorat nahi — yahin try karein:\n\n👨‍🌾 \"buyer\"\nApni fasal batayein, main open demand wale buyers dikhaunga\n\n💰 \"bhav\"\nMandi bhav dekhein\n\nℹ️ \"how it works\"\nJaanein FarmLink kaise kaam karta hai\n\n🌐 \"register\"\nFarmLink website ka link paayein\n\nAap aam bhasha mein bhi likh sakte hain.\nExample: \"Mere paas 20 quintal wheat hai, buyer dhoondho\"\n\nLot publish karne, offer bhejne ya payment aur shipment track karne ke liye FarmLink par register karein (free).\nPehle se registered hain? FarmLink → Profile se WhatsApp link code lein, phir bhejein:\nLINK <code>",
+  },
+  aboutFarmLink: {
+    en: "🌾 How FarmLink works\n\n1️⃣ Register free and add your farm and crop.\n2️⃣ Publish a lot: crop, quantity and quality.\n3️⃣ See verified buyers who have open demand for your crop.\n4️⃣ Send or receive offers and agree on a rate. No buyer is guaranteed to purchase until an offer is accepted.\n5️⃣ Arrange transport, track the shipment and see payment status. The buyer pays you directly; FarmLink tracks it.\n\nType \"help\" to see what I can do here.",
+    hi: "🌾 FarmLink कैसे काम करता है\n\n1️⃣ मुफ़्त रजिस्टर करें और अपना खेत व फसल जोड़ें।\n2️⃣ लॉट पब्लिश करें: फसल, मात्रा और क्वालिटी।\n3️⃣ अपनी फसल की खुली मांग वाले सत्यापित खरीदार देखें।\n4️⃣ ऑफर भेजें या पाएं और रेट तय करें। ऑफर स्वीकार होने तक किसी खरीदार की खरीदारी की गारंटी नहीं है।\n5️⃣ ट्रांसपोर्ट तय करें, शिपमेंट ट्रैक करें और भुगतान की स्थिति देखें। खरीदार सीधे आपको भुगतान करता है; FarmLink उसे ट्रैक करता है।\n\nमैं यहाँ क्या कर सकता हूँ, यह देखने के लिए \"help\" लिखें।",
+    hinglish: "🌾 FarmLink kaise kaam karta hai\n\n1️⃣ Free register karein aur apna khet aur fasal add karein.\n2️⃣ Lot publish karein: fasal, quantity aur quality.\n3️⃣ Apni fasal ke liye open demand wale verified buyers dekhein.\n4️⃣ Offer bhejein ya paayein aur rate tay karein. Offer accept hone tak kisi buyer ki kharidari ki guarantee nahi hai.\n5️⃣ Transport tay karein, shipment track karein aur payment status dekhein. Buyer seedha aapko payment karta hai; FarmLink use track karta hai.\n\nMain yahan kya kar sakta hoon, ye dekhne ke liye \"help\" likhein.",
+  },
+  guestGate: {
+    en: "🔒 To {what}, you need a FarmLink account.\n\n🌐 Continue on FarmLink to register (free) or log in. Then link this WhatsApp number from your Profile to use it here.",
+    hi: "🔒 {what} के लिए आपको FarmLink अकाउंट चाहिए।\n\n🌐 FarmLink पर जारी रखें: रजिस्टर करें (मुफ़्त) या लॉगिन करें। फिर यहाँ इस्तेमाल करने के लिए प्रोफाइल से यह WhatsApp नंबर जोड़ें।",
+    hinglish: "🔒 {what} ke liye aapko FarmLink account chahiye.\n\n🌐 FarmLink par continue karein: register (free) ya login karein. Phir yahan use karne ke liye Profile se ye WhatsApp number link karein.",
+  },
+  gateLots: {
+    en: "manage your lots",
+    hi: "अपने लॉट मैनेज करने",
+    hinglish: "apne lots manage karne",
+  },
+  gateOffers: {
+    en: "see your offers",
+    hi: "अपने ऑफर देखने",
+    hinglish: "apne offers dekhne",
+  },
+  gatePayments: {
+    en: "see your payments",
+    hi: "अपने भुगतान देखने",
+    hinglish: "apne payments dekhne",
+  },
+  gateShipments: {
+    en: "track your shipments",
+    hi: "अपनी शिपमेंट ट्रैक करने",
+    hinglish: "apni shipment track karne",
+  },
+  gateSendOffer: {
+    en: "send an offer",
+    hi: "ऑफर भेजने",
+    hinglish: "offer bhejne",
+  },
+  gateFarms: {
+    en: "manage your farms and crops",
+    hi: "अपने खेत और फसल मैनेज करने",
+    hinglish: "apne khet aur fasal manage karne",
+  },
+  gateGeneric: {
+    en: "do this",
+    hi: "यह करने",
+    hinglish: "ye karne",
+  },
+  guestBuyersNote: {
+    en: "🔒 To publish your lot and send an offer, continue on FarmLink (free registration).",
+    hi: "🔒 अपना लॉट पब्लिश करने और ऑफर भेजने के लिए FarmLink पर जारी रखें (रजिस्ट्रेशन मुफ़्त)।",
+    hinglish: "🔒 Apna lot publish karne aur offer bhejne ke liye FarmLink par continue karein (registration free).",
+  },
+  guestNoBuyers: {
+    en: "😔 No matching buyers right now for {crop}.\n\nNew buyers post demand often — try again soon, or register on FarmLink to publish your lot.",
+    hi: "😔 अभी {crop} के लिए कोई मेल खाता खरीदार नहीं है।\n\nनई मांग आती रहती है — थोड़ी देर बाद फिर कोशिश करें, या FarmLink पर रजिस्टर करके अपना लॉट पब्लिश करें।",
+    hinglish: "😔 Abhi {crop} ke liye koi matching buyer nahi hai.\n\nNayi demand aati rehti hai — thodi der baad phir try karein, ya FarmLink par register karke apna lot publish karein.",
+  },
+  guestWebsite: {
+    en: "🌐 FarmLink is on the web too.\n\nRegister (free) or log in to publish lots, send offers and track payments and shipments.",
+    hi: "🌐 FarmLink वेबसाइट पर भी उपलब्ध है।\n\nलॉट पब्लिश करने, ऑफर भेजने और भुगतान व शिपमेंट ट्रैक करने के लिए रजिस्टर करें (मुफ़्त) या लॉगिन करें।",
+    hinglish: "🌐 FarmLink website par bhi available hai.\n\nLot publish karne, offer bhejne aur payment aur shipment track karne ke liye register (free) ya login karein.",
+  },
+  guestFallback: {
+    en: "I can help you find buyers, check mandi prices and explain how FarmLink works — no registration needed.\n\nWhat would you like to do? Type \"help\" for the menu.",
+    hi: "मैं खरीदार खोजने, मंडी भाव देखने और FarmLink कैसे काम करता है यह समझाने में मदद कर सकता हूँ — रजिस्ट्रेशन की ज़रूरत नहीं।\n\nआप क्या करना चाहते हैं? मेनू के लिए \"help\" लिखें।",
+    hinglish: "Main buyer dhoondhne, mandi bhav dekhne aur FarmLink kaise kaam karta hai ye samjhane mein madad kar sakta hoon — registration ki zaroorat nahi.\n\nAap kya karna chahte hain? Menu ke liye \"help\" likhein.",
+  },
+  guestTextOnly: {
+    en: "I can currently process text messages.\n\nTry:\nbuyer\nbhav\nhow it works\nregister\nhelp",
+    hi: "मैं अभी सिर्फ़ टेक्स्ट संदेश समझ सकता हूँ।\n\nकोशिश करें:\nbuyer\nbhav\nhow it works\nregister\nhelp",
+    hinglish: "Main abhi sirf text messages samajh sakta hoon.\n\nTry karein:\nbuyer\nbhav\nhow it works\nregister\nhelp",
   },
   linkOk: {
     en: "✅ Done! Your WhatsApp is now linked to FarmLink.\n\nType \"help\" to see what I can do.",
@@ -389,7 +459,7 @@ const M = {
   ctaLot: { en: "📦 View Lot", hi: "📦 लॉट देखें", hinglish: "📦 View Lot" },
   ctaOffers: { en: "💰 View Offers", hi: "💰 ऑफर देखें", hinglish: "💰 View Offers" },
   ctaShipment: { en: "🚚 Track Shipment", hi: "🚚 शिपमेंट ट्रैक करें", hinglish: "🚚 Track Shipment" },
-  ctaContinue: { en: "Continue on FarmLink", hi: "FarmLink पर जारी रखें", hinglish: "Continue on FarmLink" },
+  ctaContinue: { en: "Continue on FarmLink", hi: "FarmLink पर जाएं", hinglish: "Continue on FarmLink" },
   ctaLogistics: { en: "🚜 Open Logistics", hi: "🚜 लॉजिस्टिक्स खोलें", hinglish: "🚜 Open Logistics" },
   ctaAddFarm: { en: "🌱 Add Farm", hi: "🌱 खेत जोड़ें", hinglish: "🌱 Add Farm" },
   ctaProblem: { en: "Report a problem", hi: "समस्या बताएं", hinglish: "Problem batayein" },
