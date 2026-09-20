@@ -319,42 +319,6 @@ export default function LandingPage() {
                 Ecosystem
               </a>
             </nav>
-
-            {/* TAGLINE */}
-
-            <div
-              className="
-                hidden
-                items-center
-                gap-2
-                border-l
-                border-white/15
-                pl-7
-                xl:flex
-              "
-            >
-              <span
-                className="
-                  h-1.5
-                  w-1.5
-                  rounded-full
-                  bg-[#d6b841]
-                "
-              />
-
-              <span
-                className="
-                  whitespace-nowrap
-                  text-[10px]
-                  font-semibold
-                  tracking-wide
-                  text-white/50
-                  lg:text-[11px]
-                "
-              >
-                Rooted in Farming. Built for the Future.
-              </span>
-            </div>
           </div>
 
           {/* =================================================
@@ -512,31 +476,7 @@ export default function LandingPage() {
               backdrop-blur-2xl
             "
           >
-            {/* MOBILE TAGLINE */}
-
-            <div
-              className="
-                mb-2
-                rounded-xl
-                border
-                border-white/10
-                bg-white/[0.04]
-                px-4
-                py-3
-                text-center
-              "
-            >
-              <p
-                className="
-                  text-[10px]
-                  font-semibold
-                  tracking-wide
-                  text-[#d6b841]
-                "
-              >
-                Rooted in Farming. Built for the Future.
-              </p>
-            </div>
+ 
 
             {/* HOME */}
 
