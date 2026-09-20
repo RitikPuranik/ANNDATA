@@ -50,12 +50,15 @@ The system is being developed module-by-module. Later modules consume earlier do
 | 27 | External API / Integration Layer | 🟡 Provider/integration boundaries exist |
 | 28 | Audit, Security & Monitoring | 🟡 Shared infrastructure implemented across modules |
 | 29 | AI/ML Platform | 🟡 Provider boundaries exist; standalone platform pending |
+| 30 | WhatsApp API Integration | ✅ Complete |
 
 ### Important status note
 
 Module 19 is implemented as a **payment status system**, not a payment gateway. It records obligations and payment records/statuses but does not itself move money through UPI, cards, banks, or escrow.
 
 Module 20 has a defined handoff contract exposed by Module 19, but the actual Digital Transaction Ledger is not yet implemented.
+
+Module 30 is the completed **Meta WhatsApp Business Cloud API integration**, including webhook handling, signature verification, inbound/outbound messaging, public guest conversations, linked-farmer workflows, idempotency, rate limiting, conversation persistence, and Meta provider integration.
 
 ---
 
@@ -1168,31 +1171,19 @@ Analytics events should describe product behavior without leaking authentication
 
 # Documentation
 
-Module specifications live under:
+Module specifications and supporting project documentation live under:
 
 ```text
-docs/modules/
-```
-
-Important documentation includes:
-
-```text
-module-15-transporter-vehicle-network.md
-module-16-logistics-quote-optimization.md
-module-17-shipment-gps-tracking.md
-module-18-delivery-quality-reconciliation.md
-module-whatsapp-farmer-assistant.md
+docs/
 ```
 
 Before modifying a module, read:
 
 1. `PROJECT_CONTEXT.md`
-2. The module's specification
+2. The relevant module specification, when one exists
 3. Direct dependencies
 4. Existing tests
-5. Existing routes/services/repositories
-
----
+5. Existing routes, services, and repositories
 
 # Engineering Rules for Future Modules
 
