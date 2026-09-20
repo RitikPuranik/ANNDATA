@@ -89,11 +89,7 @@ function SaleCards(){
 }
 
 function MarketPreview(){
-<<<<<<< HEAD
  return <Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="section-title">Market at a glance</h2><p className="text-xs text-muted-foreground mt-1">Check the numbers before you decide.</p></div><Link href="/market" className="text-xs font-bold">Open market →</Link></div>
-=======
- return <Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="text-base font-bold">Market at a glance</h2><p className="text-xs text-muted-foreground mt-1">Check the numbers before you decide.</p></div><Link href="/market" className="text-xs font-bold">Open market →</Link></div>
->>>>>>> 41b51a91a7ff3f3704653280dc76e6649c947448
   <div className="grid grid-cols-2 divide-x divide-border"><Link href="/market" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Today&apos;s rates</span><strong className="mt-2 block text-xl font-black">View mandi prices</strong><span className="mt-1 flex items-center gap-1 text-xs text-emerald-700"><TrendingUp className="h-3.5 w-3.5"/> Compare markets</span></Link><Link href="/forecasts" className="p-5 hover:bg-[#fafaf7]"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Decision tool</span><strong className="mt-2 block text-xl font-black">Price forecast</strong><span className="mt-1 text-xs text-muted-foreground">See the outlook for your crops</span></Link></div>
  </Card>;
 }
