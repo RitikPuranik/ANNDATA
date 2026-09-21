@@ -2,7 +2,7 @@ import { freshness, haversineKm } from "../market-intelligence/analytics";
 import type { MarketIntelligenceRepository } from "../market-intelligence/market-intelligence.repository";
 import type { CropDTO } from "../reference-data/reference-data.service";
 import type { WhatsAppCatalogService } from "./whatsapp-catalog.service";
-import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import type { ANNDATAUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, textMsg } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { formatDate, inr } from "./whatsapp-text";
@@ -11,7 +11,7 @@ import { isLinked, type AnyFlowInput, type OutboundMessage } from "./whatsapp.ty
 const MAX_MANDIS = 3;
 
 /**
- * "bhav": reads FarmLink's EXISTING mandi price data via
+ * "bhav": reads ANNDATA's EXISTING mandi price data via
  * MarketIntelligenceRepository (the same repository MarketIntelligenceService
  * uses). No second price implementation, and no number is ever invented —
  * empty or stale data is reported as such.
@@ -20,7 +20,7 @@ export class WhatsAppMarketService {
   constructor(
     private readonly market: MarketIntelligenceRepository,
     private readonly catalog: WhatsAppCatalogService,
-    private readonly urls: FarmLinkUrlService,
+    private readonly urls: ANNDATAUrlService,
   ) {}
 
   async prices(input: AnyFlowInput, crop: CropDTO, opts: { locationText?: string; coords?: { latitude: number; longitude: number } } = {}): Promise<OutboundMessage[]> {
@@ -69,7 +69,7 @@ export class WhatsAppMarketService {
     conv.entities = {};
 
     // Prices are public data, but the full market page needs a login: a guest's
-    // button leads to sign-up ("Continue on FarmLink"), a farmer's to the page.
+    // button leads to sign-up ("Continue on ANNDATA"), a farmer's to the page.
     const cta = isLinked(input) ? { text: t("ctaOpen", lang), url: this.urls.market() } : { text: t("ctaContinue", lang), url: this.urls.signup() };
 
     if (chosen.length === 0) return [ctaMsg(t("mandiUnavailable", lang), cta.text, cta.url)];
@@ -88,7 +88,7 @@ export class WhatsAppMarketService {
   /**
    * Mandi modal price used as a labelled *reference* next to buyer results. The
    * buyer's own target price is intentionally never shown to farmers by
-   * FarmLink's matching API, so we don't surface it here either.
+   * ANNDATA's matching API, so we don't surface it here either.
    */
   async referencePrice(cropId: string, state?: string): Promise<number | null> {
     try {
