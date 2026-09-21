@@ -16,7 +16,7 @@ describe("deterministic command parser", () => {
     ["VIEW_PAYMENT", ["payment", "payments", "mera payment", "payment status", "paisa kab milega", "payment kab aayega", "mera paisa kab milega?", "भुगतान", "peyment"]],
     ["VIEW_SHIPMENT", ["shipment", "my shipment", "delivery", "meri shipment", "mera maal kaha hai", "delivery status", "Meri shipment kaha hai?", "mera maal kaha pahucha?", "शिपमेंट", "shipmnt"]],
     ["HELP", ["help", "menu", "options", "madad", "kya kar sakte ho", "hi", "namaste", "मदद", "HELP!!"]],
-    ["ABOUT", ["how it works", "How does FarmLink work?", "what is farmlink", "about farmlink", "farmlink kya hai", "farmlink kaise kaam karta hai", "kaise kaam karta hai", "explain the process", "samjhao", "फार्मलिंक कैसे काम करता है"]],
+    ["ABOUT", ["how it works", "How does ANNDATA work?", "what is anndata", "about anndata", "anndata kya hai", "anndata kaise kaam karta hai", "kaise kaam karta hai", "explain the process", "samjhao", "फार्मलिंक कैसे काम करता है"]],
   ];
   for (const [expected, inputs] of table) {
     it.each(inputs)(`"%s" → ${expected}`, (text) => {
