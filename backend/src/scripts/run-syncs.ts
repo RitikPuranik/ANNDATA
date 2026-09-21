@@ -225,11 +225,37 @@ export async function runAllSyncs(
       ? undefined
       : parseInt(process.env.MARKET_SEED_MAX_RECORDS || "500", 10) || 500;
 
+    // Resume from the last persisted pagination checkpoint. The first run
+    // starts at 289500; subsequent runs continue from the saved offset.
+    const checkpoint = await prisma.marketDataSyncCheckpoint.findUnique({
+      where: { source: "data.gov.in" },
+      select: { metadata: true, cursor: true },
+    });
+
+    const checkpointMetadata =
+      checkpoint?.metadata &&
+      typeof checkpoint.metadata === "object" &&
+      !Array.isArray(checkpoint.metadata)
+        ? (checkpoint.metadata as { marketDataHistoricalOffset?: unknown })
+        : undefined;
+
+    const savedOffset =
+      typeof checkpointMetadata?.marketDataHistoricalOffset === "number"
+        ? checkpointMetadata.marketDataHistoricalOffset
+        : checkpoint?.cursor
+          ? Number(checkpoint.cursor)
+          : NaN;
+
+    const startOffset =
+      Number.isFinite(savedOffset) && savedOffset >= marketStartOffset
+        ? Math.floor(savedOffset)
+        : marketStartOffset;
+
     console.log("Starting market-data import:");
     console.log(
       `   Historical From : ${from.toISOString().slice(0, 10)}`,
     );
-    console.log(`   Starting Offset  : ${marketStartOffset}`);
+    console.log(`   Starting Offset  : ${startOffset}`);
     console.log(`   Max Records      : ${maxRecords ?? "UNBOUNDED"}`);
 
     try {
@@ -237,10 +263,11 @@ export async function runAllSyncs(
         marketProvider.records(
           from,
           maxRecords,
-          marketStartOffset,
+          startOffset,
         ),
         "data.gov.in",
         "HISTORICAL_IMPORT",
+        { checkpointOffsets: true },
       );
 
       console.log("✅ Market Data Seed completed successfully!");
