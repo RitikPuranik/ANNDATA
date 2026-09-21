@@ -68,7 +68,7 @@ async function main() {
   const whatsappRecoveryTask: ScheduledTask | null = registerWhatsAppRecoveryJob(app.locals.whatsapp);
 
   const server = app.listen(env.PORT, () => {
-    logger.info(`FarmLink auth service listening on ${env.BACKEND_URL} (port ${env.PORT})`);
+    logger.info(`ANNDATA auth service listening on ${env.BACKEND_URL} (port ${env.PORT})`);
     logger.info(`API docs available at ${env.BACKEND_URL}/api/docs`);
   });
 
