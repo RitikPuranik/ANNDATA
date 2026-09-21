@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { AuditService } from "../audit/audit.service";
 import type { BuyerMatchingService } from "../buyer-matching/buyer-matching.service";
 import { counterBody } from "../buyer-matching/buyer-matching.schemas";
-import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import type { ANNDATAUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, optionsMessage, textMsg, WHATSAPP_META, type OptionSpec } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { extractNumber } from "./nlu/whatsapp-command-parser";
@@ -61,7 +61,7 @@ export class WhatsAppOfferService {
   constructor(
     private readonly matching: BuyerMatchingService,
     private readonly prisma: PrismaClient,
-    private readonly urls: FarmLinkUrlService,
+    private readonly urls: ANNDATAUrlService,
     private readonly audit: AuditService,
   ) {}
 
