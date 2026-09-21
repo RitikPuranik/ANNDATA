@@ -15,7 +15,7 @@ import { WarehouseSourceReferenceRepository } from "./warehouse-source-reference
 // Architecture (Part 13 of the ingestion spec):
 //
 //   WarehouseProviderRegistry -> Provider Results -> Normalization ->
-//   Validation -> Duplicate Detection -> Warehouse Sync -> FarmLink Warehouse DB
+//   Validation -> Duplicate Detection -> Warehouse Sync -> ANNDATA Warehouse DB
 //
 // Every record is handled independently, in its own short transaction
 // (Part 14: "a malformed record must NOT rollback an entire provider
@@ -97,10 +97,10 @@ function toWarehouseSourceType(providerType: WarehouseProviderType): WarehouseSo
   return providerType;
 }
 
-/** syncProviderRecords/persistOne are only ever reached for non-FarmLink
+/** syncProviderRecords/persistOne are only ever reached for non-ANNDATA
  * providers (see the guard in run() above) — narrowed here so `ownerType`
  * can be assigned directly from the provider type without a cast. */
-type ExternalWarehouseProviderType = Exclude<WarehouseProviderType, "FARMLINK">;
+type ExternalWarehouseProviderType = Exclude<WarehouseProviderType, "ANNDATA">;
 
 export class WarehouseSyncService {
   constructor(
@@ -127,13 +127,13 @@ export class WarehouseSyncService {
 
     const providerSummaries: ProviderSyncSummary[] = [];
     for (const result of providerResults) {
-      // FarmLink records never flow through this ingestion path at all —
-      // FarmLink is already the canonical store for its own warehouses
-      // (see FarmLinkWarehouseProvider's own doc comment). Guarded here
+      // ANNDATA records never flow through this ingestion path at all —
+      // ANNDATA is already the canonical store for its own warehouses
+      // (see ANNDATAWarehouseProvider's own doc comment). Guarded here
       // too so a future accidental change to that provider can't silently
-      // start mutating FarmLink-owned rows through the external-source
+      // start mutating ANNDATA-owned rows through the external-source
       // persistence path below.
-      if (result.provider.type === "FARMLINK") {
+      if (result.provider.type === "ANNDATA") {
         providerSummaries.push({
           providerId: result.provider.id,
           providerType: result.provider.type,
@@ -361,7 +361,7 @@ export class WarehouseSyncService {
 
         // Sync bookkeeping (lastSyncedAt/sourceUpdatedAt/metadata) is
         // always refreshed regardless of whether the warehouse's own
-        // fields changed — "FarmLink last successfully processed this
+        // fields changed — "ANNDATA last successfully processed this
         // source record" is true on every run, changed or not.
         await this.sourceReferences.update(
           existingReference.id,
@@ -382,7 +382,7 @@ export class WarehouseSyncService {
 
       if (duplicate.state === "MATCHED" && duplicate.warehouseId) {
         // Deterministic match to an existing warehouse (possibly
-        // FarmLink-owned, possibly from another provider): attach
+        // ANNDATA-owned, possibly from another provider): attach
         // provenance only. Never touch the existing warehouse's fields or
         // storage units — this sync run does not own that data (Part 15).
         await this.sourceReferences.create(
