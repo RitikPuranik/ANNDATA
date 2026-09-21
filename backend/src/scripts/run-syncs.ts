@@ -71,23 +71,19 @@ async function syncLocationCatalog(prisma: any) {
   console.log(`✅ State & District catalog updated: ${totalStates} States and ${totalDistricts} Districts available in database.`);
 }
 
-async function main() {
-  const { PrismaClient } = await import("@prisma/client");
+export interface RunSyncOptions { full?: boolean; marketStartOffset?: number; }\n\nexport async function runAllSyncs(prisma: any, auditService: any, options: RunSyncOptions = {}) {
   const { DataGovMarketProvider } = await import("../modules/market-data/data-gov.provider");
   const { MarketDataService } = await import("../modules/market-data/market-data.service");
   const { WarehouseSyncService } = await import("../modules/warehouse-intelligence/warehouse-sync.service");
   const { WarehouseProviderRegistry } = await import("../modules/warehouse-intelligence/providers/warehouse-provider-registry");
   const { PrismaWarehouseSourceReferenceRepository } = await import("../modules/warehouse-intelligence/warehouse-source-reference.repository");
   const { WarehouseDuplicateDetectionService } = await import("../modules/warehouse-intelligence/warehouse-duplicate-detection.service");
-  const { PrismaAuditService } = await import("../modules/audit/audit.service");
   const { FarmLinkWarehouseProvider } = await import("../modules/warehouse-intelligence/providers/farmlink-warehouse-provider");
   const { FciIisfmWarehouseProvider } = await import("../modules/warehouse-intelligence/providers/fci-iisfm-warehouse-provider");
   const { UnavailablePartnerWarehouseProvider } = await import("../modules/warehouse-intelligence/providers/partner-warehouse-provider");
   const { logger } = await import("../config/logger");
   logger.level = "warn";
 
-  const prisma = new PrismaClient();
-  const auditService = new PrismaAuditService(prisma);
 
   // 1. Run Warehouse Sync
   console.log("\n==========================================");
@@ -102,7 +98,7 @@ async function main() {
   const dupDetection = new WarehouseDuplicateDetectionService(prisma);
   const warehouseSync = new WarehouseSyncService(prisma, registry, sourceRefs, dupDetection, auditService);
 
-  const isFull = process.argv.includes("--full") || process.env.SYNC_FULL === "true";
+  const isFull = options.full ?? (process.argv.includes("--full") || process.env.SYNC_FULL === "true");
   const maxWarehouses = isFull ? undefined : (parseInt(process.env.WAREHOUSE_SYNC_MAX_RECORDS || "50", 10) || 50);
 
   try {
@@ -128,14 +124,14 @@ async function main() {
 
     // Limit records for CLI run if specified, or default to 500 records for fast seeding
     // Set MARKET_SEED_MAX_RECORDS=0 or pass --full to pull full dataset
-    const isFull = process.argv.includes("--full") || process.env.MARKET_SEED_MAX_RECORDS === "0";
+    const isFull = options.full ?? (process.argv.includes("--full") || process.env.MARKET_SEED_MAX_RECORDS === "0");
     const maxRecords = isFull ? undefined : (parseInt(process.env.MARKET_SEED_MAX_RECORDS || "500", 10) || 500);
 
     console.log(`Starting seed (mode: ${isFull ? "unbounded full 5-year pull" : `bounded batch of ${maxRecords} records`})...`);
 
     try {
       const result = await new MarketDataService(prisma).run(
-        marketProvider.records(from, maxRecords),
+        marketProvider.records(from, maxRecords, options.marketStartOffset ?? 0),
         "data.gov.in",
         "HISTORICAL_IMPORT"
       );
@@ -154,12 +150,8 @@ async function main() {
   // 4. Populate State and District catalog from ingested warehouses and mandis
   await syncLocationCatalog(prisma);
 
-  await prisma.$disconnect();
   console.log("\n✨ All synchronization tasks finished.\n");
-  process.exit(0);
-}
-
-main().catch((e) => {
+}\n\nasync function main() {\n  const { PrismaClient } = await import("@prisma/client");\n  const { PrismaAuditService } = await import("../modules/audit/audit.service");\n  const prisma = new PrismaClient();\n  const auditService = new PrismaAuditService(prisma);\n  try {\n    await runAllSyncs(prisma, auditService, {\n      full: process.argv.includes("--full"),\n      marketStartOffset: 289500,\n    });\n  } finally {\n    await prisma.$disconnect();\n  }\n}\n\nmain().catch((e) => {
   console.error("Fatal Error:", e);
   process.exit(1);
 });
