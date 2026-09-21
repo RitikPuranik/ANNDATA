@@ -1,4 +1,4 @@
-# FarmLink Intelligence — Backend (Modules 1, 2, 3, 4 & 5)
+# ANNDATA Intelligence — Backend (Modules 1, 2, 3, 4 & 5)
 
 SIH26132 — Strengthening market linkages and price discovery for farmers.
 This backend currently covers:
@@ -41,7 +41,7 @@ This backend currently covers:
   `LotAuthorizationService` and Module 3's `FpoAuthorizationService`
   unchanged; no second lot-ownership check.
 
-Every future FarmLink module (market intelligence, buyers, logistics,
+Every future ANNDATA module (market intelligence, buyers, logistics,
 warehouses…) is expected to consume the identity Module 1 issues, the
 farmer/farm/crop data Module 2 issues, the FPO/membership/aggregation data
 Module 3 issues, the actual `CropLot` data Module 4 issues, and the
