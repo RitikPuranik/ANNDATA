@@ -80,7 +80,7 @@ async function main() {
   const { PrismaWarehouseSourceReferenceRepository } = await import("../modules/warehouse-intelligence/warehouse-source-reference.repository");
   const { WarehouseDuplicateDetectionService } = await import("../modules/warehouse-intelligence/warehouse-duplicate-detection.service");
   const { PrismaAuditService } = await import("../modules/audit/audit.service");
-  const { FarmLinkWarehouseProvider } = await import("../modules/warehouse-intelligence/providers/farmlink-warehouse-provider");
+  const { ANNDATAWarehouseProvider } = await import("../modules/warehouse-intelligence/providers/anndata-warehouse-provider");
   const { FciIisfmWarehouseProvider } = await import("../modules/warehouse-intelligence/providers/fci-iisfm-warehouse-provider");
   const { UnavailablePartnerWarehouseProvider } = await import("../modules/warehouse-intelligence/providers/partner-warehouse-provider");
   const { logger } = await import("../config/logger");
@@ -94,7 +94,7 @@ async function main() {
   console.log("  Step 1: Running Warehouse Sync          ");
   console.log("==========================================");
   const registry = new WarehouseProviderRegistry([
-    new FarmLinkWarehouseProvider(),
+    new ANNDATAWarehouseProvider(),
     new FciIisfmWarehouseProvider(),
     new UnavailablePartnerWarehouseProvider(),
   ]);
