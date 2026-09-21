@@ -1,15 +1,15 @@
-# FarmLink Intelligence — AI Project Context
+# ANNDATA Intelligence — AI Project Context
 
 > Canonical context for coding agents working on this repository. Read this file first for future module work. Inspect only files directly relevant to the current task unless a dependency requires deeper inspection.
 
 ## Product
-- Product: FarmLink Intelligence
+- Product: ANNDATA Intelligence
 - SIH: Smart India Hackathon 2026
 - Problem Statement: SIH26132 — Strengthening market linkages and price discovery for farmers
 - Core idea: AI-powered market decision + transaction orchestration platform that helps farmers/FPOs decide where, when, and to whom to sell, how to store/move produce, and expected net realization.
 
 ## Repository
-- GitHub: https://github.com/RitikPuranik/FarmLink
+- GitHub: https://github.com/RitikPuranik/ANNDATA
 - Default branch: `main`
 - Top-level areas: `backend/`, `frontend/`, `e2e/`
 
@@ -153,7 +153,7 @@ Farmer -> Farm/Profile -> Crop Lot -> Quality -> Market Intelligence -> Price Fo
 
 ## Planned Logistics Architecture
 Transport data should be provider-agnostic:
-- Registered local transporters in FarmLink
+- Registered local transporters in ANNDATA
 - FPO/local transporter network
 - Commercial/partner logistics APIs where credentials/partnerships exist
 - Government transporter/compliance integrations where appropriate
