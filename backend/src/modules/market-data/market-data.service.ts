@@ -161,26 +161,63 @@ export class MarketDataService {
 
     await this.loadCropCache();
 
-    const processChunk = async (chunk: SourceMarketRecord[]) =>
-      this.prisma.$transaction(async (tx) => {
-        for (const record of chunk) {
-          try {
-            const outcome = await this.persist(record, tx);
-            if (outcome.imported) {
-              imported++;
-              if (!newestObservedDate || record.observedDate > newestObservedDate) {
-                newestObservedDate = record.observedDate;
+    const processChunk = async (chunk: SourceMarketRecord[]) => {
+      const maxTransactionRetries = 3;
+
+      for (let attempt = 1; attempt <= maxTransactionRetries; attempt++) {
+        try {
+          await this.prisma.$transaction(
+            async (tx) => {
+              for (const record of chunk) {
+                try {
+                  const outcome = await this.persist(record, tx);
+
+                  if (outcome.imported) {
+                    imported++;
+                    if (
+                      !newestObservedDate ||
+                      record.observedDate > newestObservedDate
+                    ) {
+                      newestObservedDate = record.observedDate;
+                    }
+                  } else {
+                    rejected++;
+                    diagnostics.push(
+                      `${record.commodity}: ${outcome.reason}`,
+                    );
+                  }
+                } catch (err) {
+                  rejected++;
+                  diagnostics.push(
+                    `${record?.commodity ?? "record"}: ${
+                      err instanceof Error ? err.message : "Invalid record"
+                    }`,
+                  );
+                }
               }
-            } else {
-              rejected++;
-              diagnostics.push(`${record.commodity}: ${outcome.reason}`);
-            }
-          } catch (err) {
-            rejected++;
-            diagnostics.push(`${record?.commodity ?? "record"}: ${err instanceof Error ? err.message : "Invalid record"}`);
+            },
+            { timeout: 60_000 },
+          );
+
+          return;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const isDeadlock =
+            message.includes("40P01") ||
+            message.toLowerCase().includes("deadlock detected");
+
+          if (!isDeadlock || attempt === maxTransactionRetries) {
+            throw err;
           }
+
+          const delayMs = attempt * 1000;
+          console.warn(
+            `[Market Data] PostgreSQL deadlock detected. Retrying chunk in ${delayMs}ms (attempt ${attempt + 1}/${maxTransactionRetries})...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
-      }, { timeout: 60_000 });
+      }
+    };
 
     try {
       let chunk: SourceMarketRecord[] = [];
