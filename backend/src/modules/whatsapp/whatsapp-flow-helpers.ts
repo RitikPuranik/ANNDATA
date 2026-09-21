@@ -61,9 +61,9 @@ const GATE_WHAT: Record<GateReason, MsgKey> = {
 };
 
 /**
- * The single "this needs a FarmLink account" reply for numbers that aren't
+ * The single "this needs a ANNDATA account" reply for numbers that aren't
  * linked to one. Everything that creates, publishes or reads account-owned data
- * ends up here → "🌐 Continue on FarmLink". (The button label is capped at 20
+ * ends up here → "🌐 Continue on ANNDATA". (The button label is capped at 20
  * characters by WhatsApp, so the globe lives in the body, not on the button.)
  */
 export function guestGate(lang: Lang, signupUrl: string, reason: GateReason): OutboundMessage {
