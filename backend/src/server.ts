@@ -60,23 +60,6 @@ async function main() {
   await prisma.$connect();
   logger.info("Database connection established");
 
-  // ============================================================
-  // STARTUP FULL SYNC
-  // Set to false, or comment out the runAllSyncs() block, when
-  // you do not want the full warehouse + market-data sync on startup.
-  // IMPORTANT: market data starts from offset 289500 for this startup run.
-  // ============================================================
-  const RUN_STARTUP_FULL_SYNC = true;
-
-  if (RUN_STARTUP_FULL_SYNC) {
-    logger.info("Starting full startup synchronization...");
-    await runAllSyncs(prisma, auditService, {
-      full: true,
-      marketStartOffset: 289500,
-    });
-    logger.info("Full startup synchronization completed."); 
-  }
-
   // All scheduled cron jobs live in ./jobs — each `register*Job` decides
   // for itself whether it should actually schedule anything (env flags,
   // provider configuration, production-only guards) and returns the
@@ -91,6 +74,24 @@ async function main() {
     logger.info(`FarmLink auth service listening on ${env.BACKEND_URL} (port ${env.PORT})`);
     logger.info(`API docs available at ${env.BACKEND_URL}/api/docs`);
   });
+
+  // ============================================================
+  // STARTUP FULL SYNC
+  // Set to false, or comment out the runAllSyncs() block, when
+  // you do not want the full warehouse + market-data sync on startup.
+  // IMPORTANT: market data starts from offset 289500 for this startup run.
+  // The API starts listening first so Render can detect the port.
+  // ============================================================
+  const RUN_STARTUP_FULL_SYNC = true;
+
+  if (RUN_STARTUP_FULL_SYNC) {
+    runAllSyncs(prisma, auditService, {
+      full: true,
+      marketStartOffset: 289500,
+    })
+      .then(() => logger.info("Full startup synchronization completed."))
+      .catch((err) => logger.error({ err }, "Full startup synchronization failed."));
+  }
 
   async function shutdown(signal: string) {
     logger.info(`${signal} received — shutting down gracefully`);
