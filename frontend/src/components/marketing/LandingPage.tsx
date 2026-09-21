@@ -583,45 +583,13 @@ export default function LandingPage() {
             BACKGROUND IMAGE
         ================================================= */}
 
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           <img
             src="/images/front.avif"
             alt="Farmers harvesting crop in field"
-            className="
-              absolute
-              inset-0
-              h-full
-              w-full
-              scale-105
-              object-cover
-              object-center
-            "
+            className="absolute inset-0 h-full w-full object-cover object-center"
             fetchPriority="high"
             decoding="async"
-          />
-
-          {/* DARK CINEMATIC OVERLAY */}
-
-          <div
-            className="
-              absolute
-              inset-0
-              bg-gradient-to-r
-              from-black/85
-              via-black/55
-              to-black/15
-            "
-          />
-
-          <div
-            className="
-              absolute
-              inset-0
-              bg-gradient-to-t
-              from-black/45
-              via-transparent
-              to-black/20
-            "
           />
         </div>
 
