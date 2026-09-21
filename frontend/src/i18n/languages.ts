@@ -14,7 +14,7 @@ export interface LanguageOption {
 export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: "en", englishName: "English", nativeName: "English" },
 
-  // Widely used across FarmLink's primary market (India)
+  // Widely used across ANNDATA's primary market (India)
   { code: "hi", englishName: "Hindi", nativeName: "हिन्दी" },
   { code: "mr", englishName: "Marathi", nativeName: "मराठी" },
   { code: "bn", englishName: "Bengali", nativeName: "বাংলা" },
