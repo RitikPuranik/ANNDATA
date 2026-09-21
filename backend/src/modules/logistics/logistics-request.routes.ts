@@ -149,7 +149,7 @@ export function createLogisticsRequestRouter(
    * /api/logistics/requests/{publicId}/calculate:
    *   post:
    *     tags: [Logistics]
-   *     summary: Calculate FarmLink's own best-effort distance/duration/cost estimate
+   *     summary: Calculate ANNDATA's own best-effort distance/duration/cost estimate
    *     description: |
    *       Requires pickup and destination coordinates to already be set on
    *       the request (Step 3/12) — this never calls a third-party maps
