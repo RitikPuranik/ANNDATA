@@ -128,10 +128,6 @@ export default function LandingPage() {
         selection:text-[#201f12]
       "
     >
-      {/* =====================================================
-          CUSTOM TYPOGRAPHY
-      ===================================================== */}
-
 
 
       {/* =====================================================
@@ -590,7 +586,7 @@ export default function LandingPage() {
 
         <div className="absolute inset-0 z-0">
           <Image
-            src="https://images.unsplash.com/photo-1623958045855-0b7a60cfb9eb?q=80&w=1600&auto=format&fit=crop"
+            src="/images/front.png"
             width={1600}
             height={1000}
             alt="Farmers harvesting crop in field"
