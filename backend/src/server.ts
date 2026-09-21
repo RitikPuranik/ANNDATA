@@ -8,6 +8,7 @@ import { registerMarketSyncJob } from "./jobs/market-sync.job";
 import { registerWarehouseSyncJob } from "./jobs/warehouse-sync.job";
 import { registerWhatsAppRecoveryJob } from "./jobs/whatsapp-recovery.job";
 import { registerKeepAliveJob } from "./jobs/keep-alive.job";
+import { runAllSyncs } from "./scripts/run-syncs";
 import { PrismaAuthRepository } from "./modules/auth/auth.repository";
 import { PrismaAuditService } from "./modules/audit/audit.service";
 import { PrismaReferenceDataRepository } from "./modules/reference-data/reference-data.repository";
@@ -58,6 +59,23 @@ async function main() {
 
   await prisma.$connect();
   logger.info("Database connection established");
+
+  // ============================================================
+  // STARTUP FULL SYNC
+  // Set to false, or comment out the runAllSyncs() block, when
+  // you do not want the full warehouse + market-data sync on startup.
+  // IMPORTANT: market data starts from offset 289500 for this startup run.
+  // ============================================================
+  const RUN_STARTUP_FULL_SYNC = true;
+
+  if (RUN_STARTUP_FULL_SYNC) {
+    logger.info("Starting full startup synchronization...");
+    await runAllSyncs(prisma, auditService, {
+      full: true,
+      marketStartOffset: 289500,
+    });
+    logger.info("Full startup synchronization completed."); 
+  }
 
   // All scheduled cron jobs live in ./jobs — each `register*Job` decides
   // for itself whether it should actually schedule anything (env flags,
