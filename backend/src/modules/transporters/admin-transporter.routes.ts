@@ -36,7 +36,7 @@ export function createAdminTransporterRouter(
    *     tags: [Admin - Transporters]
    *     summary: Set a transporter's verification status
    *     description: |
-   *       "Verified" means verified per FarmLink's own administrative
+   *       "Verified" means verified per ANNDATA's own administrative
    *       workflow, not a claim of government/RTO verification. Allowed
    *       transitions: PENDING -> VERIFIED/REJECTED, VERIFIED -> SUSPENDED,
    *       SUSPENDED -> VERIFIED. REJECTED is terminal.
@@ -75,7 +75,7 @@ export function createAdminTransporterRouter(
    *     tags: [Admin - Vehicles]
    *     summary: Set a vehicle's verification status
    *     description: |
-   *       "Verified" means verified per FarmLink's own administrative
+   *       "Verified" means verified per ANNDATA's own administrative
    *       workflow only — this module does not integrate with any external
    *       RTO/government registry, so this is never a claim that the
    *       registration number has been government-verified. Allowed
