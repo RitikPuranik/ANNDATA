@@ -585,7 +585,7 @@ export default function LandingPage() {
 
         <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           <img
-            src="../../../public/images/front.avif"
+            src="/images/image.png"
             alt="Farmers harvesting crop in field"
             className="absolute inset-0 h-full w-full object-cover object-center"
             loading="eager"
