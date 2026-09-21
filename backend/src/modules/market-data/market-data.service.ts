@@ -166,54 +166,61 @@ export class MarketDataService {
 
       for (let attempt = 1; attempt <= maxTransactionRetries; attempt++) {
         try {
-          await this.prisma.$transaction(
+          const stats = await this.prisma.$transaction(
             async (tx) => {
+              let chunkImported = 0;
+              let chunkRejected = 0;
+              const chunkDiagnostics: string[] = [];
+              let chunkNewestObservedDate: Date | undefined;
+
               for (const record of chunk) {
                 try {
                   const outcome = await this.persist(record, tx);
 
                   if (outcome.imported) {
-                    imported++;
-                    if (
-                      !newestObservedDate ||
-                      record.observedDate > newestObservedDate
-                    ) {
-                      newestObservedDate = record.observedDate;
+                    chunkImported++;
+                    if (!chunkNewestObservedDate || record.observedDate > chunkNewestObservedDate) {
+                      chunkNewestObservedDate = record.observedDate;
                     }
                   } else {
-                    rejected++;
-                    diagnostics.push(
-                      `${record.commodity}: ${outcome.reason}`,
-                    );
+                    chunkRejected++;
+                    chunkDiagnostics.push(`${record.commodity}: ${outcome.reason}`);
                   }
                 } catch (err) {
-                  rejected++;
-                  diagnostics.push(
-                    `${record?.commodity ?? "record"}: ${
-                      err instanceof Error ? err.message : "Invalid record"
-                    }`,
-                  );
+                  chunkRejected++;
+                  chunkDiagnostics.push(`${record?.commodity ?? "record"}: ${err instanceof Error ? err.message : "Invalid record"}`);
                 }
               }
+
+              return {
+                imported: chunkImported,
+                rejected: chunkRejected,
+                diagnostics: chunkDiagnostics,
+                newestObservedDate: chunkNewestObservedDate,
+              };
             },
             { timeout: 60_000 },
           );
 
+          imported += stats.imported;
+          rejected += stats.rejected;
+          diagnostics.push(...stats.diagnostics);
+
+          if (stats.newestObservedDate && (!newestObservedDate || stats.newestObservedDate > newestObservedDate)) {
+            newestObservedDate = stats.newestObservedDate;
+          }
+
           return;
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          const isDeadlock =
-            message.includes("40P01") ||
-            message.toLowerCase().includes("deadlock detected");
+          const isDeadlock = message.includes("40P01") || message.toLowerCase().includes("deadlock detected");
 
           if (!isDeadlock || attempt === maxTransactionRetries) {
             throw err;
           }
 
           const delayMs = attempt * 1000;
-          console.warn(
-            `[Market Data] PostgreSQL deadlock detected. Retrying chunk in ${delayMs}ms (attempt ${attempt + 1}/${maxTransactionRetries})...`,
-          );
+          console.warn(`[Market Data] PostgreSQL deadlock detected. Retrying chunk in ${delayMs}ms (attempt ${attempt + 1}/${maxTransactionRetries})...`);
           await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       }
