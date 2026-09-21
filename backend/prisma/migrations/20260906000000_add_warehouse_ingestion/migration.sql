@@ -7,7 +7,7 @@
 -- nullable with no default (existing rows read back as NULL).
 
 -- Two new WarehouseOwnerType members for warehouses ingested from an
--- external source with no FarmLink user/FPO behind them. Postgres enum
+-- external source with no ANNDATA user/FPO behind them. Postgres enum
 -- values can only be added, never removed/renamed in a single statement,
 -- which matches this migration's own "additive only" requirement.
 ALTER TYPE "WarehouseOwnerType" ADD VALUE 'GOVERNMENT';
@@ -20,7 +20,7 @@ ALTER TABLE "warehouses" ADD COLUMN "pincode" TEXT;
 -- Provenance/idempotency table. See the schema.prisma comment on
 -- WarehouseSourceReference for why this is a separate table rather than
 -- columns on Warehouse itself.
-CREATE TYPE "WarehouseSourceType" AS ENUM ('FARMLINK', 'GOVERNMENT', 'PRIVATE_PARTNER');
+CREATE TYPE "WarehouseSourceType" AS ENUM ('ANNDATA', 'GOVERNMENT', 'PRIVATE_PARTNER');
 
 CREATE TABLE "warehouse_source_references" (
     "id" TEXT NOT NULL,
