@@ -153,7 +153,12 @@ export class MarketDataService {
     return { imported: true as const };
   }
 
-  async run(records: AsyncIterable<SourceMarketRecord>, source: string, operation: "HISTORICAL_IMPORT" | "INCREMENTAL_SYNC") {
+  async run(
+    records: AsyncIterable<SourceMarketRecord>,
+    source: string,
+    operation: "HISTORICAL_IMPORT" | "INCREMENTAL_SYNC",
+    options: { checkpointOffsets?: boolean } = {},
+  ) {
     const run = await this.prisma.marketDataImportRun.create({ data: { source, operation } });
     let read = 0, imported = 0, rejected = 0;
     let newestObservedDate: Date | undefined;
@@ -161,26 +166,104 @@ export class MarketDataService {
 
     await this.loadCropCache();
 
-    const processChunk = async (chunk: SourceMarketRecord[]) =>
-      this.prisma.$transaction(async (tx) => {
-        for (const record of chunk) {
-          try {
-            const outcome = await this.persist(record, tx);
-            if (outcome.imported) {
-              imported++;
-              if (!newestObservedDate || record.observedDate > newestObservedDate) {
-                newestObservedDate = record.observedDate;
+    const processChunk = async (chunk: SourceMarketRecord[]) => {
+      const maxTransactionRetries = 3;
+
+      for (let attempt = 1; attempt <= maxTransactionRetries; attempt++) {
+        try {
+          const stats = await this.prisma.$transaction(
+            async (tx) => {
+              let chunkImported = 0;
+              let chunkRejected = 0;
+              const chunkDiagnostics: string[] = [];
+              let chunkNewestObservedDate: Date | undefined;
+
+              for (const record of chunk) {
+                try {
+                  const outcome = await this.persist(record, tx);
+
+                  if (outcome.imported) {
+                    chunkImported++;
+                    if (!chunkNewestObservedDate || record.observedDate > chunkNewestObservedDate) {
+                      chunkNewestObservedDate = record.observedDate;
+                    }
+                  } else {
+                    chunkRejected++;
+                    chunkDiagnostics.push(`${record.commodity}: ${outcome.reason}`);
+                  }
+                } catch (err) {
+                  chunkRejected++;
+                  chunkDiagnostics.push(`${record?.commodity ?? "record"}: ${err instanceof Error ? err.message : "Invalid record"}`);
+                }
               }
-            } else {
-              rejected++;
-              diagnostics.push(`${record.commodity}: ${outcome.reason}`);
-            }
-          } catch (err) {
-            rejected++;
-            diagnostics.push(`${record?.commodity ?? "record"}: ${err instanceof Error ? err.message : "Invalid record"}`);
+
+              return {
+                imported: chunkImported,
+                rejected: chunkRejected,
+                diagnostics: chunkDiagnostics,
+                newestObservedDate: chunkNewestObservedDate,
+              };
+            },
+            { timeout: 60_000 },
+          );
+
+          imported += stats.imported;
+          rejected += stats.rejected;
+          diagnostics.push(...stats.diagnostics);
+
+          if (stats.newestObservedDate && (!newestObservedDate || stats.newestObservedDate > newestObservedDate)) {
+            newestObservedDate = stats.newestObservedDate;
           }
+
+          // Persist the provider pagination cursor after a successful
+          // transaction. Replaying the current page after a crash is safe
+          // because mandi/mandiPrice writes are upserts.
+          if (options.checkpointOffsets && chunk.length > 0) {
+            const offsets = chunk
+              .map((record) => {
+                const raw = (record.metadata as { offset?: unknown } | undefined)?.offset;
+                return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+              })
+              .filter((value): value is number => value !== null);
+
+            if (offsets.length > 0) {
+              const checkpointOffset = Math.min(...offsets);
+              await this.prisma.marketDataSyncCheckpoint.upsert({
+                where: { source },
+                create: {
+                  source,
+                  cursor: String(checkpointOffset),
+                  metadata: {
+                    marketDataHistoricalOffset: checkpointOffset,
+                  },
+                  lastSuccessfulSyncAt: new Date(),
+                },
+                update: {
+                  cursor: String(checkpointOffset),
+                  metadata: {
+                    marketDataHistoricalOffset: checkpointOffset,
+                  },
+                  lastSuccessfulSyncAt: new Date(),
+                },
+              });
+            }
+          }
+
+          return;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const isDeadlock = message.includes("40P01") || message.toLowerCase().includes("deadlock detected");
+
+          if (!isDeadlock || attempt === maxTransactionRetries) {
+            throw err;
+          }
+
+          const delayMs = attempt * 1000;
+          console.warn(`[Market Data] PostgreSQL deadlock detected. Retrying chunk in ${delayMs}ms (attempt ${attempt + 1}/${maxTransactionRetries})...`);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
-      }, { timeout: 60_000 });
+      }
+    };
 
     try {
       let chunk: SourceMarketRecord[] = [];
