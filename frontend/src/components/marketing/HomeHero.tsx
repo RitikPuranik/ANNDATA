@@ -4,7 +4,7 @@ import { LineChart, Package, Handshake, Scale, ArrowRight } from "lucide-react";
 import { CropVisual } from "@/components/crops/CropVisual";
 import { toneFor, type CropIconKey } from "@/components/crops/cropCatalog";
 
-/** Amazon-style row of colorful promo tiles, reframed for FarmLink's actual actions. */
+/** Amazon-style row of colorful promo tiles, reframed for ANNDATA's actual actions. */
 const PROMO_TILES: {
   title: string;
   subtitle: string;
