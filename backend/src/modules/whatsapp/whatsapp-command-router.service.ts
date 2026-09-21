@@ -4,7 +4,7 @@ import { extractNumber, isNo, isYes } from "./nlu/whatsapp-command-parser";
 import type { WhatsAppIntentService } from "./nlu/whatsapp-intent.service";
 import type { WhatsAppBuyerAssistantService } from "./whatsapp-buyer-assistant.service";
 import type { WhatsAppCatalogService } from "./whatsapp-catalog.service";
-import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import type { ANNDATAUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, errorMessage, guestGate, textMsg, type GateReason } from "./whatsapp-flow-helpers";
 import { t, type MsgKey } from "./whatsapp-i18n";
 import type { WhatsAppLotService } from "./whatsapp-lot-service";
@@ -24,7 +24,7 @@ export interface RouterDeps {
   payments: WhatsAppPaymentService;
   shipments: WhatsAppShipmentService;
   catalog: WhatsAppCatalogService;
-  urls: FarmLinkUrlService;
+  urls: ANNDATAUrlService;
 }
 
 type IntentHandler = (input: AnyFlowInput, det: DetectedIntent) => Promise<OutboundMessage[]>;
@@ -42,7 +42,7 @@ const LINKED_ONLY_ACTIONS = new Set(["confirm:yes", "lot:open", "lots:more", "of
  * that isn't linked to an account). A guest can use everything that reads public
  * data (buyer demand search, mandi prices, "how it works", website links); every
  * handler that touches account-owned data is wrapped in `linkedOnly()`, which
- * answers a guest with the "Continue on FarmLink" gate instead. The type system
+ * answers a guest with the "Continue on ANNDATA" gate instead. The type system
  * backs this up: services that need a farmer take a `FlowInput`, which a guest
  * cannot construct. Handlers live in an
  * intent → handler registry, so a future command ("warehouse", "forecast",
@@ -85,7 +85,7 @@ export class WhatsAppCommandRouter {
     this.handlers.set(intent, handler);
   }
 
-  /** Wraps a handler that needs a FarmLink account: guests get the sign-up gate instead. */
+  /** Wraps a handler that needs a ANNDATA account: guests get the sign-up gate instead. */
   private linkedOnly(reason: GateReason, run: (input: FlowInput, det: DetectedIntent) => Promise<OutboundMessage[]>): IntentHandler {
     return async (input, det) => {
       if (isLinked(input)) return run(input, det);
@@ -340,14 +340,14 @@ export class WhatsAppCommandRouter {
     return [textMsg(t(isLinked(input) ? "help" : "guestHelp", conv.language))];
   }
 
-  /** "How does FarmLink work?" — public information, for guests and farmers alike. */
+  /** "How does ANNDATA work?" — public information, for guests and farmers alike. */
   private about(input: AnyFlowInput): OutboundMessage[] {
     const { conv } = input;
     const lang = conv.language;
     this.reset(conv);
     return isLinked(input)
-      ? [ctaMsg(t("aboutFarmLink", lang), t("ctaOpen", lang), this.d.urls.dashboard())]
-      : [ctaMsg(t("aboutFarmLink", lang), t("ctaContinue", lang), this.d.urls.signup())];
+      ? [ctaMsg(t("aboutANNDATA", lang), t("ctaOpen", lang), this.d.urls.dashboard())]
+      : [ctaMsg(t("aboutANNDATA", lang), t("ctaContinue", lang), this.d.urls.signup())];
   }
 
   private cancel(input: AnyFlowInput): OutboundMessage[] {
