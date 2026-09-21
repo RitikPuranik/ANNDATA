@@ -153,7 +153,12 @@ export class MarketDataService {
     return { imported: true as const };
   }
 
-  async run(records: AsyncIterable<SourceMarketRecord>, source: string, operation: "HISTORICAL_IMPORT" | "INCREMENTAL_SYNC") {
+  async run(
+    records: AsyncIterable<SourceMarketRecord>,
+    source: string,
+    operation: "HISTORICAL_IMPORT" | "INCREMENTAL_SYNC",
+    options: { checkpointOffsets?: boolean } = {},
+  ) {
     const run = await this.prisma.marketDataImportRun.create({ data: { source, operation } });
     let read = 0, imported = 0, rejected = 0;
     let newestObservedDate: Date | undefined;
@@ -208,6 +213,34 @@ export class MarketDataService {
 
           if (stats.newestObservedDate && (!newestObservedDate || stats.newestObservedDate > newestObservedDate)) {
             newestObservedDate = stats.newestObservedDate;
+          }
+
+          // Persist the provider pagination cursor after a successful
+          // transaction. Replaying the current page after a crash is safe
+          // because mandi/mandiPrice writes are upserts.
+          if (options.checkpointOffsets && chunk.length > 0) {
+            const offsets = chunk
+              .map((record) => {
+                const raw = (record.metadata as { offset?: unknown } | undefined)?.offset;
+                return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+              })
+              .filter((value): value is number => value !== null);
+
+            if (offsets.length > 0) {
+              const checkpointOffset = Math.min(...offsets);
+              await this.prisma.marketDataSyncCheckpoint.upsert({
+                where: { source },
+                create: {
+                  source,
+                  cursor: String(checkpointOffset),
+                  lastSuccessfulSyncAt: new Date(),
+                },
+                update: {
+                  cursor: String(checkpointOffset),
+                  lastSuccessfulSyncAt: new Date(),
+                },
+              });
+            }
           }
 
           return;
