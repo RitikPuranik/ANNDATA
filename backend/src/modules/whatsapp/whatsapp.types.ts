@@ -37,7 +37,7 @@ export interface DetectedIntent {
   entities: RawEntities;
   confidence: number;
   source: "command" | "rules" | "ai" | "none";
-  /** For WEBSITE intents: which FarmLink page the request maps to. */
+  /** For WEBSITE intents: which ANNDATA page the request maps to. */
   websiteTarget?: WebsiteTarget;
 }
 
@@ -183,7 +183,7 @@ export interface LinkedFarmer {
   phoneNumber: string;
 }
 
-/** A message from a number that is linked to a FarmLink farmer account. */
+/** A message from a number that is linked to a ANNDATA farmer account. */
 export interface FlowInput {
   inbound: InboundMessage;
   conv: ConversationRecord;
@@ -191,7 +191,7 @@ export interface FlowInput {
 }
 
 /**
- * A message from a number that is NOT linked to any FarmLink account ("guest").
+ * A message from a number that is NOT linked to any ANNDATA account ("guest").
  * There is deliberately no `farmer` here: guest flows can only reach public
  * data (mandi prices, open buyer demand) and can never call a user-scoped
  * service. Anything that needs an account must narrow with `isLinked()` first,
