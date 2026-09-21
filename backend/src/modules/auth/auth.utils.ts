@@ -83,7 +83,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 // body for the SPA to hold in memory (and is short-lived).
 // ---------------------------------------------------------------------------
 
-export const REFRESH_COOKIE_NAME = "farmlink_refresh";
+export const REFRESH_COOKIE_NAME = "anndata_refresh";
 
 function baseCookieOptions(): CookieOptions {
   return {
