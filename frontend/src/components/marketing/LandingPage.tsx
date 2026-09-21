@@ -585,7 +585,7 @@ export default function LandingPage() {
 
         <div className="absolute inset-0 z-0">
           <img
-            src="/images/front.png"
+            src="/images/front.avif"
             alt="Farmers harvesting crop in field"
             className="
               absolute
