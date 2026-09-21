@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Given a lot needing transport, Module 16 lets FarmLink (a) produce its own
+Given a lot needing transport, Module 16 lets ANNDATA (a) produce its own
 best-effort distance/duration/cost estimate without any provider involved,
 (b) show which of Module 15's vehicles are actually eligible and why/why
 not, (c) let transport providers submit competing quotes, and (d)
@@ -79,7 +79,7 @@ relation (`TransporterProfile.logisticsQuotes`, `Vehicle.logisticsQuotes`,
   keeps the module usable regardless of where the destination came from.
 - `LogisticsQuote` — one per provider/vehicle submission against a
   request. `quotedAmount` is always kept distinct from
-  `LogisticsRequest.estimatedCost` (FarmLink's own guess) and from
+  `LogisticsRequest.estimatedCost` (ANNDATA's own guess) and from
   whatever ends up `ACCEPTED` — three independently-inspectable numbers,
   never merged.
 - `LogisticsOptimizationResult` — one immutable row per `optimize()` run
