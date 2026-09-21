@@ -16,8 +16,8 @@ export type LanguageCode = string;
 export type SupportedLanguage = LanguageCode;
 
 const BASE_LANGUAGE: LanguageCode = "en";
-const LANGUAGE_STORAGE_KEY = "farmlink.language";
-const CACHE_PREFIX = "farmlink.i18n.cache.";
+const LANGUAGE_STORAGE_KEY = "anndata.language";
+const CACHE_PREFIX = "anndata.i18n.cache.";
 
 const baseDict = en as Record<string, string>;
 const baseKeys = Object.keys(baseDict);
