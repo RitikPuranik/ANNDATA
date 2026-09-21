@@ -33,7 +33,7 @@ describe("Price Forecasting Routes Integration", () => {
     prediction: { targetDate: "2026-09-11", predictedPrice: 2100, lowerBound: 2000, upperBound: 2200 },
     confidence: { score: 0.65, level: "MEDIUM", sampleCount: 14 },
     metadata: {
-      modelProvider: "FARMLINK_BASELINE_ENGINE",
+      modelProvider: "ANNDATA_BASELINE_ENGINE",
       modelVersion: "WEIGHTED_MOVING_AVERAGE_TREND_V1",
       algorithm: "WEIGHTED_MOVING_AVERAGE_TREND_V1",
       observationsUsed: 14,
