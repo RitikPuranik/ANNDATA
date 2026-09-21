@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   ArrowRight,
   ShoppingBag,
@@ -589,21 +588,19 @@ export default function LandingPage() {
         ================================================= */}
 
         <div className="absolute inset-0 z-0">
-          <Image
-            src="https://images.unsplash.com/photo-1623958045855-0b7a60cfb9eb?q=80&w=1600&auto=format&fit=crop"
-            width={1600}
-            height={1000}
-            alt="Farmers harvesting crop in field"
-            priority
-            sizes="100vw"
-            className="
-              h-full
-              w-full
-              scale-105
-              object-cover
-              object-center
-            "
-          />
+          <img
+  src="https://images.unsplash.com/photo-1623958045855-0b7a60cfb9eb?q=80&w=1600&auto=format&fit=crop"
+  width={1600}
+  height={1000}
+  alt="Farmers harvesting crop in field"
+  className="
+    h-full
+    w-full
+    scale-105
+    object-cover
+    object-center
+  "
+/>
 
           {/* DARK CINEMATIC OVERLAY */}
 
