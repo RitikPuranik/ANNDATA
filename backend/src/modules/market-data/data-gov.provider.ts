@@ -47,9 +47,9 @@ export class DataGovMarketProvider {
     throw new MarketDomainError(failure instanceof Error ? failure.message : "Market data provider is unavailable.", "MARKET_DATA_PROVIDER_ERROR", 502);
   }
 
-  async *records(from?: Date, maxRecords?: number): AsyncGenerator<SourceMarketRecord> {
+  async *records(from?: Date, maxRecords?: number, startOffset = 0): AsyncGenerator<SourceMarketRecord> {
     if (!this.configured) return;
-    let offset = 0;
+    let offset = Math.max(0, startOffset);
     let yielded = 0;
     for (;;) {
       const rows = await this.fetchPage(offset, from);
