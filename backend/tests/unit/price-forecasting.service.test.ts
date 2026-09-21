@@ -28,7 +28,7 @@ function makeForecast(overrides: Partial<PersistedForecast> = {}): PersistedFore
     output: { predictedPrice: 2100, lowerBound: 2000, upperBound: 2200 },
     confidence: { score: 0.65, sampleCount: 14 },
     model: {
-      modelProvider: "FARMLINK_BASELINE_ENGINE",
+      modelProvider: "ANNDATA_BASELINE_ENGINE",
       modelVersion: BASELINE_MODEL_VERSION,
       inputDataStartDate: new Date("2026-08-01T00:00:00.000Z"),
       inputDataEndDate: new Date("2026-09-04T00:00:00.000Z"),
