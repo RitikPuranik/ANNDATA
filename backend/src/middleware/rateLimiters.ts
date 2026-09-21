@@ -13,7 +13,7 @@ const commonOptions: Partial<Options> = {
 };
 
 // Uses express-rate-limit's in-memory store. That's correct for a single
-// backend instance (this module's deployment target). If FarmLink later
+// backend instance (this module's deployment target). If ANNDATA later
 // scales to multiple backend instances behind a load balancer, swap the
 // `store` option for a Redis-backed store (REDIS_URL is already wired up in
 // config/redis.ts) so limits are shared across processes.
