@@ -27,9 +27,9 @@ const K = {
   about: ["about", "process", "explain", "explanation", "samjhao", "samjhaiye", "intro", "introduction", "जानकारी", "परिचय"],
 };
 
-/** "How does FarmLink work" phrasings (matched on normalized text: lowercase, punctuation → space). */
+/** "How does ANNDATA work" phrasings (matched on normalized text: lowercase, punctuation → space). */
 const ABOUT_PHRASES =
-  /(how (does|do|it|farmlink|this|to use)|how .{0,20} works?|kaise (kaam|kam|chalta|chalti|karta|kare|use)|what is farmlink|what s farmlink|about farmlink|farmlink (kya|kaise|ke bare|ke baare)|कैसे (काम|चलता|चलती)|फार्मलिंक (क्या|कैसे))/u;
+  /(how (does|do|it|anndata|this|to use)|how .{0,20} works?|kaise (kaam|kam|chalta|chalti|karta|kare|use)|what is anndata|what s anndata|about anndata|anndata (kya|kaise|ke bare|ke baare)|कैसे (काम|चलता|चलती)|फार्मलिंक (क्या|कैसे))/u;
 
 const WEBSITE_KEYWORDS: Array<{ words: string[]; target: WebsiteTarget }> = [
   { words: ["warehouse", "warehouses", "godown", "storage", "गोदाम"], target: "warehouses" },
@@ -39,7 +39,7 @@ const WEBSITE_KEYWORDS: Array<{ words: string[]; target: WebsiteTarget }> = [
   { words: ["profile", "account", "प्रोफाइल"], target: "profile" },
   { words: ["transaction", "transactions", "history", "report", "reports", "analytics", "statement", "इतिहास"], target: "transactions" },
   { words: ["register", "signup", "onboarding", "रजिस्टर"], target: "register" },
-  { words: ["dashboard", "website", "site", "app", "portal", "farmlink", "web", "डैशबोर्ड", "वेबसाइट"], target: "dashboard" },
+  { words: ["dashboard", "website", "site", "app", "portal", "anndata", "web", "डैशबोर्ड", "वेबसाइट"], target: "dashboard" },
   { words: ["farm", "farms", "khet", "खेत"], target: "farms" },
   { words: ["complaint", "grievance", "dispute", "shikayat", "शिकायत"], target: "dashboard" },
 ];
@@ -202,7 +202,7 @@ export function parseMessage(raw: string): DetectedIntent {
   if ((hasSell || hasHave) && (entities.crop || entities.quantity)) return done("FIND_BUYER", 0.85, "rules");
   if (hasSell) return done("FIND_BUYER", 0.8, "rules");
 
-  // "How does FarmLink work?" — after every action command so "payment kaise milega"
+  // "How does ANNDATA work?" — after every action command so "payment kaise milega"
   // or "how to sell wheat" keep their own meaning.
   if (ABOUT_PHRASES.test(n) || hasKeyword(tokens, K.about)) return done("ABOUT", cmdConf, cmdSource);
 
