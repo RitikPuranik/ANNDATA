@@ -91,7 +91,7 @@ import {
 } from "./modules/warehouse-intelligence/storage-intelligence-provider";
 import { WarehouseStorageIntelligenceProvider } from "./modules/warehouse-intelligence/storage-intelligence-provider.service";
 import { createWarehouseIntelligenceRouter } from "./modules/warehouse-intelligence/warehouse-intelligence.routes";
-import { FarmLinkWarehouseProvider } from "./modules/warehouse-intelligence/providers/farmlink-warehouse-provider";
+import { ANNDATAWarehouseProvider } from "./modules/warehouse-intelligence/providers/anndata-warehouse-provider";
 import { UnavailableGovernmentWarehouseProvider } from "./modules/warehouse-intelligence/providers/government-warehouse-provider";
 import { UnavailablePartnerWarehouseProvider } from "./modules/warehouse-intelligence/providers/partner-warehouse-provider";
 import { WarehouseProviderRegistry } from "./modules/warehouse-intelligence/providers/warehouse-provider-registry";
@@ -495,13 +495,13 @@ export function createApp(deps: AppDependencies): Express {
 
   // Warehouse Ecosystem Ingestion Layer — the upper "where do warehouse
   // records come from" half of Module 9, sitting entirely above the
-  // FarmLink Warehouse DB. Nothing above this line (availability,
+  // ANNDATA Warehouse DB. Nothing above this line (availability,
   // suitability, risk, recommendations, StorageIntelligenceProvider) was
   // changed to know this exists; it only ever writes plain Warehouse /
   // WarehouseStorageUnit rows that those services already know how to
   // read.
   const warehouseProviderRegistry = new WarehouseProviderRegistry([
-    new FarmLinkWarehouseProvider(),
+    new ANNDATAWarehouseProvider(),
     new UnavailableGovernmentWarehouseProvider(),
     new UnavailablePartnerWarehouseProvider(),
   ]);
