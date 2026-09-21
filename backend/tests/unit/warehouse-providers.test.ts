@@ -1,12 +1,12 @@
-import { FarmLinkWarehouseProvider } from "../../src/modules/warehouse-intelligence/providers/farmlink-warehouse-provider";
+import { ANNDATAWarehouseProvider } from "../../src/modules/warehouse-intelligence/providers/anndata-warehouse-provider";
 import { UnavailableGovernmentWarehouseProvider } from "../../src/modules/warehouse-intelligence/providers/government-warehouse-provider";
 import { UnavailablePartnerWarehouseProvider } from "../../src/modules/warehouse-intelligence/providers/partner-warehouse-provider";
 import { WarehouseProviderRegistry } from "../../src/modules/warehouse-intelligence/providers/warehouse-provider-registry";
 import { WarehouseDataProvider, WarehouseProviderResult } from "../../src/modules/warehouse-intelligence/providers/warehouse-data-provider";
 
-describe("FarmLinkWarehouseProvider", () => {
-  it("always succeeds with zero records — FarmLink is already canonical", async () => {
-    const result = await new FarmLinkWarehouseProvider().fetchWarehouses({});
+describe("ANNDATAWarehouseProvider", () => {
+  it("always succeeds with zero records — ANNDATA is already canonical", async () => {
+    const result = await new ANNDATAWarehouseProvider().fetchWarehouses({});
     expect(result.status).toBe("SUCCESS");
     expect(result.warehouses).toEqual([]);
   });
