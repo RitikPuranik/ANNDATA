@@ -49,6 +49,9 @@ const envObjectSchema = z.object({
   // endpoint/credential variables the same way DataGovMarketProvider reads
   // MARKET_DATA_GOV_* above — none are declared here speculatively.
   WAREHOUSE_GOVERNMENT_PROVIDER_ENABLED: z.coerce.boolean().default(false),
+  // FCI/IISFM public government warehouse API.
+  FCI_IISFM_API_BASE_URL: z.string().url().default("https://api.iisfm.nic.in"),
+  FCI_IISFM_DEPOTS_ENDPOINT: z.string().min(1).default("/DepotsWithCap"),
   WAREHOUSE_GOVERNMENT_PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   WAREHOUSE_GOVERNMENT_PROVIDER_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(3),
 
