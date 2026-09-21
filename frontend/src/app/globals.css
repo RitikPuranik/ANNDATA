@@ -1269,3 +1269,40 @@
   filter:
     drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.35));
 }
+
+/* ================================================================
+   BRAND LOGO — the gold emblem is full-colour with a transparent
+   background, so it sits directly on the surface (no tile behind it).
+   Kept last so it overrides the older tile rules above.
+   ================================================================ */
+.app-brand .app-brand-mark,
+.app-brand:hover .app-brand-mark,
+.mobile-drawer .app-brand .app-brand-mark {
+  width: 42px; height: 42px; border-radius: 0;
+  background: transparent !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important;
+}
+.app-brand-mark img { width: 100%; height: 100%; filter: drop-shadow(0 2px 8px rgba(0,0,0,.3)); transition: transform .25s ease; }
+.app-brand:hover .app-brand-mark img { transform: scale(1.08) rotate(-3deg); }
+
+.mobile-brand > span { width: 36px; height: 36px; border-radius: 0; background: transparent !important; }
+.mobile-brand > span img { width: 100%; height: 100%; }
+.mobile-form-mark { width: 60px; height: 60px; border-radius: 0; background: transparent !important; margin-bottom: 10px; }
+.mobile-form-mark img { width: 100%; height: 100%; filter: drop-shadow(0 4px 12px rgba(160,120,30,.28)); }
+
+.anndata-global-loader-mark,
+.route-loading-brand { width: 60px !important; height: 60px !important; border-radius: 0 !important; background: transparent !important; }
+.anndata-global-loader-mark img,
+.route-loading-brand img { width: 100%; height: 100%; animation: brand-breathe 1.6s ease-in-out infinite; }
+@keyframes brand-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+@media (max-width: 760px) {
+  .app-brand .app-brand-mark, .app-brand:hover .app-brand-mark { width: 36px; height: 36px; }
+}
+
+/* Auth pages: the header already shows the brand, so on phones drop the duplicate brand row
+   (the large mark above the form stays) and give the desktop card brand some breathing room. */
+.auth-form-top { margin-bottom: 10px; }
+@media (max-width: 760px) {
+  .auth-form-top .mobile-brand { display: none !important; }
+  .auth-form-top .back-home { margin-left: auto; }
+}

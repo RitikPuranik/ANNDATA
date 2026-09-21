@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Building2, Handshake, LineChart, Package, Plus, Scale, ShieldCheck, Sprout, Warehouse, Wheat, ChevronRight, Search, TrendingUp, Store, Truck, CircleDollarSign, Sparkles, BadgeCheck, Users, MapPinned } from "lucide-react";
 import { CropSticker } from "@/components/crops/CropSticker";
 import Link from "next/link";
+import Image from "next/image";
 import { RoleProtectedPage } from "@/components/RoleProtectedPage";
 import { useAuth } from "@/hooks/useAuth";
 import { Alert, Card } from "@/components/ui/primitives";
@@ -59,7 +60,7 @@ function CategoryCard({title,description,image,href,ribbon}:{title:string;descri
  return <Link href={href} className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition hover:border-[#a8842f] hover:shadow-lg">
   <div className="img-zoom img-gradient h-[130px] w-full bg-[#f1f3f6]">
    {ribbon && <span className="ribbon"><Sparkles className="h-3 w-3"/> {ribbon}</span>}
-   <img src={image} alt={title} className="h-full w-full object-cover" loading="lazy" />
+   <Image src={image} alt={title} width={400} height={130} className="h-full w-full object-cover" loading="lazy" />
   </div>
   <div className="flex items-center justify-between gap-2 px-4 py-3">
    <span className="min-w-0"><b className="block truncate text-sm font-bold text-[#171714]">{title}</b><small className="block truncate text-xs text-muted-foreground">{description}</small></span>
@@ -83,7 +84,7 @@ function SaleCards(){
     <small className={`mt-1 block text-xs leading-5 ${s.sub}`}>{s.description}</small>
     <span className={`mt-3 inline-flex items-center rounded-md px-3 py-2 text-xs font-bold transition group-hover:brightness-110 ${s.btn}`}>{s.cta}</span>
    </span>
-   <span className="img-zoom h-20 w-20 flex-none overflow-hidden rounded-md"><img src={s.image} alt="" className="h-full w-full object-cover" loading="lazy" /></span>
+   <span className="img-zoom h-20 w-20 flex-none overflow-hidden rounded-md"><Image src={s.image} alt="" width={80} height={80} className="h-full w-full object-cover" loading="lazy" /></span>
   </Link>)}
  </section>;
 }
@@ -105,7 +106,7 @@ function DashboardContent(){
  if(!user)return null;
  return <div>
   <div className="dashboard-hero fade-in-up">
-  <img src="/images/image.png" alt="Farmer using a phone while working on the farm" className="dashboard-hero-bg" loading="eager" />
+  <Image src="/images/image.png" alt="Farmer using a phone while working on the farm" fill priority sizes="100vw" className="dashboard-hero-bg" />
    <div className="dashboard-hero-copy"><div className="dashboard-kicker">YOUR FARM HOME</div><h1>Welcome back, <span translate="no">{user.fullName.split(" ")[0]}</span>.</h1><p>Everything you need to grow, check prices and sell your produce.</p><div className="dashboard-hero-actions"><Link href="/lots/new" className="dashboard-primary"><Plus className="h-5 w-5"/> Sell produce</Link><Link href="/market" className="dashboard-secondary"><Search className="h-5 w-5"/> Check market</Link></div>
     <div className="trust-bar">
      <div className="trust-item"><BadgeCheck/><span>Verified<br/>farmers</span></div>

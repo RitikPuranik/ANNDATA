@@ -158,7 +158,7 @@ function PaymentDetailContent({ id }: { id: string }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-2xl font-bold">
-              {o.currency} {o.totalAmount?.toLocaleString?.("en-IN") ?? o.totalAmount}
+              {o.currency} {o.finalPayableAmount.toLocaleString("en-IN")}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               {o.amountDue > 0 ? `${o.currency} ${o.amountDue.toLocaleString("en-IN")} still due` : "Fully settled"}
@@ -174,7 +174,7 @@ function PaymentDetailContent({ id }: { id: string }) {
           <div>
             <p className="text-xs font-semibold uppercase text-muted-foreground">Total</p>
             <p className="mt-1 font-semibold">
-              {o.currency} {o.totalAmount.toLocaleString("en-IN")}
+              {o.currency} {o.finalPayableAmount.toLocaleString("en-IN")}
             </p>
           </div>
           <div>

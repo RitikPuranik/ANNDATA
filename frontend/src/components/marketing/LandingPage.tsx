@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   ArrowRight,
   ShoppingBag,
@@ -197,33 +198,9 @@ export default function LandingPage() {
               sm:gap-3
             "
           >
-            <div
-              className="
-                flex
-                h-9
-                w-9
-                shrink-0
-                items-center
-                justify-center
-                rounded-full
-                border
-                border-white/20
-                bg-white/10
-                backdrop-blur-md
-                transition-all
-                duration-300
-                group-hover:border-[#d6b841]
-                group-hover:bg-white/15
-              "
-            >
-              <LogoMark
-                className="
-                  h-5
-                  w-5
-                  text-[#d6b841]
-                "
-              />
-            </div>
+            <LogoMark
+              className="h-10 w-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-11 sm:w-11"
+            />
 
             <span
               className="
@@ -612,9 +589,13 @@ export default function LandingPage() {
         ================================================= */}
 
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1623958045855-0b7a60cfb9eb?q=80&w=1600&auto=format&fit=crop"
+            width={1600}
+            height={1000}
             alt="Farmers harvesting crop in field"
+            priority
+            sizes="100vw"
             className="
               h-full
               w-full
