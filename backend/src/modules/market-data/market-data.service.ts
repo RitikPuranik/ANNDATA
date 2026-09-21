@@ -233,10 +233,16 @@ export class MarketDataService {
                 create: {
                   source,
                   cursor: String(checkpointOffset),
+                  metadata: {
+                    marketDataHistoricalOffset: checkpointOffset,
+                  },
                   lastSuccessfulSyncAt: new Date(),
                 },
                 update: {
                   cursor: String(checkpointOffset),
+                  metadata: {
+                    marketDataHistoricalOffset: checkpointOffset,
+                  },
                   lastSuccessfulSyncAt: new Date(),
                 },
               });
