@@ -13,7 +13,6 @@ import {
 
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { LogoMark } from '@/components/Logo'
-import { HERO_IMAGE } from './heroImage'
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -586,11 +585,10 @@ export default function LandingPage() {
 
         <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           <img
-            src={HERO_IMAGE}
+            src="/images/image.png"
             alt="Farmers harvesting crop in field"
             className="absolute inset-0 h-full w-full object-cover object-center"
-            fetchPriority="high"
-            decoding="async"
+            loading="eager"
           />
         </div>
 
