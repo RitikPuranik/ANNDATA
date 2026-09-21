@@ -1,8 +1,8 @@
 # WhatsApp Farmer Assistant
 
-A thin WhatsApp channel over FarmLink's **existing** modules, using the official
+A thin WhatsApp channel over ANNDATA's **existing** modules, using the official
 **WhatsApp Business Platform (Meta Cloud API)**. It contains no business logic of
-its own: every answer and every action comes from FarmLink's deterministic
+its own: every answer and every action comes from ANNDATA's deterministic
 services. An LLM is optional and only ever extracts intent/entities.
 
 ```
@@ -22,7 +22,7 @@ Farmer ─ WhatsApp ─▶ Meta ─▶ POST /api/whatsapp/webhook
 
 ## Commands
 
-| Farmer says (examples) | Intent | FarmLink module used |
+| Farmer says (examples) | Intent | ANNDATA module used |
 |---|---|---|
 | `buyer`, `find buyer`, `mujhe buyer chahiye`, `Mere paas 20 quintal gehu hai` | FIND_BUYER | Lots → Quality → Buyer Matching → Offers |
 | `bhav`, `gehu ka bhav`, `mandi price` | CHECK_MANDI_PRICE | Market Intelligence (mandi prices) |
@@ -31,9 +31,9 @@ Farmer ─ WhatsApp ─▶ Meta ─▶ POST /api/whatsapp/webhook
 | `payment`, `paisa kab milega` | VIEW_PAYMENT | Payment Status Tracking (read-only) |
 | `shipment`, `mera maal kaha hai` | VIEW_SHIPMENT | Shipment & GPS Tracking (read-only) |
 | `help`, `menu`, `madad`, `hi` | HELP | – |
-| `how it works`, `farmlink kaise kaam karta hai`, `about` | ABOUT | – (static explanation of the FarmLink process) |
+| `how it works`, `anndata kaise kaam karta hai`, `about` | ABOUT | – (static explanation of the ANNDATA process) |
 | `cancel`, `back` | CANCEL / BACK | – |
-| anything else understood-but-unsupported (transactions, warehouse, transport, profile…) | WEBSITE | deep link to the FarmLink website |
+| anything else understood-but-unsupported (transactions, warehouse, transport, profile…) | WEBSITE | deep link to the ANNDATA website |
 
 English, Hindi (Devanagari) and Hinglish are understood; replies follow the
 language the farmer writes in (English until a message shows otherwise).
@@ -45,7 +45,7 @@ parser's `WEBSITE_KEYWORDS` table for website-only features.
 ## Design decisions worth knowing
 
 * **Identity = an explicit link, not the phone number.** `User.mobile` is not
-  OTP-verified in FarmLink today, so "same number" is not proof. A logged-in
+  OTP-verified in ANNDATA today, so "same number" is not proof. A logged-in
   farmer calls `POST /api/whatsapp/link/code` (one-time, 8 chars, 10 min,
   hash-only storage, 5/hour) and sends `LINK <code>` from WhatsApp. Every
   service call afterwards uses the user id from that link — never anything in
@@ -56,13 +56,13 @@ parser's `WEBSITE_KEYWORDS` table for website-only features.
   payments or transactions page yet, so those link to `/dashboard` and
   `/net-realization`. A test walks `frontend/src/app` to guarantee every emitted route exists. Links never contain tokens.
 * **"Indicative price" is the mandi reference price**, labelled as market data.
-  FarmLink's matching API deliberately hides the buyer's target price from
+  ANNDATA's matching API deliberately hides the buyer's target price from
   farmers, so the assistant does not reveal it either. Demand, reference
   price, offer and accepted offer are always distinguished, and no buyer is
   presented as guaranteed.
 * **Lots**: created through `LotsService` only after an explicit "Yes", reusing
   an existing identical lot when there is one. Requires an existing farm with that
-  crop on FarmLink (otherwise the farmer is sent to the website). A grade given on
+  crop on ANNDATA (otherwise the farmer is sent to the website). A grade given on
   WhatsApp is stored as a *self-reported* quality assessment; the matching engine
   only weighs verified assessments.
 * **Offers**: the assistant never has its own state machine. Accept / reject /
@@ -72,7 +72,7 @@ parser's `WEBSITE_KEYWORDS` table for website-only features.
   are never shown, no internal ids appear in messages or button ids (buttons
   carry `opt:<n>`, resolved against server-side conversation state), outbound
   message bodies are not stored, stored inbound coordinates are rounded to ~100 m.
-* **No queue exists in FarmLink**, so the webhook persists the event, replies
+* **No queue exists in ANNDATA**, so the webhook persists the event, replies
   200, then processes in-process. A per-minute cron (`whatsapp-recovery.job.ts`)
   re-drives anything left `RECEIVED/PROCESSING` after a crash. A compare-and-set
   claim and deterministic outbound keys (`out:<wamid>:<n>`) guarantee a message is
@@ -83,10 +83,10 @@ parser's `WEBSITE_KEYWORDS` table for website-only features.
 
 ## Guest mode (no registration)
 
-A number that is not linked to a FarmLink farmer account is not turned away. It
+A number that is not linked to a ANNDATA farmer account is not turned away. It
 becomes a **guest** and can use everything that reads *public* data; anything that
 creates or reads *account-owned* data answers with a sign-up card
-(**🌐 Continue on FarmLink** → `/register`).
+(**🌐 Continue on ANNDATA** → `/register`).
 
 | Guest can | How |
 |---|---|
@@ -95,10 +95,10 @@ creates or reads *account-owned* data answers with a sign-up card
 | See mandi prices | `MarketIntelligenceRepository` (district is asked, since a guest has no farms) |
 | Search buyer demand | `BuyerMatchingService.searchOpenDemand()` — open demand of VERIFIED buyers for the crop, scored by the same `scoreMatch()` |
 | See buyer options / details | organisation, district, demand quantity. No contact details, no target price |
-| Learn how FarmLink works | `ABOUT` |
+| Learn how ANNDATA works | `ABOUT` |
 | Get the website link | `register` / `website` |
 
-| Needs an account → "Continue on FarmLink" | Typical message |
+| Needs an account → "Continue on ANNDATA" | Typical message |
 |---|---|
 | create or publish a lot | (guests never reach lot creation) |
 | send an offer | the "Request offer" button |
@@ -193,10 +193,10 @@ To test against real WhatsApp locally, expose the port with a tunnel (e.g. ngrok
 
 ## Known limitations
 
-* **Voice notes**: the STT provider interface and download path exist, but no STT implementation is configured (FarmLink has none). Voice notes currently get the "text only" hint.
+* **Voice notes**: the STT provider interface and download path exist, but no STT implementation is configured (ANNDATA has none). Voice notes currently get the "text only" hint.
 * **The guest → registered loop is not closed in the UI.** The sign-up card tells a guest to register and then link the number from Profile, but the frontend has no "Link WhatsApp" screen yet (next item).
 * **No "Link WhatsApp" screen** in the frontend yet — the API is ready (`POST /api/whatsapp/link/code`); a button on the profile page needs to call it.
-* Location matching uses FarmLink's mandi districts/states and the farmer's own farms; **pincodes are not resolved** (no pincode dataset) — the farmer is asked for a district.
+* Location matching uses ANNDATA's mandi districts/states and the farmer's own farms; **pincodes are not resolved** (no pincode dataset) — the farmer is asked for a district.
 * Guest buyer results show the buyer's organisation name (as they do for farmers). To hide names until registration, mask `organizationName` in `WhatsAppBuyerAssistantService.toCards()` for guests.
 * WhatsApp caps CTA / button labels at 20 characters (Meta truncates longer ones); a test now checks every label in every language.
 * Creating a lot needs an existing farm + crop on the website (complex forms are intentionally not reproduced in chat).
