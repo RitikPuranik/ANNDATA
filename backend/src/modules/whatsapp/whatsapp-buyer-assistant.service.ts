@@ -9,7 +9,7 @@ import type { QualityService } from "../quality/quality.service";
 import type { CropDTO } from "../reference-data/reference-data.service";
 import { extractBareQuantity, extractGrade, isDontKnow, isOther } from "./nlu/whatsapp-command-parser";
 import type { WhatsAppCatalogService } from "./whatsapp-catalog.service";
-import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import type { ANNDATAUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, guestGate, optionsMessage, textMsg, WHATSAPP_META, type GateReason, type OptionSpec } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { lotStatusLabel, type WhatsAppLotService } from "./whatsapp-lot-service";
@@ -54,7 +54,7 @@ export class WhatsAppBuyerAssistantService {
     private readonly quality: QualityService,
     private readonly matching: BuyerMatchingService,
     private readonly market: WhatsAppMarketService,
-    private readonly urls: FarmLinkUrlService,
+    private readonly urls: ANNDATAUrlService,
     private readonly audit: AuditService,
     private readonly limiter: WhatsAppRateLimiter,
     private readonly matchingLimitPerHour: number,
