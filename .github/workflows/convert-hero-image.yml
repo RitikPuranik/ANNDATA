@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - frontend/public/images/front.avif
+      - .github/workflows/convert-hero-image.yml
 
 permissions:
   contents: write
