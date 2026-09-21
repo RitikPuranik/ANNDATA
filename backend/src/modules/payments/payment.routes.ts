@@ -130,7 +130,7 @@ export function createPaymentRouter(paymentService: PaymentService, authRepo: Au
    *     summary: Report an externally made payment against this obligation (Step 5/13/21/22)
    *     description: |
    *       Never initiates a payment (Step 36) — records a payment already
-   *       made outside FarmLink. amountPaid/amountDue/status are always
+   *       made outside ANNDATA. amountPaid/amountDue/status are always
    *       recalculated server-side from the full payment history, never
    *       trusted from the client (Step 13). idempotencyKey is required —
    *       a retried request with the same key is a no-op, never a
