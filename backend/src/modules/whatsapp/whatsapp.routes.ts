@@ -70,7 +70,7 @@ export function createWhatsAppAccountRouter(controller: WhatsAppAccountControlle
  *     description: |
  *       Receives message and status events from the WhatsApp Business Platform.
  *
- *       **Authentication:** none of FarmLink's JWT auth applies. Every request must carry
+ *       **Authentication:** none of ANNDATA's JWT auth applies. Every request must carry
  *       `X-Hub-Signature-256: sha256=<hex>` — an HMAC-SHA256 of the *raw request body* keyed with the
  *       Meta **App Secret** (`WHATSAPP_APP_SECRET`). Requests with a missing/invalid signature are rejected (401).
  *
@@ -177,7 +177,7 @@ export function createWhatsAppAccountRouter(controller: WhatsAppAccountControlle
  *     summary: Create a one-time WhatsApp link code
  *     description: |
  *       The logged-in farmer receives a single-use code (valid 10 minutes, shown once, stored only as a
- *       hash). Sending `LINK <code>` to FarmLink's WhatsApp number from the farmer's phone binds that
+ *       hash). Sending `LINK <code>` to ANNDATA's WhatsApp number from the farmer's phone binds that
  *       WhatsApp number to this account. Limited to 5 codes per hour per user.
  *     security: [{ bearerAuth: [] }]
  *     responses:
