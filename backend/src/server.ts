@@ -3,6 +3,7 @@ import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { initSentry } from "./config/sentry";
 import { prisma } from "./config/prisma";
+import { getRedis } from "./config/redis";
 import { registerMarketSeedJob } from "./jobs/market-seed.job";
 import { registerMarketSyncJob } from "./jobs/market-sync.job";
 import { registerWarehouseSyncJob } from "./jobs/warehouse-sync.job";
@@ -84,13 +85,54 @@ async function main() {
   // ============================================================
   const RUN_STARTUP_FULL_SYNC = true;
 
+  let startupSyncLockRedis: ReturnType<typeof getRedis> = null;
+  let startupSyncLockToken: string | null = null;
+
   if (RUN_STARTUP_FULL_SYNC) {
-    runAllSyncs(prisma, auditService, {
-      full: true,
-      marketStartOffset: 289500,
-    })
-      .then(() => logger.info("Full startup synchronization completed."))
-      .catch((err) => logger.error({ err }, "Full startup synchronization failed."));
+    const runStartupSync = async () => {
+      startupSyncLockRedis = getRedis();
+
+      // Prevent two Render instances/restarts from running the large
+      // historical import at the same time. If Redis is unavailable,
+      // the sync still runs, preserving local/dev behavior.
+      if (startupSyncLockRedis) {
+        startupSyncLockToken = `${process.pid}:${Date.now()}`;
+        const acquired = await startupSyncLockRedis.set(
+          "market-data:startup-full-sync-lock",
+          startupSyncLockToken,
+          "PX",
+          6 * 60 * 60_000,
+          "NX",
+        );
+
+        if (acquired !== "OK") {
+          logger.info("Startup full sync skipped: another instance is already running it.");
+          return;
+        }
+      }
+
+      try {
+        logger.info("Starting full startup synchronization...");
+        await runAllSyncs(prisma, auditService, {
+          full: true,
+          marketStartOffset: 289500,
+        });
+        logger.info("Full startup synchronization completed.");
+      } finally {
+        if (
+          startupSyncLockRedis &&
+          startupSyncLockToken &&
+          (await startupSyncLockRedis.get("market-data:startup-full-sync-lock")) ===
+            startupSyncLockToken
+        ) {
+          await startupSyncLockRedis.del("market-data:startup-full-sync-lock");
+        }
+      }
+    };
+
+    runStartupSync().catch((err) =>
+      logger.error({ err }, "Full startup synchronization failed."),
+    );
   }
 
   async function shutdown(signal: string) {
