@@ -77,7 +77,7 @@ describe("POST /api/auth/login", () => {
 
     expect(res.status).toEqual(200);
     expect(res.body.data.accessToken).toEqual(expect.any(String));
-    expect(res.headers["set-cookie"]?.[0]).toMatch(/farmlink_refresh=/);
+    expect(res.headers["set-cookie"]?.[0]).toMatch(/anndata_refresh=/);
     expect(res.headers["set-cookie"]?.[0]).toMatch(/HttpOnly/);
   });
 
