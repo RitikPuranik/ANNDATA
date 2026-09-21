@@ -5,7 +5,7 @@ import { registerAndLoginFarmer } from "../testUtils/farmerAuthHelpers";
 import { WhatsAppAccountController } from "../../src/modules/whatsapp/whatsapp-webhook.controller";
 import { buildHarness } from "../whatsapp/harness";
 
-describe("WhatsApp wiring inside the real FarmLink app", () => {
+describe("WhatsApp wiring inside the real ANNDATA app", () => {
   it("is disabled by default: webhook answers 503 and JSON APIs are unaffected", async () => {
     const { app } = buildTestApp();
     const get = await request(app).get("/api/whatsapp/webhook").query({ "hub.mode": "subscribe", "hub.verify_token": "x", "hub.challenge": "1" });
