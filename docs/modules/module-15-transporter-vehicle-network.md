@@ -10,7 +10,7 @@ A **registry layer**, not a logistics engine. It answers:
 - What vehicles does each provider operate, and what capacity/capabilities
   do those vehicles have?
 - Where do they operate (declared service areas)?
-- Has FarmLink verified this transporter/vehicle, per its own
+- Has ANNDATA verified this transporter/vehicle, per its own
   administrative workflow?
 
 It deliberately does **not** answer "which transporter is cheapest," "what
@@ -41,7 +41,7 @@ Availability (manually set AVAILABLE/UNAVAILABLE only, per vehicle —
               never at the provider level)
         │
         ▼
-Verification (FarmLink's own workflow, not a government/RTO claim)
+Verification (ANNDATA's own workflow, not a government/RTO claim)
         │
         ▼
 Transporter Discovery (pure filtering, never ranking or pricing)
@@ -235,7 +235,7 @@ never silently succeeds:
   exist (Part J is explicit that this is simpler than the transporter's
   own suspend/reactivate cycle).
 
-"Verified" means **verified per FarmLink's own administrative workflow**
+"Verified" means **verified per ANNDATA's own administrative workflow**
 in both cases — this module has no RTO/government registry integration,
 and the Swagger docs for both admin verification routes say so
 explicitly.
@@ -467,7 +467,7 @@ never silently succeeds:
   exist (Part J is explicit that this is simpler than the transporter's
   own suspend/reactivate cycle).
 
-"Verified" means **verified per FarmLink's own administrative workflow**
+"Verified" means **verified per ANNDATA's own administrative workflow**
 in both cases — this module has no RTO/government registry integration,
 and the Swagger docs for both admin verification routes say so
 explicitly.
