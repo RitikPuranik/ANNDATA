@@ -5,7 +5,7 @@ import {
   MetaWhatsAppProvider, buildButtonsPayload, buildCtaUrlPayload, buildListPayload, buildTextPayload, buildTemplatePayload,
 } from "../../src/modules/whatsapp/providers/meta-whatsapp.provider";
 import { WhatsAppProviderError } from "../../src/modules/whatsapp/providers/whatsapp-provider.interface";
-import { FarmLinkUrlService } from "../../src/modules/whatsapp/whatsapp-deeplink.service";
+import { ANNDATAUrlService } from "../../src/modules/whatsapp/whatsapp-deeplink.service";
 import { ALL_MESSAGE_KEYS, rawEntry, t } from "../../src/modules/whatsapp/whatsapp-i18n";
 import { detectLanguage, normalizeText } from "../../src/modules/whatsapp/whatsapp-text";
 import { parseMessage } from "../../src/modules/whatsapp/nlu/whatsapp-command-parser";
@@ -86,7 +86,7 @@ describe("MetaWhatsAppProvider", () => {
     expect(l.interactive.action.sections[0]!.rows[0]!.title.length).toBeLessThanOrEqual(24);
     expect(l.interactive.action.sections[0]!.rows[0]!.description!.length).toBeLessThanOrEqual(72);
     expect(l.interactive.action.button.length).toBeLessThanOrEqual(20);
-    const c = buildCtaUrlPayload("1", "b", "🌐 Open FarmLink and see everything", "https://x");
+    const c = buildCtaUrlPayload("1", "b", "🌐 Open ANNDATA and see everything", "https://x");
     expect(c.interactive.type).toBe("cta_url");
     expect(c.interactive.action.parameters.display_text.length).toBeLessThanOrEqual(20);
     expect(buildTemplatePayload("1", { name: "n", languageCode: "hi", bodyParams: ["a"] }).template.components).toBeDefined();
@@ -101,12 +101,12 @@ describe("configuration defaults", () => {
   });
 });
 
-describe("FarmLinkUrlService", () => {
-  const urls = new FarmLinkUrlService("https://app.farmlink.test/");
+describe("ANNDATAUrlService", () => {
+  const urls = new ANNDATAUrlService("https://app.anndata.test/");
   it("builds contextual links from the configured base, without tokens", () => {
-    expect(urls.lot("abc")).toBe("https://app.farmlink.test/lots/abc");
-    expect(urls.shipment("s 1")).toBe("https://app.farmlink.test/shipments/s%201");
-    expect(urls.offer("o1")).toBe("https://app.farmlink.test/trade-offers/o1");
+    expect(urls.lot("abc")).toBe("https://app.anndata.test/lots/abc");
+    expect(urls.shipment("s 1")).toBe("https://app.anndata.test/shipments/s%201");
+    expect(urls.offer("o1")).toBe("https://app.anndata.test/trade-offers/o1");
     expect(urls.payments()).toBe(urls.dashboard()); // no payments page exists → closest page
     for (const u of [urls.dashboard(), urls.lots(), urls.offers(), urls.shipments(), urls.profile()]) expect(u).not.toMatch(/token|jwt|password|\?/i);
   });
@@ -124,7 +124,7 @@ describe("FarmLinkUrlService", () => {
       }
     };
     walk(appDir, "");
-    for (const p of [...FarmLinkUrlService.STATIC_PATHS, ...FarmLinkUrlService.DYNAMIC_PATHS]) expect(pages).toContain(p);
+    for (const p of [...ANNDATAUrlService.STATIC_PATHS, ...ANNDATAUrlService.DYNAMIC_PATHS]) expect(pages).toContain(p);
   });
 });
 
@@ -139,7 +139,7 @@ describe("i18n catalog", () => {
     }
   });
   it("Hindi messages are written in Devanagari", () => {
-    for (const k of ["help", "askCrop", "askQuantity", "genericError", "guestHelp", "aboutFarmLink", "guestGate"] as const) expect(rawEntry(k).hi).toMatch(/[\u0900-\u097F]/);
+    for (const k of ["help", "askCrop", "askQuantity", "genericError", "guestHelp", "aboutANNDATA", "guestGate"] as const) expect(rawEntry(k).hi).toMatch(/[\u0900-\u097F]/);
   });
   it("substitutes params and leaves unknown placeholders visible", () => {
     expect(t("askQuantity", "en", { crop: "Wheat" })).toContain("Wheat");
