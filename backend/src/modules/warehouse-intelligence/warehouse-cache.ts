@@ -9,7 +9,7 @@ function digest(parts: unknown[]) {
 }
 
 /**
- * Redis is optional in FarmLink (same convention as market-cache.ts) — a
+ * Redis is optional in ANNDATA (same convention as market-cache.ts) — a
  * missing/unreachable Redis must never break a warehouse read. Entries are
  * versioned rather than deleted one-by-one so a capacity change can
  * invalidate the whole bounded read model atomically via invalidate()
