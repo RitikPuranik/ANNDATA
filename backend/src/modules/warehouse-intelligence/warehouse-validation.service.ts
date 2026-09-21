@@ -54,7 +54,7 @@ export function validateNormalizedWarehouseRecord(record: NormalizedWarehouseRec
     // A name-less warehouse can still be identified by its source/external
     // id for provenance purposes, but is not safe to surface in search —
     // treated as a hard requirement, same as the existing Warehouse.name
-    // NOT NULL column already enforces for FarmLink-created warehouses.
+    // NOT NULL column already enforces for ANNDATA-created warehouses.
     errors.push({ field: "name", code: "MISSING_NAME", message: "Warehouse name is required." });
   }
   if (!record.location.state || !record.location.district) {
