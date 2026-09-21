@@ -1,9 +1,11 @@
+"use client";
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
 import {
   ArrowRight,
   ShoppingBag,
-  Sprout,
   User,
   Menu,
   X,
@@ -11,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { LogoMark } from '@/components/Logo'
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -117,64 +120,19 @@ export default function LandingPage() {
       className="
         min-h-screen
         overflow-x-hidden
-        bg-[#11140f]
+        bg-[#15150f]
         font-['Plus_Jakarta_Sans',sans-serif]
         text-[#f8f4e9]
         antialiased
         selection:bg-[#d6b841]
-        selection:text-[#262c1d]
+        selection:text-[#201f12]
       "
     >
       {/* =====================================================
           CUSTOM TYPOGRAPHY
       ===================================================== */}
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Yellowtail&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-        :root {
-          --sticker-stroke: 5px;
-          --script-stroke: 3px;
-        }
-
-        @media (min-width: 640px) {
-          :root {
-            --sticker-stroke: 8px;
-            --script-stroke: 5px;
-          }
-        }
-
-        @media (min-width: 1024px) {
-          :root {
-            --sticker-stroke: 12px;
-            --script-stroke: 8px;
-          }
-        }
-
-        .brand-sticker {
-          font-family: 'Fredoka', cursive, sans-serif;
-          font-weight: 700;
-          color: #20231c;
-          -webkit-text-stroke: var(--sticker-stroke) #f8f4e9;
-          paint-order: stroke fill;
-          stroke-linejoin: round;
-          stroke-linecap: round;
-          letter-spacing: -0.02em;
-          filter:
-            drop-shadow(0px 5px 12px rgba(0, 0, 0, 0.45));
-        }
-
-        .brand-script-yellow {
-          font-family: 'Yellowtail', cursive;
-          color: #d6b841;
-          -webkit-text-stroke: var(--script-stroke) #f8f4e9;
-          paint-order: stroke fill;
-          stroke-linejoin: round;
-          stroke-linecap: round;
-          filter:
-            drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.35));
-        }
-      `}</style>
 
       {/* =====================================================
           NAVBAR
@@ -197,7 +155,7 @@ export default function LandingPage() {
               ? `
                 border-b
                 border-white/10
-                bg-[#11140f]/80
+                bg-[#15150f]/80
                 py-3
                 shadow-xl
                 backdrop-blur-xl
@@ -228,7 +186,7 @@ export default function LandingPage() {
               LOGO
           ================================================= */}
 
-          <a
+          <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
             className="
@@ -240,33 +198,9 @@ export default function LandingPage() {
               sm:gap-3
             "
           >
-            <div
-              className="
-                flex
-                h-9
-                w-9
-                shrink-0
-                items-center
-                justify-center
-                rounded-full
-                border
-                border-white/20
-                bg-white/10
-                backdrop-blur-md
-                transition-all
-                duration-300
-                group-hover:border-[#d6b841]
-                group-hover:bg-white/15
-              "
-            >
-              <Sprout
-                className="
-                  h-5
-                  w-5
-                  text-[#d6b841]
-                "
-              />
-            </div>
+            <LogoMark
+              className="h-10 w-10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 sm:h-11 sm:w-11"
+            />
 
             <span
               className="
@@ -280,9 +214,9 @@ export default function LandingPage() {
                 sm:text-xl
               "
             >
-              Anndataa
+              Anndata
             </span>
-          </a>
+          </Link>
 
           {/* =================================================
               DESKTOP NAVIGATION + TAGLINE
@@ -362,7 +296,6 @@ export default function LandingPage() {
                 Ecosystem
               </a>
             </nav>
-
           </div>
 
           {/* =================================================
@@ -391,7 +324,7 @@ export default function LandingPage() {
                   hover:[&>button]:text-[#d6b841]
 
                   [&>div[role=menu]]:border-white/10
-                  [&>div[role=menu]]:bg-[#171914]/95
+                  [&>div[role=menu]]:bg-[#242424]/95
                   [&>div[role=menu]]:text-white/80
 
                   [&_p]:text-white/40
@@ -408,7 +341,7 @@ export default function LandingPage() {
 
             {/* DESKTOP LOGIN */}
 
-            <a
+            <Link
               href="/login"
               className="
                 group
@@ -431,7 +364,7 @@ export default function LandingPage() {
                 duration-300
                 hover:border-[#d6b841]
                 hover:bg-[#d6b841]
-                hover:text-[#262c1d]
+                hover:text-[#201f12]
                 active:scale-95
                 sm:text-sm
                 md:inline-flex
@@ -442,7 +375,7 @@ export default function LandingPage() {
               <span>
                 Login / Register
               </span>
-            </a>
+            </Link>
 
             {/* MOBILE MENU BUTTON */}
 
@@ -513,13 +446,14 @@ export default function LandingPage() {
               rounded-2xl
               border
               border-white/10
-              bg-[#151713]/95
+              bg-[#15150f]/95
               p-3
               shadow-2xl
               shadow-black/50
               backdrop-blur-2xl
             "
           >
+ 
 
             {/* HOME */}
 
@@ -593,7 +527,7 @@ export default function LandingPage() {
 
             {/* LOGIN */}
 
-            <a
+            <Link
               href="/login"
               onClick={() =>
                 setMobileMenuOpen(false)
@@ -610,10 +544,10 @@ export default function LandingPage() {
                 font-black
                 uppercase
                 tracking-wider
-                text-[#262c1d]
+                text-[#201f12]
                 transition-all
                 duration-200
-                hover:bg-[#e0c64d]
+                hover:bg-[#eec766]
                 active:scale-[0.98]
               "
             >
@@ -624,7 +558,7 @@ export default function LandingPage() {
               </span>
 
               <ChevronRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -655,9 +589,13 @@ export default function LandingPage() {
         ================================================= */}
 
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1623958045855-0b7a60cfb9eb?q=80&w=1600&auto=format&fit=crop"
+            width={1600}
+            height={1000}
             alt="Farmers harvesting crop in field"
+            priority
+            sizes="100vw"
             className="
               h-full
               w-full
@@ -877,7 +815,7 @@ export default function LandingPage() {
           >
             {/* MARKETPLACE */}
 
-            <a
+            <Link
               href="/login"
               className="
                 flex
@@ -918,11 +856,11 @@ export default function LandingPage() {
               />
 
               Explore Marketplace
-            </a>
+            </Link>
 
             {/* GET STARTED */}
 
-            <a
+            <Link
               href="/login"
               className="
                 flex
@@ -938,11 +876,11 @@ export default function LandingPage() {
                 font-black
                 uppercase
                 tracking-wider
-                text-[#262c1d]
+                text-[#201f12]
                 shadow-xl
                 transition-all
                 duration-300
-                hover:bg-[#e0c64d]
+                hover:bg-[#eec766]
                 active:scale-[0.98]
                 sm:w-auto
                 sm:px-8
@@ -959,7 +897,7 @@ export default function LandingPage() {
                   sm:w-5
                 "
               />
-            </a>
+            </Link>
           </div>
         </div>
       </section>

@@ -1,14 +1,27 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
+import { Plus_Jakarta_Sans, Fraunces, Fredoka, Yellowtail } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "./providers/AppProviders";
 import { NavigationLoader } from "@/components/NavigationLoader";
-import { SiteFooter } from "@/components/layout/SiteFooter";
 
 const fontSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
   weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const fontFredoka = Fredoka({
+  subsets: ["latin"],
+  variable: "--font-fredoka",
+  weight: ["700"],
+  display: "swap",
+});
+
+const fontYellowtail = Yellowtail({
+  subsets: ["latin"],
+  variable: "--font-yellowtail",
+  weight: ["400"],
   display: "swap",
 });
 
@@ -34,12 +47,11 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable}`}>
+    <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable} ${fontFredoka.variable} ${fontYellowtail.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <AppProviders>
           <div className="flex min-h-screen flex-col">
             <div className="flex-1">{children}</div>
-            <SiteFooter />
           </div>
           <NavigationLoader />
         </AppProviders>

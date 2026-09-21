@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Yellowtail&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1247,7 +1246,7 @@
 }
 
 .brand-sticker {
-  font-family: 'Fredoka', cursive, sans-serif;
+  font-family: var(--font-fredoka), cursive, sans-serif;
   font-weight: 700;
   color: #242424;
   -webkit-text-stroke: var(--sticker-stroke) #f8f4e9;
@@ -1260,7 +1259,7 @@
 }
 
 .brand-script-yellow {
-  font-family: 'Yellowtail', cursive;
+  font-family: var(--font-yellowtail), cursive;
   color: #d6b841;
   -webkit-text-stroke: var(--script-stroke) #f8f4e9;
   paint-order: stroke fill;
