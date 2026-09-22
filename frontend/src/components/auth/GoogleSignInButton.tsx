@@ -6,8 +6,7 @@ import Script from "next/script";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
 // Minimal shape of the bits of the Google Identity Services global we
-// actually use — the real type comes from Google's own script, which we
-// don't bundle a package for.
+// actually use. The real implementation is loaded from Google's script.
 interface GoogleCredentialResponse {
   credential: string;
 }
@@ -45,43 +44,48 @@ interface GoogleSignInButtonProps {
   onError?: (message: string) => void;
 }
 
-/**
- * Renders Google's own "Sign in with Google" button via Google Identity
- * Services (loaded from accounts.google.com — see publish rules elsewhere
- * in this codebase's docs: this is the one allowed cdnjs-equivalent
- * exception, google-hosted and required for GIS to work at all). The
- * button itself handles the popup/One Tap flow; we only get a callback
- * with a signed ID token, which we hand straight to the backend for
- * verification (never trusted client-side).
- */
-export function GoogleSignInButton({ text = "signin_with", onCredential, onError }: GoogleSignInButtonProps) {
-  const buttonRef = React.useRef<HTMLDivElement>(null);
-  const [scriptLoaded, setScriptLoaded] = React.useState(false);
+// GIS is loaded once for the whole SPA. Next.js client-side navigation can
+// unmount /login and mount /register without reloading the Google script.
+// Keeping initialization state outside the component prevents the new page
+// from waiting for an onLoad event that already happened, while the callback
+// ref below always points at the currently mounted page.
+let gisInitialized = false;
 
-  const handleCredential = React.useCallback(
-    async (response: GoogleCredentialResponse) => {
-      try {
-        await onCredential(response.credential);
-      } catch (err) {
-        onError?.(err instanceof Error ? err.message : "Google sign-in failed. Please try again.");
-      }
-    },
-    [onCredential, onError],
-  );
+export function GoogleSignInButton({
+  text = "signin_with",
+  onCredential,
+  onError,
+}: GoogleSignInButtonProps) {
+  const buttonRef = React.useRef<HTMLDivElement>(null);
+  const callbackRef = React.useRef(onCredential);
+  const errorRef = React.useRef(onError);
 
   React.useEffect(() => {
-    if (!scriptLoaded || !buttonRef.current || !window.google) return;
+    callbackRef.current = onCredential;
+    errorRef.current = onError;
+  }, [onCredential, onError]);
 
-    if (!GOOGLE_CLIENT_ID) {
-      // Not configured for this environment — silently omit the button
-      // rather than rendering something broken.
-      return;
+  const renderGoogleButton = React.useCallback(() => {
+    if (!buttonRef.current || !window.google || !GOOGLE_CLIENT_ID) return;
+
+    if (!gisInitialized) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          Promise.resolve(callbackRef.current(response.credential)).catch((err) => {
+            errorRef.current?.(
+              err instanceof Error ? err.message : "Google sign-in failed. Please try again.",
+            );
+          });
+        },
+      });
+      gisInitialized = true;
     }
 
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleCredential,
-    });
+    // A newly mounted login/register page gets a fresh container. Clear it
+    // defensively before rendering so SPA navigation can never leave a stale
+    // Google button behind.
+    buttonRef.current.replaceChildren();
 
     window.google.accounts.id.renderButton(buttonRef.current, {
       type: "standard",
@@ -91,7 +95,29 @@ export function GoogleSignInButton({ text = "signin_with", onCredential, onError
       text,
       width: 320,
     });
-  }, [scriptLoaded, text, handleCredential]);
+  }, [text]);
+
+  React.useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    // Important for Next.js client-side navigation: the Google script may
+    // already be loaded before this component mounts, so onLoad will not fire
+    // again. Check the global immediately and also retry briefly while the
+    // script is loading.
+    if (window.google) {
+      renderGoogleButton();
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      if (window.google) {
+        window.clearInterval(interval);
+        renderGoogleButton();
+      }
+    }, 50);
+
+    return () => window.clearInterval(interval);
+  }, [renderGoogleButton]);
 
   if (!GOOGLE_CLIENT_ID) return null;
 
@@ -100,7 +126,6 @@ export function GoogleSignInButton({ text = "signin_with", onCredential, onError
       <Script
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
-        onLoad={() => setScriptLoaded(true)}
       />
       <div className="flex justify-center" ref={buttonRef} />
     </>
