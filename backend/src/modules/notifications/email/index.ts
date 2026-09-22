@@ -1,7 +1,6 @@
 import { env } from "../../../config/env";
 import { EmailProvider } from "./emailProvider.interface";
 import { MockEmailProvider } from "./mockEmailProvider";
-import { ResendEmailProvider } from "./resendEmailProvider";
 import { EmailJSEmailProvider } from "./emailjsEmailProvider";
 import { EmailService } from "./email.service";
 
@@ -27,17 +26,6 @@ export function createEmailProvider(): EmailProvider {
       templateId: env.EMAILJS_TEMPLATE_ID,
       publicKey: env.EMAILJS_PUBLIC_KEY,
       privateKey: env.EMAILJS_PRIVATE_KEY,
-      fromAddress: env.EMAIL_FROM_ADDRESS,
-      fromName: env.EMAIL_FROM_NAME,
-      timeoutMs: env.EMAIL_TIMEOUT_MS,
-      maxRetries: env.EMAIL_MAX_RETRIES,
-    });
-  }
-
-  if (env.EMAIL_PROVIDER === "resend") {
-    return new ResendEmailProvider({
-      apiKey: env.RESEND_API_KEY,
-      apiBaseUrl: env.RESEND_API_BASE_URL,
       fromAddress: env.EMAIL_FROM_ADDRESS,
       fromName: env.EMAIL_FROM_NAME,
       timeoutMs: env.EMAIL_TIMEOUT_MS,

@@ -140,13 +140,11 @@ const envObjectSchema = z.object({
   // send is only logged (see MockEmailProvider) — mirrors the
   // WHATSAPP_ENABLED / WAREHOUSE_*_PROVIDER_ENABLED pattern above.
   EMAIL_ENABLED: strictBoolean,
-  EMAIL_PROVIDER: z.enum(["resend", "emailjs"]).default("emailjs"),
+  EMAIL_PROVIDER: z.enum(["emailjs"]).default("emailjs"),
   // Inbox that receives "Contact support" widget submissions
   // (see notifications/contactSupport.routes.ts). Falls back to
   // EMAIL_FROM_ADDRESS below if unset.
   CONTACT_SUPPORT_TO_EMAIL: z.string().optional().default(""),
-  RESEND_API_KEY: z.string().optional().default(""),
-  RESEND_API_BASE_URL: z.string().url().default("https://api.resend.com"),
   EMAIL_FROM_ADDRESS: z.string().default("notifications@anndata.app"),
   EMAIL_FROM_NAME: z.string().default("Anndata"),
   EMAIL_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
@@ -186,13 +184,6 @@ const envSchema = envObjectSchema.superRefine((value, ctx) => {
       code: z.ZodIssueCode.custom,
       path: ["GEMINI_API_KEY"],
       message: "GEMINI_API_KEY is required when WHATSAPP_AI_PROVIDER=gemini",
-    });
-  }
-  if (value.EMAIL_ENABLED && value.EMAIL_PROVIDER === "resend" && !value.RESEND_API_KEY) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["RESEND_API_KEY"],
-      message: "RESEND_API_KEY is required when EMAIL_ENABLED=true and EMAIL_PROVIDER=resend",
     });
   }
   if (value.EMAIL_ENABLED && value.EMAIL_PROVIDER === "emailjs") {

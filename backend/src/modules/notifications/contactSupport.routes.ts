@@ -9,7 +9,7 @@ import { contactSupportEmailTemplate } from "./email/email.templates";
  * Replaces the old browser -> EmailJS direct call (frontend/src/lib/emailjs.ts).
  * The "Contact support" widget now posts here; this route renders the
  * message with contactSupportEmailTemplate and sends it through whichever
- * EmailProvider is configured server-side (EmailJS or Resend, see
+ * EmailProvider is configured server-side (EmailJS, see
  * backend/src/modules/notifications/email/index.ts) — so the EmailJS
  * public key, service id and template id never need to ship to the
  * browser at all.

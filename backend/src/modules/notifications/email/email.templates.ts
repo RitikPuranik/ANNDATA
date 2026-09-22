@@ -4,7 +4,7 @@
  * consistently across Gmail, Outlook, Apple Mail, etc.
  *
  * These templates are provider-agnostic: whichever EmailProvider is
- * wired up (EmailJSEmailProvider, ResendEmailProvider, ...) just takes
+ * wired up (EmailJSEmailProvider, ...) just takes
  * the finished `html`/`text` strings and sends them as-is. For EmailJS
  * specifically, the dashboard template must render `html_content`
  * UNESCAPED — i.e. `{{{html_content}}}` with triple braces — or this
