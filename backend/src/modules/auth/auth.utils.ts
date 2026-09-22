@@ -24,16 +24,12 @@ export async function verifyPassword(hash: string, plain: string): Promise<boole
   try {
     return await argon2.verify(hash, plain);
   } catch {
-    // Malformed/foreign hash — treat as a failed verification, not a crash.
     return false;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Opaque secure tokens (refresh tokens, password reset tokens, OTP codes)
-//
-// The raw secret is only ever handed to the client / delivery channel. The
-// database stores a SHA-256 hash of it, so a DB leak alone can't be replayed.
+// Opaque secure tokens
 // ---------------------------------------------------------------------------
 
 export function generateSecureToken(bytes = 48): string {
@@ -55,7 +51,7 @@ export function generateNumericOtp(length = 6): string {
 // ---------------------------------------------------------------------------
 
 interface AccessTokenPayload {
-  sub: string; // user.id
+  sub: string;
   publicId: string;
   role: AuthenticatedUserContext["role"];
 }
@@ -76,11 +72,12 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 }
 
 // ---------------------------------------------------------------------------
-// Cookies
+// Refresh cookie
 //
-// Refresh token lives in a Secure, HttpOnly, SameSite cookie so it is never
-// reachable from client-side JS. The access token is returned in the JSON
-// body for the SPA to hold in memory (and is short-lived).
+// In production the frontend proxies /api/* through the Vercel origin.
+// Keeping this cookie host-only (no Domain attribute) means the browser
+// stores it for whichever host actually returned the response. This avoids
+// third-party-cookie dependence between Vercel and Render.
 // ---------------------------------------------------------------------------
 
 export const REFRESH_COOKIE_NAME = "anndata_refresh";
@@ -89,11 +86,10 @@ function baseCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: isProduction,
+    // SameSite=None remains compatible with both the direct Render API and
+    // the same-origin Vercel proxy. Secure is enabled in production.
     sameSite: isProduction ? "none" : "lax",
     path: "/api/auth",
-    // Only scope to a cookie domain in production where a real domain
-    // exists; leaving it unset locally lets it work on plain localhost.
-    ...(isProduction && env.COOKIE_DOMAIN && env.COOKIE_DOMAIN !== "localhost" ? { domain: env.COOKIE_DOMAIN } : {}),
   };
 }
 
