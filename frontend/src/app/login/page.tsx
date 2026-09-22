@@ -50,6 +50,7 @@ export default function LoginPage() {
     setServerError(null);
     try {
       const user = await loginWithGoogle(idToken);
+      window.dispatchEvent(new CustomEvent("anndata:navigate-start", { detail: { message: "Signing you in…" } }));
       router.push(ROLE_HOME_ROUTE[user.role]);
     } catch (err) {
       setServerError({
@@ -65,6 +66,7 @@ export default function LoginPage() {
     try {
       const user = await login(values);
 
+      window.dispatchEvent(new CustomEvent("anndata:navigate-start", { detail: { message: "Signing you in…" } }));
       router.push(ROLE_HOME_ROUTE[user.role]);
     } catch (err) {
       if (isInvalidCredentials(err)) {
