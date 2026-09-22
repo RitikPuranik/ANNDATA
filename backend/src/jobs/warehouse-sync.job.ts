@@ -5,7 +5,7 @@ import { logger } from "../config/logger";
 import { captureException } from "../config/sentry";
 import { getRedis } from "../config/redis";
 import { WarehouseProviderRegistry } from "../modules/warehouse-intelligence/providers/warehouse-provider-registry";
-import { FarmLinkWarehouseProvider } from "../modules/warehouse-intelligence/providers/farmlink-warehouse-provider";
+import { AnndataWarehouseProvider } from "../modules/warehouse-intelligence/providers/anndata-warehouse-provider";
 import { FciIisfmWarehouseProvider } from "../modules/warehouse-intelligence/providers/fci-iisfm-warehouse-provider";
 import { UnavailablePartnerWarehouseProvider } from "../modules/warehouse-intelligence/providers/partner-warehouse-provider";
 import { WarehouseDuplicateDetectionService } from "../modules/warehouse-intelligence/warehouse-duplicate-detection.service";
@@ -55,7 +55,7 @@ export function registerWarehouseSyncJob({ prisma, auditService }: WarehouseSync
   }
 
   const warehouseProviderRegistry = new WarehouseProviderRegistry([
-    new FarmLinkWarehouseProvider(),
+    new AnndataWarehouseProvider(),
     new FciIisfmWarehouseProvider(),
     new UnavailablePartnerWarehouseProvider(),
   ]);

@@ -4,7 +4,7 @@ import { captureException } from "../config/sentry";
 import type { WhatsAppModule } from "../modules/whatsapp";
 
 /**
- * FarmLink has no job queue, so the webhook persists each inbound message and
+ * Anndata has no job queue, so the webhook persists each inbound message and
  * then processes it in-process right after replying 200. If the process
  * crashes (or a deploy restarts it) between "persisted" and "answered", this
  * per-minute sweep re-drives those messages. The database claim

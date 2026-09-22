@@ -39,7 +39,7 @@ export default function DocsPage() {
           <section className="rounded-2xl border border-border bg-card p-6">
             <h2 className="text-xl font-bold">Buyer matching</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Matching uses FarmLink&apos;s domain services and considers factors such as crop compatibility,
+              Matching uses Anndata&apos;s domain services and considers factors such as crop compatibility,
               quality, quantity and location. Buyer demand shown to visitors is not a guarantee of a sale.
             </p>
           </section>
@@ -49,7 +49,7 @@ export default function DocsPage() {
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               The public WhatsApp assistant can answer supported market questions, help users describe
               produce they want to sell and show safe buyer-demand previews. Private account data requires
-              an explicitly linked FarmLink account.
+              an explicitly linked Anndata account.
             </p>
           </section>
         </div>

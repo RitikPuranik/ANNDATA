@@ -24,8 +24,8 @@ export function generateLinkCode(): string {
   return out;
 }
 
-/** wa_id (91XXXXXXXXXX) → the 10-digit form FarmLink stores in User.mobile. */
-export function toFarmLinkMobile(waId: string): string {
+/** wa_id (91XXXXXXXXXX) → the 10-digit form Anndata stores in User.mobile. */
+export function toAnndataMobile(waId: string): string {
   return waId.length === 12 && waId.startsWith("91") ? waId.slice(2) : waId;
 }
 
@@ -33,7 +33,7 @@ export function toFarmLinkMobile(waId: string): string {
  * Identity for the WhatsApp channel.
  *
  * The WhatsApp sender number is authenticated by Meta (the webhook is
- * signature-verified), but FarmLink's `User.mobile` is NOT OTP-verified, so
+ * signature-verified), but Anndata's `User.mobile` is NOT OTP-verified, so
  * "same phone number" is not enough to expose a farmer's data. A number is
  * trusted only after an explicit link: the farmer, logged in on the website,
  * requests a one-time code and sends it from WhatsApp. The user id used for
@@ -59,7 +59,7 @@ export class WhatsAppFarmerService {
     }
 
     if (this.config.devAutoLinkByMobile) {
-      const candidate = await this.repo.findFarmerByMobile(toFarmLinkMobile(phone));
+      const candidate = await this.repo.findFarmerByMobile(toAnndataMobile(phone));
       if (candidate && candidate.role === "FARMER" && candidate.accountStatus === "ACTIVE") {
         await this.repo.upsertLink(candidate.id, phone);
         logger.warn({ event: "dev_auto_link" }, "[WhatsApp] DEV auto-link by mobile used (disabled in production)");

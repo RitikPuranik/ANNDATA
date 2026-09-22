@@ -1,6 +1,6 @@
 import type { AuditService } from "../audit/audit.service";
 import type { ShipmentService } from "../shipments/shipment.service";
-import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import type { AnndataUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, WHATSAPP_META } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { formatDateTime, num, unitShort } from "./whatsapp-text";
@@ -21,7 +21,7 @@ const STATUS: Record<string, string> = {
 export class WhatsAppShipmentService {
   constructor(
     private readonly shipments: ShipmentService,
-    private readonly urls: FarmLinkUrlService,
+    private readonly urls: AnndataUrlService,
     private readonly audit: AuditService,
   ) {}
 

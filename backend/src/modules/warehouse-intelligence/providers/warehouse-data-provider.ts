@@ -4,16 +4,16 @@
 // This is a DIFFERENT abstraction from StorageIntelligenceProvider
 // (storage-intelligence-provider.ts). That one answers "can this crop be
 // stored, and where" for the Sell vs Store Decision Engine, reading only
-// the FarmLink Warehouse DB. This one answers "where do warehouse RECORDS
+// the Anndata Warehouse DB. This one answers "where do warehouse RECORDS
 // come from" for the sync pipeline that fills that DB in the first place.
-// Nothing downstream of the FarmLink Warehouse DB (search, availability,
+// Nothing downstream of the Anndata Warehouse DB (search, availability,
 // suitability, risk, recommendations, StorageIntelligenceProvider, Sell vs
 // Store) ever imports anything from this file or this providers/ folder —
 // that dependency direction, and only that direction, is what keeps
 // external-source complexity from leaking past the normalization layer.
 // ---------------------------------------------------------------------------
 
-export type WarehouseProviderType = "FARMLINK" | "GOVERNMENT" | "PRIVATE_PARTNER";
+export type WarehouseProviderType = "ANNDATA" | "GOVERNMENT" | "PRIVATE_PARTNER";
 
 /**
  * Canonical, provider-neutral shape every provider must translate its own
@@ -128,7 +128,7 @@ export interface WarehouseProviderResult {
 }
 
 /**
- * The provider boundary every concrete source (FarmLink, Government,
+ * The provider boundary every concrete source (Anndata, Government,
  * Private Partner, and any future one) implements. WarehouseProviderRegistry
  * is the only thing that calls this directly — nothing else in the
  * codebase should ever import a concrete provider class.

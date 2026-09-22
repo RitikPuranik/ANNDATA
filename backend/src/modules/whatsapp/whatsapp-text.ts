@@ -94,7 +94,7 @@ export function formatDateTime(d: Date | string | null | undefined): string {
   if (!d) return "-";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "-";
-  // IST (UTC+5:30) — FarmLink's farmers are in India.
+  // IST (UTC+5:30) — Anndata's farmers are in India.
   const ist = new Date(date.getTime() + 5.5 * 3600_000);
   const h = ist.getUTCHours();
   const m = String(ist.getUTCMinutes()).padStart(2, "0");

@@ -13,7 +13,7 @@ export const AI_MIN_CONFIDENCE = 0.6;
  *   otherwise, if an NLU provider is configured and the farmer is under the
  *   hourly AI budget → LLM → Zod validation → confidence gate
  *   otherwise → UNKNOWN (caller shows the friendly menu + website fallback)
- * The LLM only ever returns an intent + entities; FarmLink's deterministic
+ * The LLM only ever returns an intent + entities; Anndata's deterministic
  * services make every business decision.
  */
 export class WhatsAppIntentService {

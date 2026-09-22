@@ -1,7 +1,7 @@
 {
-  "name": "farmlink-backend",
+  "name": "anndata-backend",
   "version": "1.0.0",
-  "description": "FarmLink Intelligence - Authentication & RBAC backend (Module 1)",
+  "description": "Anndata Intelligence - Authentication & RBAC backend (Module 1)",
   "main": "src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",

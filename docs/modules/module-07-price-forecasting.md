@@ -478,7 +478,7 @@ retuned. No raw price arrays or other unnecessary data snapshots are
 stored — only these aggregated, already-rounded numbers.
 
 `modelProvider`/`modelVersion` are fixed constants
-(`BASELINE_MODEL_PROVIDER = "FARMLINK_BASELINE_ENGINE"`,
+(`BASELINE_MODEL_PROVIDER = "ANNDATA_BASELINE_ENGINE"`,
 `BASELINE_MODEL_VERSION = "WEIGHTED_MOVING_AVERAGE_TREND_V1"`) — a
 distinct, versioned algorithm identity so a future, more advanced model
 can be introduced under its own `modelVersion` without colliding with or

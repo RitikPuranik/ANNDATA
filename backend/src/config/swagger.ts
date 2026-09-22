@@ -6,7 +6,7 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.3",
     info: {
-      title: "FarmLink Intelligence API — Modules 1–8",
+      title: "Anndata Intelligence API — Modules 1–8",
       version: "1.5.0",
       description:
         "SIH26132 — Strengthening market linkages and price discovery for farmers.\n\n" +

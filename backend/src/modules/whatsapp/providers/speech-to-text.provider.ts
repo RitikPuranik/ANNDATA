@@ -1,12 +1,12 @@
 /**
  * Speech-to-text extension point for farmer voice notes.
  *
- * FarmLink has no STT infrastructure today, so the default provider reports
+ * Anndata has no STT infrastructure today, so the default provider reports
  * "unavailable" and the assistant answers voice notes with the standard
  * "I can process text" hint. To enable voice later: implement this interface
  * (e.g. Google Cloud STT with hi-IN), and pass it to createWhatsAppModule().
  * The transcript then flows through the exact same pipeline as typed text
- * (command parser → optional AI → deterministic FarmLink services).
+ * (command parser → optional AI → deterministic Anndata services).
  */
 export interface SpeechToTextResult {
   text: string;

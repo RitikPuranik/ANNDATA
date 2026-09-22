@@ -2,7 +2,7 @@ import type { AuditService } from "../audit/audit.service";
 import type { LotsService } from "../lots/lots.service";
 import { listLotsQuerySchema } from "../lots/lots.schemas";
 import type { QualityService } from "../quality/quality.service";
-import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import type { AnndataUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, optionsMessage, type OptionSpec } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { num, unitLong } from "./whatsapp-text";
@@ -29,7 +29,7 @@ export class WhatsAppLotService {
   constructor(
     private readonly lots: LotsService,
     private readonly quality: QualityService,
-    private readonly urls: FarmLinkUrlService,
+    private readonly urls: AnndataUrlService,
     private readonly audit: AuditService,
   ) {}
 

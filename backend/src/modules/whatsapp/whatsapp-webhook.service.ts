@@ -237,7 +237,7 @@ export class WhatsAppWebhookService {
 
       // Linked farmer → full assistant. Anyone else is a GUEST: not turned away, but
       // limited to public data (mandi prices, open buyer demand, "how it works") —
-      // anything that needs an account answers "Continue on FarmLink".
+      // anything that needs an account answers "Continue on Anndata".
       const identity = await this.d.farmers.resolve(inbound.from, meta);
       const farmer = identity.status === "linked" ? identity.farmer : null;
       userId = farmer ? farmer.user.id : null;

@@ -24,7 +24,7 @@ import { WhatsAppBuyerAssistantService } from "./whatsapp-buyer-assistant.servic
 import { WhatsAppCatalogService } from "./whatsapp-catalog.service";
 import { WhatsAppCommandRouter } from "./whatsapp-command-router.service";
 import { WhatsAppConversationService } from "./whatsapp-conversation.service";
-import { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import { AnndataUrlService } from "./whatsapp-deeplink.service";
 import { WhatsAppFarmerService } from "./whatsapp-farmer.service";
 import { WhatsAppLotService } from "./whatsapp-lot-service";
 import { WhatsAppMarketService } from "./whatsapp-market-service";
@@ -82,7 +82,7 @@ export interface WhatsAppModule {
 }
 
 /**
- * Composition root for the WhatsApp Farmer Assistant. It receives FarmLink's
+ * Composition root for the WhatsApp Farmer Assistant. It receives Anndata's
  * already-constructed services (lots, quality, matching, payments, shipments,
  * reference data, audit…) and wires the WhatsApp layer on top of them — no
  * business logic is re-implemented here.
@@ -91,7 +91,7 @@ export function createWhatsAppModule(deps: WhatsAppModuleDeps): WhatsAppModule {
   const config = deps.config ?? loadWhatsAppConfig();
   const repo = deps.repository ?? new PrismaWhatsAppRepository(deps.prisma);
   const limiter = new WhatsAppRateLimiter();
-  const urls = new FarmLinkUrlService(config.frontendUrl);
+  const urls = new AnndataUrlService(config.frontendUrl);
 
   const provider = deps.provider ?? (config.enabled ? new MetaWhatsAppProvider(config) : new DisabledWhatsAppProvider());
   const nlu = deps.nluProvider ?? (config.enabled && config.aiProvider === "gemini" ? new GeminiNluProvider(config) : new UnavailableNluProvider());

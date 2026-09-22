@@ -16,7 +16,7 @@ export interface ResolvedLocation {
 }
 
 /**
- * Crop and location understanding backed by FarmLink's own data:
+ * Crop and location understanding backed by Anndata's own data:
  *  - crops come from ReferenceDataService (Crop + CropTranslation tables) —
  *    nothing is hard-coded except Hinglish *aliases* that map words like "gehu"
  *    onto the canonical crop name.
@@ -165,8 +165,8 @@ export class WhatsAppCatalogService {
 
   /**
    * Resolve typed text ("Sehore", "Sehore, Madhya Pradesh", a mandi name) to a
-   * state/district present in FarmLink's mandi data. Pincodes can't be
-   * resolved (no pincode dataset in FarmLink) → null, and the caller asks for a
+   * state/district present in Anndata's mandi data. Pincodes can't be
+   * resolved (no pincode dataset in Anndata) → null, and the caller asks for a
    * district instead.
    */
   async resolveLocation(text: string): Promise<ResolvedLocation | null> {

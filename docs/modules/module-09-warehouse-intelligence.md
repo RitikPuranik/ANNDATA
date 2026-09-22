@@ -1296,11 +1296,11 @@ narrow, precedented pattern match rather than novel logic.
 ### Architecture
 
 ```
-FARMLINK   GOVERNMENT   PRIVATE PARTNER
+ANNDATA   GOVERNMENT   PRIVATE PARTNER
     \           |            /
      \          |           /
       WAREHOUSE PROVIDER LAYER      (providers/warehouse-data-provider.ts,
-              |                      farmlink-/government-/partner-warehouse-provider.ts)
+              |                      anndata-/government-/partner-warehouse-provider.ts)
               v
       WarehouseProviderRegistry     (failure isolation per provider)
               |
@@ -1317,7 +1317,7 @@ FARMLINK   GOVERNMENT   PRIVATE PARTNER
       WarehouseSyncService          (warehouse-sync.service.ts — orchestrator)
               |
               v
-      FARMLINK WAREHOUSE DB         (Warehouse, WarehouseStorageUnit,
+      ANNDATA WAREHOUSE DB         (Warehouse, WarehouseStorageUnit,
               |                      WarehouseSourceReference)
               v
    Existing Warehouse Intelligence (Parts 1-5, completely unmodified)
@@ -1327,7 +1327,7 @@ FARMLINK   GOVERNMENT   PRIVATE PARTNER
 ```
 
 This is a data-ingestion layer sitting entirely **above** the existing
-Warehouse Intelligence module. Nothing below "FARMLINK WAREHOUSE DB" in
+Warehouse Intelligence module. Nothing below "ANNDATA WAREHOUSE DB" in
 the diagram was changed: search, availability, suitability, risk
 analysis, recommendations, `StorageIntelligenceProvider`, and Sell vs
 Store all continue reading plain `Warehouse` / `WarehouseStorageUnit`
@@ -1337,7 +1337,7 @@ rows exactly as Parts 1-5 left them. This layer's only job is to get more
 **Why this is a different abstraction from `StorageIntelligenceProvider`**
 (`storage-intelligence-provider.ts`): that one is consumer-facing — it
 answers "can this crop be stored here" for Sell vs Store, reading only
-the FarmLink Warehouse DB. `WarehouseDataProvider` (this layer) is
+the Anndata Warehouse DB. `WarehouseDataProvider` (this layer) is
 ingestion-facing — it answers "where did this warehouse row come from."
 Sell vs Store never calls a `WarehouseDataProvider`, directly or
 indirectly, and never will: external-source complexity stops at the
@@ -1347,14 +1347,14 @@ normalization boundary.
 
 Three providers, one `WarehouseProviderRegistry`:
 
-- **`FarmLinkWarehouseProvider`** (`providers/farmlink-warehouse-provider.ts`)
+- **`AnndataWarehouseProvider`** (`providers/anndata-warehouse-provider.ts`)
   — deliberately a no-op that always returns `SUCCESS` with zero records.
-  FarmLink is already the canonical store for its own warehouses (created
+  Anndata is already the canonical store for its own warehouses (created
   through the existing Part 1 create flow); reading them back out only to
   normalize/validate/upsert them into the same table would be pure
   ceremony. It still exists as a registry entry (rather than being
   omitted) so the registry's "one status per source type" shape stays
-  uniform, and so a future need (e.g. republishing FarmLink warehouses to
+  uniform, and so a future need (e.g. republishing Anndata warehouses to
   a partner feed) has an obvious place to grow into.
 - **`UnavailableGovernmentWarehouseProvider`** /
   **`UnavailablePartnerWarehouseProvider`** (`providers/government-warehouse-provider.ts`,
@@ -1369,7 +1369,7 @@ Three providers, one `WarehouseProviderRegistry`:
 - **`WarehouseProviderRegistry`** (`providers/warehouse-provider-registry.ts`)
   — runs every provider in parallel; a provider that throws is converted
   into a `FAILED` result (logged + sent to Sentry) rather than crashing
-  the run. Government failing never stops FarmLink or Partner from being
+  the run. Government failing never stops Anndata or Partner from being
   processed.
 
 ### Normalization
@@ -1442,7 +1442,7 @@ unrelated warehouse normally.
 
 - `WarehouseOwnerType` gained two new enum members, `GOVERNMENT` and
   `PRIVATE_PARTNER`, for warehouses ingested from an external source with
-  no FarmLink user/FPO behind them (`ownerUserId`/`ownerFpoId` stay
+  no Anndata user/FPO behind them (`ownerUserId`/`ownerFpoId` stay
   `null` for these rows). Existing `USER`/`FPO` rows are completely
   unaffected.
 - `Warehouse` gained one new optional column, `pincode String?`, used
@@ -1455,10 +1455,10 @@ unrelated warehouse normally.
   *separate table* rather than columns bolted onto `Warehouse`: a single
   warehouse can end up known to more than one external source at once
   (e.g. both a government registry and a private partner), and a
-  FarmLink-created warehouse should never be forced to carry an
-  artificial external id just because this table exists. A FarmLink-owned
+  Anndata-created warehouse should never be forced to carry an
+  artificial external id just because this table exists. A Anndata-owned
   warehouse simply has zero rows here — that absence *is* the "sourceType
-  = FARMLINK" fact; nothing is backfilled for existing warehouses.
+  = ANNDATA" fact; nothing is backfilled for existing warehouses.
 - Migration `20260906000000_add_warehouse_ingestion` is additive-only: no
   existing column, index, table, or enum value is altered or dropped.
 
@@ -1475,7 +1475,7 @@ unrelated warehouse normally.
 - **Deterministically `MATCHED` to a different existing warehouse**
   (first time this provider/externalId pair has been seen, but the
   record lines up with a warehouse that already exists under a different
-  identity — possibly FarmLink-owned): only a new
+  identity — possibly Anndata-owned): only a new
   `WarehouseSourceReference` is attached. The existing warehouse's fields
   and storage units are never touched — this sync run doesn't own that
   data.
@@ -1484,11 +1484,11 @@ unrelated warehouse normally.
   `WarehouseSourceReference` are created together in one transaction.
 
 `StorageRate` is never created or touched by this layer — external
-sources may describe capacity, never FarmLink pricing (Part 21).
+sources may describe capacity, never Anndata pricing (Part 21).
 Warehouses this layer creates default to `status: ACTIVE`,
 `verificationStatus: PENDING` exactly like any other new `Warehouse`
 row — a `GOVERNMENT`/`PRIVATE_PARTNER` `sourceType` never implies
-FarmLink verification.
+Anndata verification.
 
 ### Synchronization & transaction safety
 
@@ -1569,7 +1569,7 @@ detection's four match states; and the sync service end-to-end (create,
 idempotent update-not-duplicate, field-ownership on refresh, link-without-
 overwrite on a deterministic match, create-and-flag on a possible
 duplicate, skip-invalid-continue-others, provider failure isolation,
-FarmLink-provider records never persisted through this path, and audit
+Anndata-provider records never persisted through this path, and audit
 event recording).
 
 ### Verification
@@ -1761,7 +1761,7 @@ backoff/timeout, size cap, response validation).
 
 None of the above are WDRA- or FCI-specific hacks: they're small,
 generic extensions to the shared provider contract/normalization/sync
-layer, usable by any future provider exactly the same way FarmLink's own
+layer, usable by any future provider exactly the same way Anndata's own
 provider already uses the rest of that layer.
 
 ### Tests added
@@ -1825,7 +1825,7 @@ type-stub — see below).
   in this change. (One pre-existing lint error exists in the repository,
   in `modules/transporters/vehicle.service.ts` — untouched by this work.)
 - **WDRA import, actually run**: no CSV was supplied for this task
-  (`FarmLink-main.zip` contained only the ingestion instructions, not a
+  (`Anndata-main.zip` contained only the ingestion instructions, not a
   WDRA dataset), so `npm run warehouse:import-wdra` could not be run
   against a real ~7,775-row file, and no live Postgres was available in
   this sandbox to persist against either way. In place of that, a
@@ -1910,7 +1910,7 @@ ingestion pipeline, not redesign it — and after inspection, the FCI/IISFM
 provider, mapper, `WarehouseSyncService`, duplicate detection, and manual
 admin sync endpoint documented above already satisfied nearly every
 requirement (identity via `providerId + externalId`, update-not-recreate,
-never fabricating `sourceUpdatedAt`, never touching FarmLink-owned rows,
+never fabricating `sourceUpdatedAt`, never touching Anndata-owned rows,
 per-record failure isolation). Two things were actually missing:
 
 1. **No automatic cron existed at all.** The only way to run a warehouse
@@ -1936,7 +1936,7 @@ Prisma `Decimal` and a plain number with the same numeric value as equal.
 A `tx.warehouse.update()` / `tx.warehouseStorageUnit.update()` is now only
 issued when something actually differs. `WarehouseSourceReference`
 bookkeeping (`lastSyncedAt`, `sourceUpdatedAt`, `metadata`) is still
-refreshed unconditionally on every run, changed or not — "FarmLink last
+refreshed unconditionally on every run, changed or not — "Anndata last
 successfully processed this source record" is true regardless of whether
 the record's own data moved. `ProviderSyncSummary`/`WarehouseSyncSummary`
 gained an `unchanged: number` field alongside `created`/`updated`. A

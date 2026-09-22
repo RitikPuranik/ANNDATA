@@ -133,8 +133,8 @@ export async function runAllSyncs(
   const { WarehouseDuplicateDetectionService } = await import(
     "../modules/warehouse-intelligence/warehouse-duplicate-detection.service"
   );
-  const { FarmLinkWarehouseProvider } = await import(
-    "../modules/warehouse-intelligence/providers/farmlink-warehouse-provider"
+  const { AnndataWarehouseProvider } = await import(
+    "../modules/warehouse-intelligence/providers/anndata-warehouse-provider"
   );
   const { FciIisfmWarehouseProvider } = await import(
     "../modules/warehouse-intelligence/providers/fci-iisfm-warehouse-provider"
@@ -161,7 +161,7 @@ export async function runAllSyncs(
   console.log("==========================================");
 
   const registry = new WarehouseProviderRegistry([
-    new FarmLinkWarehouseProvider(),
+    new AnndataWarehouseProvider(),
     new FciIisfmWarehouseProvider(),
     new UnavailablePartnerWarehouseProvider(),
   ]);

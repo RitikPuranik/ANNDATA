@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import type { AuditService } from "../audit/audit.service";
 import type { PaymentService } from "../payments/payment.service";
-import type { FarmLinkUrlService } from "./whatsapp-deeplink.service";
+import type { AnndataUrlService } from "./whatsapp-deeplink.service";
 import { ctaMsg, WHATSAPP_META } from "./whatsapp-flow-helpers";
 import { t } from "./whatsapp-i18n";
 import { formatDate, inr, maskTail } from "./whatsapp-text";
@@ -12,14 +12,14 @@ const ORDER: Record<string, number> = { OVERDUE: 0, DISPUTED: 1, PARTIALLY_PAID:
 
 /**
  * "payment": read-only view over the existing Payment Status Tracking module.
- * FarmLink records payments made by the buyer OUTSIDE the platform; this
+ * Anndata records payments made by the buyer OUTSIDE the platform; this
  * assistant never moves money and only shows masked references.
  */
 export class WhatsAppPaymentService {
   constructor(
     private readonly payments: PaymentService,
     private readonly prisma: PrismaClient,
-    private readonly urls: FarmLinkUrlService,
+    private readonly urls: AnndataUrlService,
     private readonly audit: AuditService,
   ) {}
 
@@ -57,7 +57,7 @@ export class WhatsAppPaymentService {
     }
     await this.audit.record({ actorUserId: user.id, action: "WHATSAPP_PAYMENT_VIEWED", entityType: "PaymentObligation", metadata: { channel: "whatsapp", count: top.length }, ...WHATSAPP_META }).catch(() => undefined);
 
-    const more = live.length > SHOW ? `\n\n+${live.length - SHOW} more on FarmLink` : "";
+    const more = live.length > SHOW ? `\n\n+${live.length - SHOW} more on Anndata` : "";
     const body = `${t("paymentHeader", lang)}\n\n${blocks.join("\n\n")}${more}\n\n${t("paymentNote", lang)}`;
     return [ctaMsg(body, needsHelp ? t("ctaProblem", lang) : t("ctaDashboard", lang), this.urls.payments())];
   }

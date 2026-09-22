@@ -25,7 +25,7 @@ export function testConfig(over: Partial<WhatsAppConfig> = {}): WhatsAppConfig {
     conversationTtlMinutes: 30, maxMessageAgeSeconds: 21_600, rateLimitPerMinute: 100,
     aiRateLimitPerHour: 30, matchingRateLimitPerHour: 50, aiProvider: "none", geminiApiKey: "",
     geminiModel: "m", geminiBaseUrl: "https://g.example", aiTimeoutMs: 1000, devAutoLinkByMobile: false,
-    frontendUrl: "https://app.farmlink.test", ...over,
+    frontendUrl: "https://app.anndata.test", ...over,
   };
 }
 
@@ -143,7 +143,7 @@ export class FakeProvider implements WhatsAppProvider {
   all(to = FARMER_PHONE) { return this.texts(to).join("\n---\n"); }
 }
 
-// ---------------------------------------------------------------- fake FarmLink services
+// ---------------------------------------------------------------- fake Anndata services
 const crops = [
   { id: "crop-wheat", name: "Wheat", category: "Cereal", translations: { hi: "गेहूं" } },
   { id: "crop-soy", name: "Soybean", category: "Oilseed", translations: { hi: "सोयाबीन" } },
