@@ -5,8 +5,12 @@ import {
   InvalidCredentialsError,
   ValidationError,
 } from "../../common/errors";
+import { env } from "../../config/env";
+import { logger } from "../../config/logger";
 import { trackEvent } from "../../config/posthog";
 import { AuditService } from "../audit/audit.service";
+import { createEmailService, EmailService } from "../notifications/email";
+import { passwordResetEmailTemplate } from "../notifications/email/email.templates";
 import { AuthRepository } from "./auth.repository";
 import {
   AuthTokens,
@@ -52,6 +56,9 @@ export class AuthService {
   constructor(
     private readonly repo: AuthRepository,
     private readonly audit: AuditService,
+    // Defaulted so every existing call site (app.ts, tests) keeps working
+    // unchanged — same pattern as createEmailService()'s own default param.
+    private readonly emailService: EmailService = createEmailService(),
   ) {}
 
   async register(input: RegisterInput, meta: RequestMeta): Promise<{ user: PublicUserDTO }> {
@@ -285,15 +292,37 @@ export class AuthService {
     });
     trackEvent("password_reset_started", user.publicId);
 
-    // SIH demo: delivery is mocked. In a real deployment this raw token is
-    // sent via SMS/email and never logged or returned to the client. Kept
-    // out of production; visible in development so the flow is testable
-    // end-to-end without a paid SMS/email integration, and in test so the
-    // integration suite can assert against a token it never receives over
-    // the wire.
+    // Dev/test visibility: the raw token is never returned to the client,
+    // so log it locally to keep the flow testable without a real provider.
+    // This is a supplement to the real email below, not a replacement —
+    // previously this was the ONLY delivery path, which is why the token
+    // showed up in logs but no email was ever sent.
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log(`[MockDelivery] Password reset token for ${user.mobile}: ${rawToken}`);
+    }
+
+    // Actually deliver the reset link by email when we have one on file.
+    // Never throw from here — a failed send shouldn't leak whether the
+    // account exists, and the controller always returns the same generic
+    // message regardless of what happens in this function.
+    if (user.email) {
+      const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
+      const rendered = passwordResetEmailTemplate(user.fullName, resetUrl);
+
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send password reset email",
+        );
+      }
     }
   }
 
