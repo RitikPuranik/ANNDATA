@@ -60,7 +60,7 @@ function CategoryCard({title,description,image,href,ribbon}:{title:string;descri
  return <Link href={href} className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition hover:border-[#a8842f] hover:shadow-lg">
   <div className="img-zoom img-gradient h-[130px] w-full bg-[#f1f3f6]">
    {ribbon && <span className="ribbon"><Sparkles className="h-3 w-3"/> {ribbon}</span>}
-   <Image src={image} alt={title} width={400} height={130} className="h-full w-full object-cover" loading="lazy" />
+   <img src={image} alt={title} className="h-full w-full object-cover" loading="lazy" />
   </div>
   <div className="flex items-center justify-between gap-2 px-4 py-3">
    <span className="min-w-0"><b className="block truncate text-sm font-bold text-[#171714]">{title}</b><small className="block truncate text-xs text-muted-foreground">{description}</small></span>
@@ -84,7 +84,7 @@ function SaleCards(){
     <small className={`mt-1 block text-xs leading-5 ${s.sub}`}>{s.description}</small>
     <span className={`mt-3 inline-flex items-center rounded-md px-3 py-2 text-xs font-bold transition group-hover:brightness-110 ${s.btn}`}>{s.cta}</span>
    </span>
-   <span className="img-zoom h-20 w-20 flex-none overflow-hidden rounded-md"><Image src={s.image} alt="" width={80} height={80} className="h-full w-full object-cover" loading="lazy" /></span>
+   <span className="img-zoom h-20 w-20 flex-none overflow-hidden rounded-md"><img src={s.image} alt="" className="h-full w-full object-cover" loading="lazy" /></span>
   </Link>)}
  </section>;
 }
