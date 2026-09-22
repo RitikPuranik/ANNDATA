@@ -5,10 +5,10 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   images: {
-    // Crop photos can come from Wikimedia/Wikipedia in existing records.
-    // Keep the allow-list broad enough for the real image URLs returned by
-    // Wikimedia (including language-specific Wikipedia hosts and redirects),
-    // otherwise Next.js returns HTTP 400 from /_next/image in production.
+    // Serve images directly instead of routing remote images through
+    // /_next/image. This avoids production 400s from remote image URLs
+    // that redirect (for example Wikimedia Special:FilePath URLs).
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -22,12 +22,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.wikipedia.org",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "*.wikimedia.org",
+        hostname: "images.unsplash.com",
         pathname: "/**",
       },
     ],
