@@ -88,7 +88,31 @@ export function CropVisual({ name, category, imageUrl, variant = "cover", icon, 
   const resolved = resolveCrop(name, category);
   const glyph = icon ?? resolved.icon;
   const colors = tone ?? resolved.tone;
-  const photo = usePhoto([imageUrl, name ? `/crops/${resolved.slug}.jpg` : null]);
+  // The repository currently contains only the crops README, not the actual JPG files
+  // referenced by the original component. Keep farmer-uploaded/local photos first,
+  // then use stable Unsplash photos as a visual fallback. If a remote photo fails,
+  // the existing designed SVG fallback still renders.
+  const REMOTE_CROP_PHOTOS: Record<string, string> = {
+    apple: "https://images.unsplash.com/photo-1639328946611-6f274e05a5f5?auto=format&fit=crop&w=1200&q=80",
+    cotton: "https://images.unsplash.com/photo-1761069183521-fc1a0d8be3dd?auto=format&fit=crop&w=1200&q=80",
+    onion: "https://images.unsplash.com/photo-1508747703725-719777637510?auto=format&fit=crop&w=1200&q=80",
+    soybean: "https://images.unsplash.com/photo-1661963106862-fac46c201cd6?auto=format&fit=crop&w=1200&q=80",
+    wheat: "https://images.unsplash.com/photo-1779036115582-5fc2c45e3dd8?auto=format&fit=crop&w=1200&q=80",
+    rice: "https://images.unsplash.com/photo-1760286834274-4f13c9747f7d?auto=format&fit=crop&w=1200&q=80",
+    tomato: "https://images.unsplash.com/photo-1671528443634-791fc3640eb9?auto=format&fit=crop&w=1200&q=80",
+    maize: "https://images.unsplash.com/photo-1567547921486-f280c2f53b5d?auto=format&fit=crop&w=1200&q=80",
+  };
+  const CATEGORY_PHOTOS: Record<string, string> = {
+    vegetable: REMOTE_CROP_PHOTOS.tomato,
+    cereal: REMOTE_CROP_PHOTOS.wheat,
+    oilseed: REMOTE_CROP_PHOTOS.soybean,
+    fibre: REMOTE_CROP_PHOTOS.cotton,
+    fiber: REMOTE_CROP_PHOTOS.cotton,
+    pulse: REMOTE_CROP_PHOTOS.soybean,
+    fruit: REMOTE_CROP_PHOTOS.apple,
+  };
+  const remotePhoto = REMOTE_CROP_PHOTOS[resolved.slug] ?? CATEGORY_PHOTOS[(category ?? "").toLowerCase()];
+  const photo = usePhoto([imageUrl, name ? `/crops/${resolved.slug}.jpg` : null, remotePhoto]);
 
   const bg = { background: `linear-gradient(145deg, ${colors.from} 0%, ${colors.to} 100%)` };
 
