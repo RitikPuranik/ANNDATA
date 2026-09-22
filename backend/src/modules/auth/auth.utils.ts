@@ -93,7 +93,7 @@ function baseCookieOptions(): CookieOptions {
     path: "/api/auth",
     // Only scope to a cookie domain in production where a real domain
     // exists; leaving it unset locally lets it work on plain localhost.
-    ...(isProduction && env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+    ...(isProduction && env.COOKIE_DOMAIN && env.COOKIE_DOMAIN !== "localhost" ? { domain: env.COOKIE_DOMAIN } : {}),
   };
 }
 
