@@ -40,7 +40,7 @@ const envObjectSchema = z.object({
 
   SENTRY_DSN: z.string().optional().default(""),
 
-  COOKIE_DOMAIN: z.string().optional().default("localhost"),
+  // Leave blank for separate frontend/API hosts. Only set this when a shared\n  // parent cookie domain is intentionally required.\n  COOKIE_DOMAIN: z.string().optional().default(""),
   MARKET_SYNC_ENABLED: z.coerce.boolean().default(false),
   MARKET_DATA_GOV_API_KEY: z.string().optional().default(""),
   MARKET_DATA_GOV_RESOURCE_ID: z.string().optional().default(""),
