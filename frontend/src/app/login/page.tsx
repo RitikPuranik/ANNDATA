@@ -122,6 +122,19 @@ export default function LoginPage() {
           </Alert>
         )}
 
+        {/* Google authentication first */}
+        <div className="space-y-2">
+          <GoogleSignInButton text="signin_with" onCredential={handleGoogleCredential} onError={(message) => setServerError({ message, kind: "other" })} />
+        </div>
+
+        <div className="relative my-2 flex items-center justify-center">
+          <span className="w-full border-t" />
+          <span className="absolute bg-background px-2 text-xs text-muted-foreground">
+            {t("login.orContinueWith")}
+          </span>
+        </div>
+
+        {/* Manual sign in */}
         {/* Mobile */}
         <div className="space-y-1.5">
           <Label htmlFor="mobile">{t("login.mobile")}</Label>
@@ -199,14 +212,7 @@ export default function LoginPage() {
           {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
         </Button>
 
-        <div className="relative my-2 flex items-center justify-center">
-          <span className="w-full border-t" />
-          <span className="absolute bg-background px-2 text-xs text-muted-foreground">
-            {t("login.orContinueWith")}
-          </span>
-        </div>
 
-        <GoogleSignInButton text="signin_with" onCredential={handleGoogleCredential} onError={(message) => setServerError({ message, kind: "other" })} />
       </form>
     </AuthLayout>
   );
