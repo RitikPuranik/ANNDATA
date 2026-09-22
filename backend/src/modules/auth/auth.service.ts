@@ -5,8 +5,12 @@ import {
   InvalidCredentialsError,
   ValidationError,
 } from "../../common/errors";
+import { env } from "../../config/env";
+import { logger } from "../../config/logger";
 import { trackEvent } from "../../config/posthog";
 import { AuditService } from "../audit/audit.service";
+import { createEmailService, EmailService } from "../notifications/email";
+import { passwordResetEmailTemplate } from "../notifications/email/email.templates";
 import { AuthRepository } from "./auth.repository";
 import {
   AuthTokens,
@@ -52,6 +56,7 @@ export class AuthService {
   constructor(
     private readonly repo: AuthRepository,
     private readonly audit: AuditService,
+    private readonly emailService: EmailService = createEmailService(),
   ) {}
 
   async register(input: RegisterInput, meta: RequestMeta): Promise<{ user: PublicUserDTO }> {
@@ -285,15 +290,30 @@ export class AuthService {
     });
     trackEvent("password_reset_started", user.publicId);
 
-    // SIH demo: delivery is mocked. In a real deployment this raw token is
-    // sent via SMS/email and never logged or returned to the client. Kept
-    // out of production; visible in development so the flow is testable
-    // end-to-end without a paid SMS/email integration, and in test so the
-    // integration suite can assert against a token it never receives over
-    // the wire.
+    // Keep local development/test visibility for the token, but this is
+    // supplemental only. The real delivery path below sends the reset link
+    // when the user has an email address.
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log(`[MockDelivery] Password reset token for ${user.mobile}: ${rawToken}`);
+    }
+
+    if (user.email) {
+      const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
+      const rendered = passwordResetEmailTemplate(user.fullName, resetUrl);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send password reset email",
+        );
+      }
     }
   }
 
