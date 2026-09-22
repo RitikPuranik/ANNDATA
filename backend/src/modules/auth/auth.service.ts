@@ -10,7 +10,11 @@ import { logger } from "../../config/logger";
 import { trackEvent } from "../../config/posthog";
 import { AuditService } from "../audit/audit.service";
 import { createEmailService, EmailService } from "../notifications/email";
-import { passwordResetEmailTemplate } from "../notifications/email/email.templates";
+import {
+  passwordResetConfirmationEmailTemplate,
+  passwordResetEmailTemplate,
+  welcomeEmailTemplate,
+} from "../notifications/email/email.templates";
 import { AuthRepository } from "./auth.repository";
 import {
   AuthTokens,
@@ -100,6 +104,23 @@ export class AuthService {
       userAgent: meta.userAgent,
     });
     trackEvent("signup_completed", user.publicId, { role: user.role });
+
+    if (user.email) {
+      const rendered = welcomeEmailTemplate(user.fullName);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send welcome email",
+        );
+      }
+    }
 
     return { user: toPublicUserDTO(user) };
   }
@@ -263,6 +284,23 @@ export class AuthService {
       ipAddress: meta.ipAddress,
       userAgent: meta.userAgent,
     });
+
+    if (user.email) {
+      const rendered = passwordResetConfirmationEmailTemplate(user.fullName);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send password change confirmation email",
+        );
+      }
+    }
   }
 
   async requestPasswordReset(mobile: string, meta: RequestMeta): Promise<void> {
@@ -341,5 +379,23 @@ export class AuthService {
       userAgent: meta.userAgent,
     });
     trackEvent("password_reset_completed", tokenRecord.userId);
+
+    const user = await this.repo.findUserById(tokenRecord.userId);
+    if (user?.email) {
+      const rendered = passwordResetConfirmationEmailTemplate(user.fullName);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send password reset confirmation email",
+        );
+      }
+    }
   }
 }
