@@ -147,6 +147,23 @@ export default function RegisterPage() {
           </Alert>
         )}
 
+        {/* Google authentication first */}
+        <div className="space-y-2">
+          <GoogleSignInButton
+            text="signup_with"
+            onCredential={handleGoogleCredential}
+            onError={(message) => setServerError({ message, kind: "other" })}
+          />
+        </div>
+
+        <div className="relative my-2 flex items-center justify-center">
+          <span className="w-full border-t" />
+          <span className="absolute bg-background px-2 text-xs text-muted-foreground">
+            {t("login.orContinueWith")}
+          </span>
+        </div>
+
+        {/* Manual sign up */}
         <div>
           <Label htmlFor="fullName">{t("register.fullName")}</Label>
           <Input id="fullName" autoComplete="name" hasError={!!errors.fullName} {...register("fullName")} />
@@ -226,18 +243,7 @@ export default function RegisterPage() {
           {t("register.submit")}
         </Button>
 
-        <div className="relative my-2 flex items-center justify-center">
-          <span className="w-full border-t" />
-          <span className="absolute bg-background px-2 text-xs text-muted-foreground">
-            {t("login.orContinueWith")}
-          </span>
-        </div>
 
-        <GoogleSignInButton
-          text="signup_with"
-          onCredential={handleGoogleCredential}
-          onError={(message) => setServerError({ message, kind: "other" })}
-        />
       </form>
     </AuthLayout>
   );
