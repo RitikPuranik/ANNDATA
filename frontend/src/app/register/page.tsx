@@ -51,6 +51,7 @@ export default function RegisterPage() {
     setServerError(null);
     try {
       const user = await loginWithGoogle(idToken);
+      window.dispatchEvent(new CustomEvent("anndata:navigate-start", { detail: { message: "Signing you in…" } }));
       router.push(ROLE_HOME_ROUTE[user.role]);
     } catch (err) {
       setServerError({
@@ -70,6 +71,7 @@ export default function RegisterPage() {
         password: values.password,
         preferredLanguage: values.preferredLanguage,
       });
+      window.dispatchEvent(new CustomEvent("anndata:navigate-start", { detail: { message: "Creating your account…" } }));
       router.push("/login?registered=1");
     } catch (err) {
       if (isFieldConflict<RegisterFormValues>(err, "mobile")) {
