@@ -3,6 +3,7 @@ import { asyncHandler } from "../../common/asyncHandler";
 import { validateBody } from "../../middleware/validateBody";
 import {
   changePasswordRateLimiter,
+  googleAuthRateLimiter,
   loginRateLimiter,
   passwordResetRateLimiter,
   registerRateLimiter,
@@ -14,6 +15,7 @@ import { AuditService } from "../audit/audit.service";
 import {
   changePasswordSchema,
   forgotPasswordSchema,
+  googleLoginSchema,
   loginSchema,
   registerRequestSchema,
   resetPasswordSchema,
@@ -80,6 +82,38 @@ export function createAuthRouter(authService: AuthService, repo: AuthRepository,
    *       401: { description: Invalid credentials or blocked account, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
    */
   router.post("/login", loginRateLimiter(), validateBody(loginSchema), asyncHandler(controller.login));
+
+  /**
+   * @openapi
+   * /api/auth/google:
+   *   post:
+   *     summary: Sign in (or sign up) with a verified Google ID token
+   *     description: >
+   *       Accepts the ID token produced by Google Identity Services on the
+   *       frontend. The server verifies it against Google, then either logs
+   *       into an existing linked/matching-email account or creates a new
+   *       FARMER account. Response shape matches POST /api/auth/login.
+   *     tags: [Auth]
+   *     security: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [idToken]
+   *             properties:
+   *               idToken: { type: string }
+   *     responses:
+   *       200: { description: Logged in, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessResponse' } } } }
+   *       401: { description: Invalid Google token or blocked account, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+   */
+  router.post(
+    "/google",
+    googleAuthRateLimiter(),
+    validateBody(googleLoginSchema),
+    asyncHandler(controller.googleLogin),
+  );
 
   /**
    * @openapi

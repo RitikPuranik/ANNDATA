@@ -13,6 +13,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<AuthUser>;
+  loginWithGoogle: (idToken: string) => Promise<AuthUser>;
   register: (payload: RegisterPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
   homeRoute: string;
@@ -40,6 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     onSuccess: (user) => queryClient.setQueryData(ME_QUERY_KEY, user),
   });
 
+  const googleLoginMutation = useMutation({
+    mutationFn: authApi.loginWithGoogle,
+    onSuccess: (user) => queryClient.setQueryData(ME_QUERY_KEY, user),
+  });
+
   const registerMutation = useMutation({
     mutationFn: authApi.register,
     onSuccess: (result) => result.user,
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!user,
     isLoading: meQuery.isLoading,
     login: (payload) => loginMutation.mutateAsync(payload),
+    loginWithGoogle: (idToken) => googleLoginMutation.mutateAsync(idToken),
     register: async (payload) => (await registerMutation.mutateAsync(payload)).user,
     logout: () => logoutMutation.mutateAsync(),
     homeRoute: user ? ROLE_HOME_ROUTE[user.role] : "/login",

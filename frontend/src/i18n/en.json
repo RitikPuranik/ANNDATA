@@ -20,6 +20,7 @@
   "login.mobile": "Mobile number",
   "login.password": "Password",
   "login.submit": "Log in",
+  "login.orContinueWith": "or continue with",
   "login.forgotPassword": "Forgot password?",
   "login.noAccount": "New to Anndata?",
   "login.createAccount": "Create an account",

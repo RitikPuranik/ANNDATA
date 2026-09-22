@@ -33,6 +33,21 @@ export function loginRateLimiter() {
   });
 }
 
+/**
+ * Google sign-in has no mobile field to key on (unlike loginRateLimiter),
+ * so it's keyed by IP alone. Slightly more generous than password login
+ * since the token itself already proves a successful Google auth — this
+ * limiter mainly guards against a client replaying/hammering the endpoint.
+ */
+export function googleAuthRateLimiter() {
+  return rateLimit({
+    ...commonOptions,
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    keyGenerator: (req) => `google-auth:${req.ip}`,
+  });
+}
+
 export function registerRateLimiter() {
   return rateLimit({
     ...commonOptions,

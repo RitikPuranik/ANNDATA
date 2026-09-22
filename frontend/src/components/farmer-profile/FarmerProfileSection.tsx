@@ -26,7 +26,7 @@ function PersonalInfoCard() {
         </div>
         <div>
           <dt className="text-sm text-muted-foreground">{t("farmerProfile.mobile")}</dt>
-          <dd className="font-medium">{user.mobile}</dd>
+          <dd className="font-medium">{user.mobile ?? "—"}</dd>
         </div>
         <div>
           <dt className="text-sm text-muted-foreground">{t("farmerProfile.email")}</dt>

@@ -9,6 +9,16 @@ export interface CreateUserData {
   preferredLanguage: Language;
 }
 
+/** A brand-new account created from a verified Google sign-in — no mobile
+ * or password yet (see auth.schemas.ts / google.service.ts). */
+export interface CreateUserFromGoogleData {
+  fullName: string;
+  email: string;
+  googleId: string;
+  role: UserRole;
+  preferredLanguage: Language;
+}
+
 export interface CreateSessionData {
   userId: string;
   tokenHash: string;
@@ -35,6 +45,7 @@ export interface AuthRepository {
   findUserByMobile(mobile: string): Promise<User | null>;
   findUserByEmail(email: string): Promise<User | null>;
   findUserById(id: string): Promise<User | null>;
+  findUserByGoogleId(googleId: string): Promise<User | null>;
   /**
    * Batch lookup — added for Module 3's FPO member directory (build spec
    * section 25/59: "avoid N+1 queries" when joining membership rows back to
@@ -43,6 +54,10 @@ export interface AuthRepository {
    */
   findManyByIds(ids: string[]): Promise<User[]>;
   createUser(data: CreateUserData): Promise<User>;
+  createUserFromGoogle(data: CreateUserFromGoogleData): Promise<User>;
+  /** Attaches a Google identity to an existing (mobile/password) account —
+   * used the first time such a user signs in with a matching Google email. */
+  linkGoogleAccount(userId: string, googleId: string): Promise<User>;
   updateUserPassword(userId: string, passwordHash: string): Promise<void>;
   updateLastLogin(userId: string): Promise<void>;
   updateAccountStatus(userId: string, status: AccountStatus): Promise<void>;
@@ -74,6 +89,10 @@ export class PrismaAuthRepository implements AuthRepository {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  findUserByGoogleId(googleId: string) {
+    return this.prisma.user.findUnique({ where: { googleId } });
+  }
+
   findManyByIds(ids: string[]) {
     if (ids.length === 0) return Promise.resolve([]);
     return this.prisma.user.findMany({ where: { id: { in: ids } } });
@@ -94,6 +113,30 @@ export class PrismaAuthRepository implements AuthRepository {
         identityVerificationStatus: "PENDING",
       },
     });
+  }
+
+  createUserFromGoogle(data: CreateUserFromGoogleData) {
+    return this.prisma.user.create({
+      data: {
+        fullName: data.fullName,
+        email: data.email,
+        googleId: data.googleId,
+        role: data.role,
+        preferredLanguage: data.preferredLanguage,
+        // Google has already verified this email address for us, and
+        // there's no mobile/password to collect anything else on —
+        // treat the account as usable immediately rather than stuck in
+        // PENDING_VERIFICATION with no way to clear it.
+        accountStatus: "ACTIVE",
+        phoneVerificationStatus: "PENDING",
+        emailVerificationStatus: "VERIFIED",
+        identityVerificationStatus: "PENDING",
+      },
+    });
+  }
+
+  linkGoogleAccount(userId: string, googleId: string) {
+    return this.prisma.user.update({ where: { id: userId }, data: { googleId } });
   }
 
   async updateUserPassword(userId: string, passwordHash: string) {

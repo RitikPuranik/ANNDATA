@@ -8,6 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { AuthLayout } from "@/components/AuthLayout";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { ROLE_HOME_ROUTE } from "@/lib/roleRouting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label, FieldError, FieldHint, Alert, ErrorSummary } from "@/components/ui/primitives";
@@ -24,7 +26,7 @@ const LANGUAGE_OPTIONS: { value: "en" | "hi" | "mr"; label: string }[] = [
 
 export default function RegisterPage() {
   const { t } = useI18n();
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, loginWithGoogle } = useAuth();
   const router = useRouter();
   const [serverError, setServerError] = React.useState<{
     message: string;
@@ -44,6 +46,19 @@ export default function RegisterPage() {
   });
 
   const passwordValue = watch("password") ?? "";
+
+  async function handleGoogleCredential(idToken: string) {
+    setServerError(null);
+    try {
+      const user = await loginWithGoogle(idToken);
+      router.push(ROLE_HOME_ROUTE[user.role]);
+    } catch (err) {
+      setServerError({
+        message: err instanceof ApiRequestError ? err.message : "Something went wrong. Please try again.",
+        kind: "other",
+      });
+    }
+  }
 
   async function onSubmit(values: RegisterFormValues) {
     setServerError(null);
@@ -210,6 +225,19 @@ export default function RegisterPage() {
         <Button type="submit" isLoading={isSubmitting}>
           {t("register.submit")}
         </Button>
+
+        <div className="relative my-2 flex items-center justify-center">
+          <span className="w-full border-t" />
+          <span className="absolute bg-background px-2 text-xs text-muted-foreground">
+            {t("login.orContinueWith")}
+          </span>
+        </div>
+
+        <GoogleSignInButton
+          text="signup_with"
+          onCredential={handleGoogleCredential}
+          onError={(message) => setServerError({ message, kind: "other" })}
+        />
       </form>
     </AuthLayout>
   );

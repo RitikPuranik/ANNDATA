@@ -143,7 +143,7 @@ function DashboardContent(){
      <span className="avatar">{initials(user.fullName)}</span>
      <span className="min-w-0">
       <b className="block truncate">{user.fullName}</b>
-      <small className="block truncate">{ROLE_LABEL[user.role] ?? "Farmer"} · {user.mobile}</small>
+      <small className="block truncate">{ROLE_LABEL[user.role] ?? "Farmer"}{user.mobile ? ` · ${user.mobile}` : ""}</small>
      </span>
      <ChevronRight className="h-4 w-4 shrink-0"/>
     </Link>

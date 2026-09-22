@@ -11,8 +11,12 @@ export interface AuthenticatedUserContext {
 export interface PublicUserDTO {
   id: string;
   fullName: string;
-  mobile: string;
+  mobile: string | null;
   email: string | null;
+  /** True if this account has a Google identity linked to it. */
+  hasGoogleLinked: boolean;
+  /** True if this account can log in with mobile + password. */
+  hasPassword: boolean;
   role: UserRole;
   accountStatus: AccountStatus;
   preferredLanguage: Language;
@@ -34,6 +38,10 @@ export interface RegisterInput {
 export interface LoginInput {
   mobile: string;
   password: string;
+}
+
+export interface GoogleLoginInput {
+  idToken: string;
 }
 
 export interface RequestMeta {

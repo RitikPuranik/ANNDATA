@@ -24,6 +24,15 @@ const envObjectSchema = z.object({
   FRONTEND_URL: z.string().default("http://localhost:3000"),
   BACKEND_URL: z.string().default("http://localhost:4000"),
 
+  // Sign in with Google. The OAuth client's "Web application" client ID
+  // from Google Cloud Console — shared with the frontend (it is not a
+  // secret; the trust boundary is the audience check on the ID token
+  // server-side, in google.service.ts). Left optional/empty so the rest
+  // of the app boots fine in environments where Google sign-in isn't
+  // configured yet; the /api/auth/google route itself rejects requests
+  // when it's unset.
+  GOOGLE_CLIENT_ID: z.string().optional().default(""),
+
   REDIS_URL: z.string().optional(),
 
   POSTHOG_API_KEY: z.string().optional().default(""),

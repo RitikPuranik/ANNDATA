@@ -214,10 +214,24 @@ model User {
   publicId String @unique @default(uuid())
 
   fullName     String
-  mobile       String        @unique
+  // Nullable: a user who signs up via Google may not supply a mobile
+  // number at signup time. Still unique when present — see the partial
+  // unique index added in the add_google_oauth migration (Postgres
+  // treats multiple NULLs as distinct, so plain @unique already allows
+  // any number of mobile-less rows without a workaround).
+  mobile       String?       @unique
   email        String?       @unique
   buyerProfile BuyerProfile?
-  passwordHash String
+  // Nullable: Google-authenticated users never set a local password.
+  // authService methods that need one (changePassword, etc.) must check
+  // for null and reject with a clear "no password set" error rather than
+  // assuming every user has one.
+  passwordHash String?
+
+  // Google OAuth (Sign in with Google). Null for password-based accounts
+  // that have never linked Google. Unique so a Google account can only
+  // ever be attached to one Anndata user.
+  googleId String? @unique
 
   role          UserRole
   accountStatus AccountStatus @default(PENDING_VERIFICATION)
