@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Building2, Handshake, LineChart, Package, Plus, Scale, ShieldCheck, Sprout, Warehouse, Wheat, ChevronRight, Search, TrendingUp, Store, Truck, CircleDollarSign, Sparkles, BadgeCheck, Users, MapPinned } from "lucide-react";
 import { CropSticker } from "@/components/crops/CropSticker";
+import { CropVisual, FarmVisual } from "@/components/crops/CropVisual";
 import Link from "next/link";
 import Image from "next/image";
 import { RoleProtectedPage } from "@/components/RoleProtectedPage";
@@ -70,11 +71,13 @@ function RecentProduce(){
  </Card>;
 }
 
-function CategoryCard({title,description,icon,kind,href,ribbon}:{title:string;description:string;icon:React.ReactNode;kind:string;href:string;ribbon?:string}){
+function CategoryCard({title,description,icon,kind,href,ribbon,visual}:{title:string;description:string;icon:React.ReactNode;kind:string;href:string;ribbon?:string;visual?:React.ReactNode}){
  return <Link href={href} className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition hover:border-[#a8842f] hover:shadow-lg">
-  <div className={`img-zoom relative flex h-[130px] w-full items-center justify-center ${TILE_STYLE[kind] ?? "bg-[#f1f3f6]"}`}>
-   {ribbon && <span className="ribbon"><Sparkles className="h-3 w-3"/> {ribbon}</span>}
-   <span className="[&>svg]:h-11 [&>svg]:w-11" aria-hidden>{icon}</span>
+  <div className={`img-zoom relative h-[130px] w-full overflow-hidden ${TILE_STYLE[kind] ?? "bg-[#f1f3f6]"}`}>
+   {visual && <div className="absolute inset-0">{visual}</div>}
+   <div className="absolute inset-0 bg-black/[.03]" />
+   {ribbon && <span className="ribbon z-10"><Sparkles className="h-3 w-3"/> {ribbon}</span>}
+   {!visual && <span className="relative z-10 flex h-full w-full items-center justify-center [&>svg]:h-11 [&>svg]:w-11" aria-hidden>{icon}</span>}
   </div>
   <div className="flex items-center justify-between gap-2 px-4 py-3">
    <span className="min-w-0"><b className="block truncate text-sm font-bold text-[#171714]">{title}</b><small className="block truncate text-xs text-muted-foreground">{description}</small></span>
@@ -84,9 +87,15 @@ function CategoryCard({title,description,icon,kind,href,ribbon}:{title:string;de
 }
 
 function MarketplaceShortcuts(){
+ const visuals=[
+  <FarmVisual key="farm" seed="dashboard-farm" name="My Farms" className="h-full w-full" />,
+  <CropVisual key="crops" name="Wheat" category="Cereal" variant="cover" className="h-full w-full" />,
+  <div key="market" className="relative h-full w-full"><img src="/images/front.jpg" alt="" className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" /></div>,
+  <CropVisual key="sell" name="Tomato" category="Vegetable" variant="cover" className="h-full w-full" />,
+ ];
  return <section className="mt-7 fade-in-up d1">
   <div className="flex items-end justify-between mb-4"><div><h2 className="section-title">What do you want to do?</h2><p className="text-sm text-muted-foreground mt-1">Simple shortcuts for your farm, crops and market.</p></div><Link href="/market" className="text-sm font-bold flex items-center gap-1">See market <ArrowRight className="h-4 w-4"/></Link></div>
-  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{ACTIONS.map((a,i)=><CategoryCard key={a.href} title={a.title} description={a.description} icon={a.icon} kind={a.kind} href={a.href} ribbon={i===0?"Popular":i===2?"Live prices":undefined}/>)}</div>
+  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{ACTIONS.map((a,i)=><CategoryCard key={a.href} title={a.title} description={a.description} icon={a.icon} kind={a.kind} href={a.href} ribbon={i===0?"Popular":i===2?"Live prices":undefined} visual={visuals[i]}/>)}</div>
  </section>;
 }
 
