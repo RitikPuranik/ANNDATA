@@ -134,6 +134,33 @@ const envObjectSchema = z.object({
   // website-issued code. Ignored in production, because User.mobile is not
   // OTP-verified and phone equality alone is not proof of identity.
   WHATSAPP_DEV_AUTO_LINK_BY_MOBILE: strictBoolean,
+
+  // Transactional email (welcome, password reset, receipts). Disabled by
+  // default: with EMAIL_ENABLED=false no API key is required and every
+  // send is only logged (see MockEmailProvider) — mirrors the
+  // WHATSAPP_ENABLED / WAREHOUSE_*_PROVIDER_ENABLED pattern above.
+  EMAIL_ENABLED: strictBoolean,
+  EMAIL_PROVIDER: z.enum(["resend", "emailjs"]).default("emailjs"),
+  // Inbox that receives "Contact support" widget submissions
+  // (see notifications/contactSupport.routes.ts). Falls back to
+  // EMAIL_FROM_ADDRESS below if unset.
+  CONTACT_SUPPORT_TO_EMAIL: z.string().optional().default(""),
+  RESEND_API_KEY: z.string().optional().default(""),
+  RESEND_API_BASE_URL: z.string().url().default("https://api.resend.com"),
+  EMAIL_FROM_ADDRESS: z.string().default("notifications@anndata.app"),
+  EMAIL_FROM_NAME: z.string().default("Anndata"),
+  EMAIL_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  EMAIL_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+
+  // EmailJS (https://www.emailjs.com) — used when EMAIL_PROVIDER="emailjs".
+  // Same disabled-by-default posture as the rest of this block: these are
+  // only required once EMAIL_ENABLED=true and EMAIL_PROVIDER=emailjs (see
+  // superRefine below).
+  EMAILJS_API_BASE_URL: z.string().url().default("https://api.emailjs.com"),
+  EMAILJS_SERVICE_ID: z.string().optional().default(""),
+  EMAILJS_TEMPLATE_ID: z.string().optional().default(""),
+  EMAILJS_PUBLIC_KEY: z.string().optional().default(""),
+  EMAILJS_PRIVATE_KEY: z.string().optional().default(""),
 });
 
 const envSchema = envObjectSchema.superRefine((value, ctx) => {
@@ -160,6 +187,25 @@ const envSchema = envObjectSchema.superRefine((value, ctx) => {
       path: ["GEMINI_API_KEY"],
       message: "GEMINI_API_KEY is required when WHATSAPP_AI_PROVIDER=gemini",
     });
+  }
+  if (value.EMAIL_ENABLED && value.EMAIL_PROVIDER === "resend" && !value.RESEND_API_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["RESEND_API_KEY"],
+      message: "RESEND_API_KEY is required when EMAIL_ENABLED=true and EMAIL_PROVIDER=resend",
+    });
+  }
+  if (value.EMAIL_ENABLED && value.EMAIL_PROVIDER === "emailjs") {
+    const required = ["EMAILJS_SERVICE_ID", "EMAILJS_TEMPLATE_ID", "EMAILJS_PUBLIC_KEY"] as const;
+    for (const key of required) {
+      if (!value[key]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when EMAIL_ENABLED=true and EMAIL_PROVIDER=emailjs`,
+        });
+      }
+    }
   }
 });
 

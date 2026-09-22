@@ -15,12 +15,14 @@ import { ResetPasswordFormValues, resetPasswordFormSchema } from "@/features/aut
 import { authApi } from "@/services/authApi";
 import { ApiRequestError } from "@/types/api";
 import { applyServerFieldErrors } from "@/lib/formErrors";
+import { ContactSupportForm } from "@/components/ContactSupportForm";
 
 function ResetPasswordForm() {
   const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const tokenFromEmailLink = searchParams.get("token") ?? "";
 
   const {
     register,
@@ -30,7 +32,7 @@ function ResetPasswordForm() {
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordFormSchema),
-    defaultValues: { token: searchParams.get("token") ?? "" },
+    defaultValues: { token: tokenFromEmailLink },
   });
 
   const newPasswordValue = watch("newPassword") ?? "";
@@ -51,21 +53,32 @@ function ResetPasswordForm() {
       title={t("resetPassword.title")}
       subtitle={t("resetPassword.subtitle")}
       footer={
-        <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-          {t("forgotPassword.backToLogin")}
-        </Link>
+        <div className="space-y-3">
+          <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+            {t("forgotPassword.backToLogin")}
+          </Link>
+          <div>
+            <ContactSupportForm context="Reset password" />
+          </div>
+        </div>
       }
     >
       <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
         {serverError && <Alert variant="error">{serverError}</Alert>}
 
         <div>
-          <Label htmlFor="token">{t("resetPassword.token")}</Label>
-          <Input id="token" hasError={!!errors.token} {...register("token")} />
-          {errors.token ? (
-            <FieldError>{t(errors.token.message!)}</FieldError>
+          {tokenFromEmailLink && !errors.token ? (
+            <input type="hidden" {...register("token")} />
           ) : (
-            <FieldHint>{t("resetPassword.tokenHint")}</FieldHint>
+            <>
+              <Label htmlFor="token">{t("resetPassword.token")}</Label>
+              <Input id="token" hasError={!!errors.token} {...register("token")} />
+              {errors.token ? (
+                <FieldError>{t(errors.token.message!)}</FieldError>
+              ) : (
+                <FieldHint>{t("resetPassword.tokenHint")}</FieldHint>
+              )}
+            </>
           )}
         </div>
 
