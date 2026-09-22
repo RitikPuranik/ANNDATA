@@ -69,7 +69,7 @@ export function ContactSupportForm({ context }: { context?: string }) {
   if (status === "sent") {
     return (
       <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-        Thanks — we've got your message and will get back to you soon.
+        Thanks — we&apos;ve got your message and will get back to you soon.
       </div>
     );
   }
