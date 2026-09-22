@@ -27,6 +27,19 @@ const nextConfig = {
       },
     ],
   },
+
+  // Keep browser API/auth traffic same-origin in production. The rewrite
+  // proxies /api/* to Render, so the refresh cookie becomes a first-party
+  // cookie for the Vercel frontend instead of a third-party Render cookie.
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://anndata-ovra.onrender.com/api/:path*",
+      },
+    ];
+  },
+
   // Only pulls in the icon components actually used on each page instead of
   // bundling the whole lucide-react library into every route's JS chunk.
   experimental: {
