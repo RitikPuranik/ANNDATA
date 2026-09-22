@@ -19,17 +19,31 @@ import { ApiRequestError } from "@/types/api";
 import { lotApi } from "@/services/lotApi";
 import { tradeOfferApi } from "@/services/tradeApi";
 
+// NOTE: these tiles used to hotlink photos straight from commons.wikimedia.org.
+// That works on an open home/dev connection, but many production hosts, office
+// and campus networks block or throttle third-party domains they don't control,
+// so the images silently fail to load once deployed even though the rest of the
+// app works fine. Using a local icon + gradient tile removes that external
+// dependency entirely, so the dashboard looks the same everywhere, with zero
+// network risk.
+const TILE_STYLE: Record<string,string> = {
+ crop: "bg-gradient-to-br from-[#eaf3df] to-[#cfe3b7] text-[#3f5d24]",
+ crops: "bg-gradient-to-br from-[#fdeecb] to-[#f3d68f] text-[#7a5a10]",
+ market: "bg-gradient-to-br from-[#e4ecf7] to-[#bcd0ec] text-[#274a7a]",
+ sell: "bg-gradient-to-br from-[#171714] to-[#3a382f] text-[#e1bd4f]",
+};
+
 const ACTIONS=[
- {title:"My Farms",description:"See your farms and fields.",href:"/farms",icon:<Sprout/>,kind:"crop",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=400"},
- {title:"My Crops",description:"Manage the crops you are growing.",href:"/crops",icon:<Wheat/>,kind:"crops",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Colorful%20winter%20Vegetables%20-01.jpg?width=400"},
- {title:"Market",description:"See today's local market prices.",href:"/market",icon:<Store/>,kind:"market",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Vegetable%20market%2C%20Ahmedabad.jpg?width=400"},
- {title:"Sell Produce",description:"List your crop for buyers.",href:"/lots/new",icon:<Package/>,kind:"sell",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Farmers%27%20Market%20%28Apni%20Mandi%29%20in%20Chandigarh.jpg?width=400"},
+ {title:"My Farms",description:"See your farms and fields.",href:"/farms",icon:<Sprout/>,kind:"crop"},
+ {title:"My Crops",description:"Manage the crops you are growing.",href:"/crops",icon:<Wheat/>,kind:"crops"},
+ {title:"Market",description:"See today's local market prices.",href:"/market",icon:<Store/>,kind:"market"},
+ {title:"Sell Produce",description:"List your crop for buyers.",href:"/lots/new",icon:<Package/>,kind:"sell"},
 ];
 
 const SALE_CARDS=[
- {title:"Sell your produce today",description:"List a lot in under two minutes and reach buyers directly.",cta:"Sell now",href:"/lots/new",bg:"bg-[#171714]",text:"text-white",sub:"text-[#c9c4b4]",btn:"bg-[#e1bd4f] text-[#171714]",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Farmers%27%20Market%20%28Apni%20Mandi%29%20in%20Chandigarh.jpg?width=360"},
- {title:"Check today's mandi price",description:"Compare rates across nearby markets before you decide.",cta:"Open market",href:"/market",bg:"bg-[#e1bd4f]",text:"text-[#171714]",sub:"text-[#5a4a1c]",btn:"bg-[#171714] text-white",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Vegetable%20market%2C%20Ahmedabad.jpg?width=360"},
- {title:"Grow with your FPO",description:"Aggregate produce with other farmers for a better price.",cta:"View FPO",href:"/fpo-membership",bg:"bg-[#faf8f3] border border-[#e4ddd2]",text:"text-[#171714]",sub:"text-[#77776f]",btn:"bg-[#171714] text-white",image:"https://commons.wikimedia.org/wiki/Special:FilePath/Agriculture%20in%20India%2C%20Farmer%20Punjab.jpg?width=360"},
+ {title:"Sell your produce today",description:"List a lot in under two minutes and reach buyers directly.",cta:"Sell now",href:"/lots/new",bg:"bg-[#171714]",text:"text-white",sub:"text-[#c9c4b4]",btn:"bg-[#e1bd4f] text-[#171714]",icon:<Package/>,iconBg:"bg-white/10 text-[#e1bd4f]"},
+ {title:"Check today's mandi price",description:"Compare rates across nearby markets before you decide.",cta:"Open market",href:"/market",bg:"bg-[#e1bd4f]",text:"text-[#171714]",sub:"text-[#5a4a1c]",btn:"bg-[#171714] text-white",icon:<LineChart/>,iconBg:"bg-black/10 text-[#171714]"},
+ {title:"Grow with your FPO",description:"Aggregate produce with other farmers for a better price.",cta:"View FPO",href:"/fpo-membership",bg:"bg-[#faf8f3] border border-[#e4ddd2]",text:"text-[#171714]",sub:"text-[#77776f]",btn:"bg-[#171714] text-white",icon:<Handshake/>,iconBg:"bg-[#171714]/5 text-[#171714]"},
 ];
 
 function DashboardStats(){
@@ -56,11 +70,11 @@ function RecentProduce(){
  </Card>;
 }
 
-function CategoryCard({title,description,image,href,ribbon}:{title:string;description:string;image:string;href:string;ribbon?:string}){
+function CategoryCard({title,description,icon,kind,href,ribbon}:{title:string;description:string;icon:React.ReactNode;kind:string;href:string;ribbon?:string}){
  return <Link href={href} className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition hover:border-[#a8842f] hover:shadow-lg">
-  <div className="img-zoom img-gradient h-[130px] w-full bg-[#f1f3f6]">
+  <div className={`img-zoom relative flex h-[130px] w-full items-center justify-center ${TILE_STYLE[kind] ?? "bg-[#f1f3f6]"}`}>
    {ribbon && <span className="ribbon"><Sparkles className="h-3 w-3"/> {ribbon}</span>}
-   <img src={image} alt={title} className="h-full w-full object-cover" loading="lazy" />
+   <span className="[&>svg]:h-11 [&>svg]:w-11" aria-hidden>{icon}</span>
   </div>
   <div className="flex items-center justify-between gap-2 px-4 py-3">
    <span className="min-w-0"><b className="block truncate text-sm font-bold text-[#171714]">{title}</b><small className="block truncate text-xs text-muted-foreground">{description}</small></span>
@@ -72,7 +86,7 @@ function CategoryCard({title,description,image,href,ribbon}:{title:string;descri
 function MarketplaceShortcuts(){
  return <section className="mt-7 fade-in-up d1">
   <div className="flex items-end justify-between mb-4"><div><h2 className="section-title">What do you want to do?</h2><p className="text-sm text-muted-foreground mt-1">Simple shortcuts for your farm, crops and market.</p></div><Link href="/market" className="text-sm font-bold flex items-center gap-1">See market <ArrowRight className="h-4 w-4"/></Link></div>
-  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{ACTIONS.map((a,i)=><CategoryCard key={a.href} title={a.title} description={a.description} image={a.image} href={a.href} ribbon={i===0?"Popular":i===2?"Live prices":undefined}/>)}</div>
+  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{ACTIONS.map((a,i)=><CategoryCard key={a.href} title={a.title} description={a.description} icon={a.icon} kind={a.kind} href={a.href} ribbon={i===0?"Popular":i===2?"Live prices":undefined}/>)}</div>
  </section>;
 }
 
@@ -84,7 +98,7 @@ function SaleCards(){
     <small className={`mt-1 block text-xs leading-5 ${s.sub}`}>{s.description}</small>
     <span className={`mt-3 inline-flex items-center rounded-md px-3 py-2 text-xs font-bold transition group-hover:brightness-110 ${s.btn}`}>{s.cta}</span>
    </span>
-   <span className="img-zoom h-20 w-20 flex-none overflow-hidden rounded-md"><img src={s.image} alt="" className="h-full w-full object-cover" loading="lazy" /></span>
+   <span className={`flex h-20 w-20 flex-none items-center justify-center rounded-md ${s.iconBg}`} aria-hidden><span className="[&>svg]:h-9 [&>svg]:w-9">{s.icon}</span></span>
   </Link>)}
  </section>;
 }
