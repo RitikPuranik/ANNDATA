@@ -9,7 +9,7 @@ function digest(parts: unknown[]) {
 }
 
 /**
- * Redis is optional in FarmLink. Cache entries are versioned rather than
+ * Redis is optional in Anndata. Cache entries are versioned rather than
  * deleted one-by-one so an import/sync can invalidate the whole bounded
  * read model safely, without ever putting a coordinate into the key.
  */

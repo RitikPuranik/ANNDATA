@@ -5,6 +5,7 @@ import { AuthService } from "./auth.service";
 import {
   ChangePasswordRequestBody,
   ForgotPasswordRequestBody,
+  GoogleLoginRequestBody,
   LoginRequestBody,
   RegisterRequestBody,
   ResetPasswordRequestBody,
@@ -37,6 +38,13 @@ export function createAuthController(authService: AuthService) {
     const { user, tokens } = await authService.login(body, meta(req));
     setRefreshCookie(res, tokens.refreshToken, tokens.refreshTokenExpiresAt);
     return sendSuccess(res, { user, accessToken: tokens.accessToken }, "Logged in successfully.");
+  }
+
+  async function googleLogin(req: Request, res: Response) {
+    const body = req.body as GoogleLoginRequestBody;
+    const { user, tokens } = await authService.loginWithGoogle({ idToken: body.idToken }, meta(req));
+    setRefreshCookie(res, tokens.refreshToken, tokens.refreshTokenExpiresAt);
+    return sendSuccess(res, { user, accessToken: tokens.accessToken }, "Logged in with Google successfully.");
   }
 
   async function refresh(req: Request, res: Response) {
@@ -95,5 +103,16 @@ export function createAuthController(authService: AuthService) {
     return sendSuccess(res, null, "Password has been reset. Please log in with your new password.");
   }
 
-  return { register, login, refresh, me, logout, logoutAll, changePassword, forgotPassword, resetPassword };
+  return {
+    register,
+    login,
+    googleLogin,
+    refresh,
+    me,
+    logout,
+    logoutAll,
+    changePassword,
+    forgotPassword,
+    resetPassword,
+  };
 }

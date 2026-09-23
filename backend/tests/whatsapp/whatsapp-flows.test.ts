@@ -34,7 +34,7 @@ describe("commands (7–15)", () => {
     expect(out).toContain("Max: ₹2,520/Q");
     expect(out).toMatch(/Data timestamp:\n\d{1,2} \w{3} \d{4}/);
     expect(h.provider.last()!.kind).toBe("cta_url");
-    expect((h.provider.last()!.extra as any).url).toBe("https://app.farmlink.test/market");
+    expect((h.provider.last()!.extra as any).url).toBe("https://app.anndata.test/market");
   });
 
   it("8b. 'gehu ka bhav Bhopal mein' prefers the named district", async () => {
@@ -75,7 +75,7 @@ describe("commands (7–15)", () => {
     await h.sendAction("opt:1");
     const texts = h.provider.sent.slice(-2);
     expect(texts[0]!.kind).toBe("buttons");
-    expect((texts[1]!.extra as any).url).toBe("https://app.farmlink.test/lots/lot-a");
+    expect((texts[1]!.extra as any).url).toBe("https://app.anndata.test/lots/lot-a");
   });
 
   it("10. 'offers' lists offers with buyer, quantity, rate, total and status", async () => {
@@ -132,7 +132,7 @@ describe("commands (7–15)", () => {
     expect(m.body).toContain("Live location is currently unavailable");
     expect(m.body).not.toContain("drv-secret");
     expect(m.body).not.toContain("veh-secret");
-    expect((m.extra as any).url).toBe("https://app.farmlink.test/shipments/sh-1");
+    expect((m.extra as any).url).toBe("https://app.anndata.test/shipments/sh-1");
   });
 
   it("12b. with GPS it shows only the recorded timestamp", async () => {
@@ -147,7 +147,7 @@ describe("commands (7–15)", () => {
     const h = buildHarness();
     await h.send("help");
     const out = h.provider.last()!.body;
-    for (const w of ["FarmLink Farmer Assistant", "\"buyer\"", "\"bhav\"", "\"my lot\"", "\"offers\"", "\"payment\"", "\"shipment\""]) expect(out).toContain(w);
+    for (const w of ["Anndata Farmer Assistant", "\"buyer\"", "\"bhav\"", "\"my lot\"", "\"offers\"", "\"payment\"", "\"shipment\""]) expect(out).toContain(w);
   });
 
   it("14–15. Hindi and Hinglish commands are answered in that language", async () => {
@@ -165,17 +165,17 @@ describe("commands (7–15)", () => {
     expect(h.provider.last()!.body).toContain("shipment");
   });
 
-  it("no dead ends: unknown text and website-only requests get a FarmLink link", async () => {
+  it("no dead ends: unknown text and website-only requests get a Anndata link", async () => {
     const h = buildHarness();
     await h.send("Show me complete details of my business");
     let m = h.provider.last()!;
     expect(m.kind).toBe("cta_url");
-    expect((m.extra as any).url).toBe("https://app.farmlink.test/dashboard");
+    expect((m.extra as any).url).toBe("https://app.anndata.test/dashboard");
     await h.send("show my transaction history");
     m = h.provider.last()!;
-    expect((m.extra as any).url).toBe("https://app.farmlink.test/net-realization");
+    expect((m.extra as any).url).toBe("https://app.anndata.test/net-realization");
     await h.send("advanced transport planning");
-    expect((h.provider.last()!.extra as any).url).toBe("https://app.farmlink.test/logistics");
+    expect((h.provider.last()!.extra as any).url).toBe("https://app.anndata.test/logistics");
   });
 });
 
@@ -196,7 +196,7 @@ describe("buyer flow (16–18, lots, matching)", () => {
     expect(h.provider.last()!.kind).toBe("buttons");
     expect(h.provider.last()!.body).toContain("What is the quality?");
     await h.sendAction("opt:1");
-    expect(h.provider.last()!.body).toContain("Create this lot on FarmLink?");
+    expect(h.provider.last()!.body).toContain("Create this lot on Anndata?");
     expect(h.provider.last()!.body).toContain("Kharpa, Sehore");
     expect(h.fakes.createLotCalls).toBe(0); // nothing is created before confirmation
     await h.sendAction("opt:1"); // Yes
@@ -324,7 +324,7 @@ describe("buyer flow (16–18, lots, matching)", () => {
     await fullFlow(h);
     const m = h.provider.last()!;
     expect(m.kind).toBe("cta_url");
-    expect((m.extra as any).url).toBe("https://app.farmlink.test/farms/new");
+    expect((m.extra as any).url).toBe("https://app.anndata.test/farms/new");
     expect(h.fakes.createLotCalls).toBe(0);
   });
 
@@ -332,7 +332,7 @@ describe("buyer flow (16–18, lots, matching)", () => {
     const h = buildHarness();
     h.fakes.farmerCrops = [];
     await fullFlow(h);
-    expect((h.provider.last()!.extra as any).url).toBe("https://app.farmlink.test/crops");
+    expect((h.provider.last()!.extra as any).url).toBe("https://app.anndata.test/crops");
   });
 
   it("with several farms it asks which one", async () => {
@@ -510,7 +510,7 @@ describe("security (20) and identity", () => {
     h.repo.users.get("u-1")!.accountStatus = "SUSPENDED";
     h.fakes.lots.push(wheatLot({ publicId: "lot-a" }));
     await h.send("my lot");
-    expect(h.provider.all()).toContain("you need a FarmLink account");
+    expect(h.provider.all()).toContain("you need a Anndata account");
     expect(h.provider.all()).not.toContain("lot-a");
     expect(h.fakes.serviceUsers).toHaveLength(0);
   });
@@ -523,7 +523,7 @@ describe("security (20) and identity", () => {
     expect(h.provider.all(OTHER_PHONE)).toContain("Done!");
     expect(h.repo.links.get("u-2")!.phone).toBe(OTHER_PHONE);
     await h.send("help", { from: OTHER_PHONE });
-    expect(h.provider.last(OTHER_PHONE)!.body).toContain("FarmLink Farmer Assistant");
+    expect(h.provider.last(OTHER_PHONE)!.body).toContain("Anndata Farmer Assistant");
     // single use
     await h.send("LINK " + code, { from: "919800000009" });
     expect(h.provider.last("919800000009")!.body).toContain("not valid or has expired");
@@ -554,7 +554,7 @@ describe("security (20) and identity", () => {
     expect(off.provider.last(OTHER_PHONE)!.body).toContain("No registration needed"); // a guest, not the farmer menu
     const on = buildHarness({ config: { devAutoLinkByMobile: true } });
     await on.send("help", { from: OTHER_PHONE });
-    expect(on.provider.last(OTHER_PHONE)!.body).toContain("FarmLink Farmer Assistant");
+    expect(on.provider.last(OTHER_PHONE)!.body).toContain("Anndata Farmer Assistant");
   });
 });
 
@@ -584,7 +584,7 @@ describe("delivery, rate limiting, idempotency (28–30) and AI", () => {
     const h = buildHarness({ config: { rateLimitPerMinute: 3 } });
     for (let i = 0; i < 8; i++) await h.send("help");
     const replies = h.provider.texts();
-    expect(replies.filter((t) => t.includes("FarmLink Farmer Assistant"))).toHaveLength(3);
+    expect(replies.filter((t) => t.includes("Anndata Farmer Assistant"))).toHaveLength(3);
     expect(replies.filter((t) => t.includes("too fast"))).toHaveLength(1);
     expect(h.repo.inbound().filter((m) => m.status === "IGNORED")).toHaveLength(5);
   });

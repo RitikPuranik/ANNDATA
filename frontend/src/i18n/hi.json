@@ -20,6 +20,7 @@
   "login.mobile": "मोबाइल नंबर",
   "login.password": "पासवर्ड",
   "login.submit": "लॉग इन करें",
+  "login.orContinueWith": "या इसके साथ जारी रखें",
   "login.forgotPassword": "पासवर्ड भूल गए?",
   "login.noAccount": "फार्मलिंक में नए हैं?",
   "login.createAccount": "खाता बनाएं",

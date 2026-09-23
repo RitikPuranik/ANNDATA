@@ -73,6 +73,10 @@ export const loginSchema = z.object({
   password: z.string({ required_error: "Password is required." }).min(1, "Password is required."),
 });
 
+export const googleLoginSchema = z.object({
+  idToken: z.string({ required_error: "Google ID token is required." }).min(1, "Google ID token is required."),
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required."),
@@ -94,6 +98,7 @@ export const resetPasswordSchema = z.object({
 
 export type RegisterRequestBody = z.infer<typeof registerRequestSchema>;
 export type LoginRequestBody = z.infer<typeof loginSchema>;
+export type GoogleLoginRequestBody = z.infer<typeof googleLoginSchema>;
 export type ChangePasswordRequestBody = z.infer<typeof changePasswordSchema>;
 export type ForgotPasswordRequestBody = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordRequestBody = z.infer<typeof resetPasswordSchema>;

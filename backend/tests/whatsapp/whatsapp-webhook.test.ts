@@ -79,11 +79,11 @@ describe("WhatsApp webhook — verification, signature, payload, idempotency", (
     const res = await h.send("my lot", { from: OTHER_PHONE });
     expect(res.status).toBe(200);
     const out = h.provider.all(OTHER_PHONE);
-    expect(out).toContain("you need a FarmLink account");
+    expect(out).toContain("you need a Anndata account");
     expect(h.provider.last(OTHER_PHONE)!.kind).toBe("cta_url");
-    expect((h.provider.last(OTHER_PHONE)!.extra as any).text).toBe("Continue on FarmLink");
+    expect((h.provider.last(OTHER_PHONE)!.extra as any).text).toBe("Continue on Anndata");
     expect(out).not.toContain("Wheat");
-    expect(h.fakes.serviceUsers).toHaveLength(0); // no FarmLink service was called
+    expect(h.fakes.serviceUsers).toHaveLength(0); // no Anndata service was called
   });
 
   it("6c. an unknown number's first 'hi' gets the guest menu, not a dead end", async () => {

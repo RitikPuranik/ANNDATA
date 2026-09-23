@@ -5,7 +5,7 @@ import { ExternalWarehouseRecord, WarehouseProviderType } from "./providers/ware
 // ---------------------------------------------------------------------------
 // Provider-specific raw data -> canonical ExternalWarehouseRecord (done by
 // each provider) -> THIS normalization step -> validation
-// (warehouse-validation.service.ts) -> FarmLink-compatible Warehouse input.
+// (warehouse-validation.service.ts) -> Anndata-compatible Warehouse input.
 //
 // Nothing here invents a value. Every field that cannot be confidently
 // parsed/converted becomes `null` plus a warning explaining why — never a

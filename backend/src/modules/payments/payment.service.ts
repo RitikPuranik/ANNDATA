@@ -134,7 +134,7 @@ export class PaymentService {
     const quantityUnitDivisorKg = convertQuantityToKg(1, priceQuantityUnit);
     const grossAmount = calculateGrossAmount(decimalToNumber(tradeOffer.offeredPrice), handoff.acceptedQuantity, quantityUnitDivisorKg);
     // Step 8 — "ONLY implement adjustments already represented by
-    // existing FarmLink business rules": no quality-shortfall/logistics
+    // existing Anndata business rules": no quality-shortfall/logistics
     // deduction rule is implemented anywhere else in this codebase today,
     // so adjustments is always 0 in this version (see the module's own
     // limitations note in the final report) rather than an invented

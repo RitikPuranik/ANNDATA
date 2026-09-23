@@ -20,7 +20,7 @@ function digest(parts: unknown[]) {
   return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
 }
 
-/** Redis is optional in FarmLink — every function here degrades to "no
+/** Redis is optional in Anndata — every function here degrades to "no
  *  cache" (a plain miss on read, a silent no-op on write) rather than
  *  ever failing the request it's supporting. */
 export async function getForecastCache<T>(kind: string, parts: unknown[]): Promise<T | null> {

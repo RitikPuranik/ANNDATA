@@ -29,6 +29,16 @@ export const authApi = {
     return data.user;
   },
 
+  async loginWithGoogle(idToken: string) {
+    const data = await apiRequest<{ user: AuthUser; accessToken: string }>("/api/auth/google", {
+      method: "POST",
+      body: { idToken },
+      skipAuthRetry: true,
+    });
+    setAccessToken(data.accessToken);
+    return data.user;
+  },
+
   async me() {
     return apiRequest<AuthUser>("/api/auth/me");
   },

@@ -3,13 +3,8 @@ import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { initSentry } from "./config/sentry";
 import { prisma } from "./config/prisma";
-import { getRedis } from "./config/redis";
-import { registerMarketSeedJob } from "./jobs/market-seed.job";
-import { registerMarketSyncJob } from "./jobs/market-sync.job";
-import { registerWarehouseSyncJob } from "./jobs/warehouse-sync.job";
 import { registerWhatsAppRecoveryJob } from "./jobs/whatsapp-recovery.job";
 import { registerKeepAliveJob } from "./jobs/keep-alive.job";
-import { runAllSyncs } from "./scripts/run-syncs";
 import { PrismaAuthRepository } from "./modules/auth/auth.repository";
 import { PrismaAuditService } from "./modules/audit/audit.service";
 import { PrismaReferenceDataRepository } from "./modules/reference-data/reference-data.repository";
@@ -65,81 +60,16 @@ async function main() {
   // for itself whether it should actually schedule anything (env flags,
   // provider configuration, production-only guards) and returns the
   // ScheduledTask (or null) so shutdown() can stop it cleanly.
-  const marketSeedTask: ScheduledTask | null = registerMarketSeedJob({ prisma, auditService });
-  const marketSyncTask: ScheduledTask | null = registerMarketSyncJob({ prisma, auditService });
-  const warehouseSyncTask: ScheduledTask | null = registerWarehouseSyncJob({ prisma, auditService });
   const whatsappRecoveryTask: ScheduledTask | null = registerWhatsAppRecoveryJob(app.locals.whatsapp);
   const keepAliveTask: ScheduledTask | null = registerKeepAliveJob();
 
   const server = app.listen(env.PORT, () => {
-    logger.info(`FarmLink auth service listening on ${env.BACKEND_URL} (port ${env.PORT})`);
+    logger.info(`Anndata auth service listening on ${env.BACKEND_URL} (port ${env.PORT})`);
     logger.info(`API docs available at ${env.BACKEND_URL}/api/docs`);
   });
 
-  // ============================================================
-  // STARTUP FULL SYNC
-  // Set to false, or comment out the runAllSyncs() block, when
-  // you do not want the full warehouse + market-data sync on startup.
-  // IMPORTANT: market data starts from offset 289500 for this startup run.
-  // The API starts listening first so Render can detect the port.
-  // ============================================================
-  const RUN_STARTUP_FULL_SYNC = true;
-
-  let startupSyncLockRedis: ReturnType<typeof getRedis> = null;
-  let startupSyncLockToken: string | null = null;
-
-  if (RUN_STARTUP_FULL_SYNC) {
-    const runStartupSync = async () => {
-      startupSyncLockRedis = getRedis();
-
-      // Prevent two Render instances/restarts from running the large
-      // historical import at the same time. If Redis is unavailable,
-      // the sync still runs, preserving local/dev behavior.
-      if (startupSyncLockRedis) {
-        startupSyncLockToken = `${process.pid}:${Date.now()}`;
-        const acquired = await startupSyncLockRedis.set(
-          "market-data:startup-full-sync-lock",
-          startupSyncLockToken,
-          "PX",
-          6 * 60 * 60_000,
-          "NX",
-        );
-
-        if (acquired !== "OK") {
-          logger.info("Startup full sync skipped: another instance is already running it.");
-          return;
-        }
-      }
-
-      try {
-        logger.info("Starting full startup synchronization...");
-        await runAllSyncs(prisma, auditService, {
-          full: true,
-          marketStartOffset: 289500,
-        });
-        logger.info("Full startup synchronization completed.");
-      } finally {
-        if (
-          startupSyncLockRedis &&
-          startupSyncLockToken &&
-          (await startupSyncLockRedis.get("market-data:startup-full-sync-lock")) ===
-            startupSyncLockToken
-        ) {
-          await startupSyncLockRedis.del("market-data:startup-full-sync-lock");
-        }
-      }
-    };
-
-    runStartupSync().catch((err) =>
-      logger.error({ err }, "Full startup synchronization failed."),
-    );
-  }
-
   async function shutdown(signal: string) {
     logger.info(`${signal} received — shutting down gracefully`);
-    marketSeedTask?.stop();
-    marketSyncTask?.stop();
-    warehouseSyncTask?.stop();
     whatsappRecoveryTask?.stop();
     keepAliveTask?.stop();
     server.close(async () => {

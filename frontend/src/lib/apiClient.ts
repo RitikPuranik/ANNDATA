@@ -1,6 +1,11 @@
 import { ApiRequestError, ApiResponse } from "@/types/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// Production uses the Next.js same-origin /api proxy. Development keeps the
+// configurable direct backend URL so localhost continues to work normally.
+const API_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? ""
+    : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000");
 
 // Held in module scope (not localStorage/sessionStorage — see auth.utils.ts
 // on the backend for why refresh tokens are httpOnly-cookie-only). This is
@@ -30,7 +35,7 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
     headers,
-    credentials: "include", // sends the httpOnly refresh cookie
+    credentials: "include",
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
@@ -53,9 +58,7 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
 
 /**
  * On a 401, attempt exactly one refresh (deduplicated across concurrent
- * requests via refreshInFlight) and retry the original request once. Never
- * retries a second time — that's how infinite refresh loops happen (spec
- * section 47).
+ * requests via refreshInFlight) and retry the original request once.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   try {
@@ -69,6 +72,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         refreshInFlight = null;
       });
     }
+
     const refreshed = await refreshInFlight;
     if (!refreshed) throw err;
 

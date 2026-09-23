@@ -268,7 +268,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="drawer-head"><Brand /><button className="icon-btn" onClick={() => setDrawerOpen(false)}><X /></button></div>
         <Link href="/profile" className="app-user-card" onClick={() => setDrawerOpen(false)}>
           <span className="avatar">{initials(user.fullName)}</span>
-          <span className="min-w-0"><b className="block truncate">{user.fullName}</b><small className="block truncate">{ROLE_LABEL[user.role] ?? "Farmer"} · {user.mobile}</small></span>
+          <span className="min-w-0"><b className="block truncate">{user.fullName}</b><small className="block truncate">{ROLE_LABEL[user.role] ?? "Farmer"}{user.mobile ? ` · ${user.mobile}` : ""}</small></span>
         </Link>
         <nav className="mobile-drawer-nav">{navItems.map((item) => <NavLink key={item.href} item={item} onClick={() => setDrawerOpen(false)} />)}</nav>
         <button className="app-logout" onClick={handleLogout} disabled={loggingOut}><LogOut className="h-4 w-4" /> {loggingOut ? "Signing out…" : "Sign out"}</button>

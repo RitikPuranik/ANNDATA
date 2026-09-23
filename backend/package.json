@@ -1,7 +1,7 @@
 {
-  "name": "farmlink-backend",
+  "name": "anndata-backend",
   "version": "1.0.0",
-  "description": "FarmLink Intelligence - Authentication & RBAC backend (Module 1)",
+  "description": "Anndata Intelligence - Authentication & RBAC backend (Module 1)",
   "main": "src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -14,7 +14,6 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "warehouse:import-wdra": "tsx src/modules/warehouse-intelligence/wdra-csv-import.ts",
-    "sync:all": "tsx src/scripts/run-syncs.ts",
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "test:unit": "cross-env NODE_ENV=test jest --runInBand tests/unit",
     "test:integration": "cross-env NODE_ENV=test jest --runInBand tests/integration",
@@ -29,6 +28,7 @@
     "@prisma/client": "^5.20.0",
     "@sentry/node": "^10.71.0",
     "argon2": "^0.41.1",
+    "google-auth-library": "^9.14.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

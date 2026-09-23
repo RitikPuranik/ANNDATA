@@ -1,6 +1,6 @@
 # Buyer discovery and digital offers
 
-All routes are authenticated and return FarmLink's standard response envelope.
+All routes are authenticated and return Anndata's standard response envelope.
 Buyers manage only their own profile and demands; farmers and FPO admins can
 only view matches for lots they are already authorized to manage. Public buyer
 data intentionally excludes contact details, street addresses, and precise

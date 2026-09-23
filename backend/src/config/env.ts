@@ -24,6 +24,15 @@ const envObjectSchema = z.object({
   FRONTEND_URL: z.string().default("http://localhost:3000"),
   BACKEND_URL: z.string().default("http://localhost:4000"),
 
+  // Sign in with Google. The OAuth client's "Web application" client ID
+  // from Google Cloud Console — shared with the frontend (it is not a
+  // secret; the trust boundary is the audience check on the ID token
+  // server-side, in google.service.ts). Left optional/empty so the rest
+  // of the app boots fine in environments where Google sign-in isn't
+  // configured yet; the /api/auth/google route itself rejects requests
+  // when it's unset.
+  GOOGLE_CLIENT_ID: z.string().optional().default(""),
+
   REDIS_URL: z.string().optional(),
 
   POSTHOG_API_KEY: z.string().optional().default(""),
@@ -31,7 +40,7 @@ const envObjectSchema = z.object({
 
   SENTRY_DSN: z.string().optional().default(""),
 
-  COOKIE_DOMAIN: z.string().optional().default("localhost"),
+  // Leave blank for separate frontend/API hosts. Only set this when a shared\n  // parent cookie domain is intentionally required.\n  COOKIE_DOMAIN: z.string().optional().default(""),
   MARKET_SYNC_ENABLED: z.coerce.boolean().default(false),
   MARKET_DATA_GOV_API_KEY: z.string().optional().default(""),
   MARKET_DATA_GOV_RESOURCE_ID: z.string().optional().default(""),
@@ -134,6 +143,31 @@ const envObjectSchema = z.object({
   // website-issued code. Ignored in production, because User.mobile is not
   // OTP-verified and phone equality alone is not proof of identity.
   WHATSAPP_DEV_AUTO_LINK_BY_MOBILE: strictBoolean,
+
+  // Transactional email (welcome, password reset, receipts). Disabled by
+  // default: with EMAIL_ENABLED=false no API key is required and every
+  // send is only logged (see MockEmailProvider) — mirrors the
+  // WHATSAPP_ENABLED / WAREHOUSE_*_PROVIDER_ENABLED pattern above.
+  EMAIL_ENABLED: strictBoolean,
+  EMAIL_PROVIDER: z.enum(["emailjs"]).default("emailjs"),
+  // Inbox that receives "Contact support" widget submissions
+  // (see notifications/contactSupport.routes.ts). Falls back to
+  // EMAIL_FROM_ADDRESS below if unset.
+  CONTACT_SUPPORT_TO_EMAIL: z.string().optional().default(""),
+  EMAIL_FROM_ADDRESS: z.string().default("notifications@anndata.app"),
+  EMAIL_FROM_NAME: z.string().default("Anndata"),
+  EMAIL_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  EMAIL_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+
+  // EmailJS (https://www.emailjs.com) — used when EMAIL_PROVIDER="emailjs".
+  // Same disabled-by-default posture as the rest of this block: these are
+  // only required once EMAIL_ENABLED=true and EMAIL_PROVIDER=emailjs (see
+  // superRefine below).
+  EMAILJS_API_BASE_URL: z.string().url().default("https://api.emailjs.com"),
+  EMAILJS_SERVICE_ID: z.string().optional().default(""),
+  EMAILJS_TEMPLATE_ID: z.string().optional().default(""),
+  EMAILJS_PUBLIC_KEY: z.string().optional().default(""),
+  EMAILJS_PRIVATE_KEY: z.string().optional().default(""),
 });
 
 const envSchema = envObjectSchema.superRefine((value, ctx) => {
@@ -160,6 +194,18 @@ const envSchema = envObjectSchema.superRefine((value, ctx) => {
       path: ["GEMINI_API_KEY"],
       message: "GEMINI_API_KEY is required when WHATSAPP_AI_PROVIDER=gemini",
     });
+  }
+  if (value.EMAIL_ENABLED && value.EMAIL_PROVIDER === "emailjs") {
+    const required = ["EMAILJS_SERVICE_ID", "EMAILJS_TEMPLATE_ID", "EMAILJS_PUBLIC_KEY"] as const;
+    for (const key of required) {
+      if (!value[key]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when EMAIL_ENABLED=true and EMAIL_PROVIDER=emailjs`,
+        });
+      }
+    }
   }
 });
 

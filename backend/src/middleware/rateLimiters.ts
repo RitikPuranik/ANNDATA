@@ -13,7 +13,7 @@ const commonOptions: Partial<Options> = {
 };
 
 // Uses express-rate-limit's in-memory store. That's correct for a single
-// backend instance (this module's deployment target). If FarmLink later
+// backend instance (this module's deployment target). If Anndata later
 // scales to multiple backend instances behind a load balancer, swap the
 // `store` option for a Redis-backed store (REDIS_URL is already wired up in
 // config/redis.ts) so limits are shared across processes.
@@ -30,6 +30,21 @@ export function loginRateLimiter() {
     windowMs: 15 * 60 * 1000,
     limit: 8,
     keyGenerator: (req) => `login:${req.ip}:${(req.body?.mobile as string) ?? ""}`,
+  });
+}
+
+/**
+ * Google sign-in has no mobile field to key on (unlike loginRateLimiter),
+ * so it's keyed by IP alone. Slightly more generous than password login
+ * since the token itself already proves a successful Google auth — this
+ * limiter mainly guards against a client replaying/hammering the endpoint.
+ */
+export function googleAuthRateLimiter() {
+  return rateLimit({
+    ...commonOptions,
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    keyGenerator: (req) => `google-auth:${req.ip}`,
   });
 }
 

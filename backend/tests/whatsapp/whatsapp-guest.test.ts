@@ -10,7 +10,7 @@ const cta = (h: Harness, phone = FARMER_PHONE) => {
   expect(m.kind).toBe("cta_url");
   return { body: m.body, text: (m.extra as any).text as string, url: (m.extra as any).url as string };
 };
-const REGISTER_URL = "https://app.farmlink.test/register";
+const REGISTER_URL = "https://app.anndata.test/register";
 
 /** buyer → wheat → 20 quintal → Sehore → Grade A, i.e. the guided flow, ending in results. */
 const guidedSearch = async (h: Harness) => {
@@ -58,7 +58,7 @@ describe("guest: what works without registering", () => {
     expect(out.body).toContain("XYZ Agro");
     expect(out.body).toContain("Mandi reference: ₹2,440/Q");
     expect(out.body).toContain("not guaranteed");
-    expect(out.body).toContain("continue on FarmLink"); // the guest note
+    expect(out.body).toContain("continue on Anndata"); // the guest note
     expect(out.kind).toBe("buttons");
 
     // The search used the public, lot-less path with what the guest typed ...
@@ -99,8 +99,8 @@ describe("guest: what works without registering", () => {
     await guidedSearch(h);
     await h.sendAction("opt:2"); // Request offer
     const c = cta(h);
-    expect(c.body).toContain("To send an offer, you need a FarmLink account");
-    expect(c.text).toBe("Continue on FarmLink");
+    expect(c.body).toContain("To send an offer, you need a Anndata account");
+    expect(c.text).toBe("Continue on Anndata");
     expect(c.url).toBe(REGISTER_URL);
     expect(h.fakes.offerCalls).toHaveLength(0);
     expect(h.fakes.serviceUsers).toHaveLength(0);
@@ -114,7 +114,7 @@ describe("guest: what works without registering", () => {
     await h.sendAction("opt:1"); // details → "Request offer"
     // (opt:1 on the details screen is the offer button)
     const c = cta(h);
-    expect(c.body).toContain("you need a FarmLink account");
+    expect(c.body).toContain("you need a Anndata account");
     expect(c.url).toBe(REGISTER_URL);
     expect(h.fakes.offerCalls).toHaveLength(0);
   });
@@ -147,7 +147,7 @@ describe("guest: mandi prices", () => {
     expect(c.body).toContain("Wheat Mandi Prices");
     expect(c.body).toContain("Sehore Mandi");
     expect(c.body).toContain("Modal: ₹2,450/Q");
-    expect(c.text).toBe("Continue on FarmLink");
+    expect(c.text).toBe("Continue on Anndata");
     expect(c.url).toBe(REGISTER_URL);
     expect(h.fakes.serviceUsers).toHaveLength(0);
   });
@@ -170,7 +170,7 @@ describe("guest: mandi prices", () => {
   });
 });
 
-describe("guest: account-owned features are gated with 'Continue on FarmLink'", () => {
+describe("guest: account-owned features are gated with 'Continue on Anndata'", () => {
   const gated: Array<[string, string]> = [
     ["my lot", "manage your lots"],
     ["offers", "see your offers"],
@@ -188,8 +188,8 @@ describe("guest: account-owned features are gated with 'Continue on FarmLink'", 
     h.fakes.shipments.push({ publicId: "ship-secret" });
     await h.send(text);
     const c = cta(h);
-    expect(c.body).toContain(`To ${what}, you need a FarmLink account`);
-    expect(c.text).toBe("Continue on FarmLink");
+    expect(c.body).toContain(`To ${what}, you need a Anndata account`);
+    expect(c.text).toBe("Continue on Anndata");
     expect(c.url).toBe(REGISTER_URL);
     expect(h.provider.all()).not.toMatch(/lot-secret|off-secret|ship-secret|Secret Buyer/);
     expect(h.fakes.serviceUsers).toHaveLength(0);
@@ -199,7 +199,7 @@ describe("guest: account-owned features are gated with 'Continue on FarmLink'", 
   it("G12b. the gate answers in the guest's own language", async () => {
     const h = guest();
     await h.send("mera maal kaha hai");
-    expect(cta(h).body).toContain("apni shipment track karne ke liye aapko FarmLink account chahiye");
+    expect(cta(h).body).toContain("apni shipment track karne ke liye aapko Anndata account chahiye");
     const h2 = guest();
     await h2.send("मेरा पेमेंट");
     expect(cta(h2).body).toContain("अपने भुगतान देखने के लिए");
@@ -228,31 +228,31 @@ describe("guest: account-owned features are gated with 'Continue on FarmLink'", 
 describe("guest: 'how it works' and language", () => {
   it("G15. 'how it works' explains the process, is honest about buyers, and links to sign-up", async () => {
     const h = guest();
-    await h.send("how does farmlink work?");
+    await h.send("how does anndata work?");
     const c = cta(h);
-    expect(c.body).toContain("How FarmLink works");
+    expect(c.body).toContain("How Anndata works");
     expect(c.body).toContain("No buyer is guaranteed to purchase");
     expect(c.body).toContain("The buyer pays you directly");
-    expect(c.text).toBe("Continue on FarmLink");
+    expect(c.text).toBe("Continue on Anndata");
     expect(c.url).toBe(REGISTER_URL);
   });
 
   it("G16. Hinglish and Hindi questions are answered in the same language", async () => {
     const h = guest();
-    await h.send("farmlink kaise kaam karta hai");
-    expect(cta(h).body).toContain("FarmLink kaise kaam karta hai");
+    await h.send("anndata kaise kaam karta hai");
+    expect(cta(h).body).toContain("Anndata kaise kaam karta hai");
     const h2 = guest();
     await h2.send("नमस्ते");
-    expect(h2.provider.all()).toContain("FarmLink में आपका स्वागत है");
+    expect(h2.provider.all()).toContain("Anndata में आपका स्वागत है");
   });
 
   it("G17. a linked farmer can ask too — and gets the dashboard, not sign-up", async () => {
     const h = buildHarness();
     await h.send("how it works");
     const c = cta(h);
-    expect(c.body).toContain("How FarmLink works");
-    expect(c.text).toBe("🌐 Open FarmLink");
-    expect(c.url).toBe("https://app.farmlink.test/dashboard");
+    expect(c.body).toContain("How Anndata works");
+    expect(c.text).toBe("🌐 Open Anndata");
+    expect(c.url).toBe("https://app.anndata.test/dashboard");
   });
 
   it("G18. gibberish gets a friendly guest fallback with the menu hint, never silence", async () => {
@@ -339,7 +339,7 @@ describe("guest: message catalog", () => {
   it("G25. every message that is sent as a button-card fits WhatsApp's 1024-char body limit, in every language", () => {
     for (const lang of langs) {
       const bodies = [
-        t("aboutFarmLink", lang),
+        t("aboutAnndata", lang),
         t("guestWebsite", lang),
         t("guestFallback", lang),
         t("guestNoBuyers", lang, { crop: "Groundnut" }),
@@ -356,7 +356,7 @@ describe("guest: message catalog", () => {
   });
 
   it("G27. guest messages exist in all three languages, and Hindi is Devanagari", () => {
-    for (const k of ["guestHelp", "aboutFarmLink", "guestGate", "guestBuyersNote", "guestNoBuyers", "guestWebsite", "guestFallback", "guestTextOnly"] as const) {
+    for (const k of ["guestHelp", "aboutAnndata", "guestGate", "guestBuyersNote", "guestNoBuyers", "guestWebsite", "guestFallback", "guestTextOnly"] as const) {
       expect(ALL_MESSAGE_KEYS).toContain(k);
       expect(t(k, "hi", { what: "x", crop: "x" })).toMatch(/[\u0900-\u097F]/);
     }

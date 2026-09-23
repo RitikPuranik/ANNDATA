@@ -14,8 +14,10 @@ export type Language = "en" | "hi" | "mr";
 export interface AuthUser {
   id: string;
   fullName: string;
-  mobile: string;
+  mobile: string | null;
   email: string | null;
+  hasGoogleLinked: boolean;
+  hasPassword: boolean;
   role: UserRole;
   accountStatus: AccountStatus;
   preferredLanguage: Language;

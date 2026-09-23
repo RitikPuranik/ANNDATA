@@ -18,7 +18,7 @@ function AdminUsersContent() {
 
   const filtered = (usersQuery.data ?? []).filter((u) => {
     const q = search.toLowerCase();
-    return !q || u.fullName.toLowerCase().includes(q) || u.mobile.includes(q) || (u.email ?? "").toLowerCase().includes(q);
+    return !q || u.fullName.toLowerCase().includes(q) || (u.mobile ?? "").includes(q) || (u.email ?? "").toLowerCase().includes(q);
   });
 
   return (

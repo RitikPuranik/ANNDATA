@@ -1,4 +1,4 @@
-// FarmLink Intelligence — Module 1: Authentication & RBAC
+// Anndata Intelligence — Module 1: Authentication & RBAC
 //           + Module 2: Farmer & Farm Profile Management
 // Prisma schema. Module 1 (User/Session/PasswordResetToken/OtpChallenge/
 // AuditLog) is untouched except for one additive back-relation on User
@@ -214,10 +214,24 @@ model User {
   publicId String @unique @default(uuid())
 
   fullName     String
-  mobile       String        @unique
+  // Nullable: a user who signs up via Google may not supply a mobile
+  // number at signup time. Still unique when present — see the partial
+  // unique index added in the add_google_oauth migration (Postgres
+  // treats multiple NULLs as distinct, so plain @unique already allows
+  // any number of mobile-less rows without a workaround).
+  mobile       String?       @unique
   email        String?       @unique
   buyerProfile BuyerProfile?
-  passwordHash String
+  // Nullable: Google-authenticated users never set a local password.
+  // authService methods that need one (changePassword, etc.) must check
+  // for null and reject with a clear "no password set" error rather than
+  // assuming every user has one.
+  passwordHash String?
+
+  // Google OAuth (Sign in with Google). Null for password-based accounts
+  // that have never linked Google. Unique so a Google account can only
+  // ever be attached to one Anndata user.
+  googleId String? @unique
 
   role          UserRole
   accountStatus AccountStatus @default(PENDING_VERIFICATION)
@@ -1834,13 +1848,13 @@ enum WarehouseOwnerType {
   USER
   FPO
   // Module 9 Warehouse Ecosystem Ingestion Layer — a warehouse ingested
-  // from an external data source with no FarmLink user/FPO behind it.
+  // from an external data source with no Anndata user/FPO behind it.
   // ownerUserId/ownerFpoId stay null for these rows; "owner" here means
   // "who this record's data is attributed to", not "who legally operates
-  // it in FarmLink" (see WarehouseSourceReference for the actual
+  // it in Anndata" (see WarehouseSourceReference for the actual
   // provenance/idempotency record — this enum value only has to make the
   // existing required, non-null Warehouse.ownerType column meaningful for
-  // a row nobody in FarmLink owns).
+  // a row nobody in Anndata owns).
   GOVERNMENT
   PRIVATE_PARTNER
 }
@@ -1895,7 +1909,7 @@ model Warehouse {
   state   String
   district String
   address String?
-  // Additive, nullable — populated when a source (FarmLink form or an
+  // Additive, nullable — populated when a source (Anndata form or an
   // external provider) actually supplies one; never backfilled/guessed
   // for existing rows. Used only as a conservative duplicate-detection
   // signal by the ingestion layer (see warehouse-duplicate-detection.
@@ -1933,7 +1947,7 @@ model Warehouse {
   rates        StorageRate[]
   // Warehouse Ecosystem Ingestion Layer — zero or more external-source
   // identities this warehouse is known under (see WarehouseSourceReference).
-  // A FarmLink-created warehouse (ownerType USER/FPO) normally has none;
+  // A Anndata-created warehouse (ownerType USER/FPO) normally has none;
   // its identity is its own id/publicId, never an artificial external ID
   // (Part 12 of the ingestion spec). A row may accumulate more than one
   // reference over time (e.g. matched to both a government registry entry
@@ -1965,16 +1979,16 @@ model Warehouse {
 // Deliberately a separate model rather than columns bolted onto Warehouse
 // (Part 32 of the ingestion spec): a single warehouse can legitimately be
 // known to more than one external source at once (e.g. it shows up in a
-// government registry AND a private partner feed), and a FarmLink-created
+// government registry AND a private partner feed), and a Anndata-created
 // warehouse should never be forced to carry an artificial external ID just
 // because this table exists (Part 12). One Warehouse -> many
-// WarehouseSourceReference rows; FarmLink-owned warehouses simply have
-// zero rows here, which is itself the "sourceType = FARMLINK" fact — no
+// WarehouseSourceReference rows; Anndata-owned warehouses simply have
+// zero rows here, which is itself the "sourceType = ANNDATA" fact — no
 // backfill needed or wanted (Part 33: existing warehouses keep working
 // completely untouched).
 // ---------------------------------------------------------------------------
 enum WarehouseSourceType {
-  FARMLINK
+  ANNDATA
   GOVERNMENT
   PRIVATE_PARTNER
 }
@@ -1995,7 +2009,7 @@ model WarehouseSourceReference {
   externalId String
 
   // When the source itself last reports having updated this record
-  // (nullable — many providers won't say). lastSyncedAt is FarmLink's own
+  // (nullable — many providers won't say). lastSyncedAt is Anndata's own
   // clock: the last time this reference was successfully written/refreshed
   // by a sync run, regardless of what the source claims.
   sourceUpdatedAt DateTime?
@@ -2519,7 +2533,7 @@ enum VehicleCapability {
 }
 
 // One transporter profile per user (Part A). Verification here means
-// "verified per FarmLink's own administrative workflow" — never a claim of
+// "verified per Anndata's own administrative workflow" — never a claim of
 // government/RTO verification (Part J's documentation rule applies equally
 // here).
 model TransporterProfile {
@@ -2695,10 +2709,10 @@ model VehicleDriver {
 // folded together, mirroring every other module's own "one row per
 // distinct fact" convention:
 //   - LogisticsRequest: the transport requirement itself (one per lot per
-//     transport need), plus FarmLink's own best-effort estimate.
+//     transport need), plus Anndata's own best-effort estimate.
 //   - LogisticsQuote: a transport provider's own submitted number for a
 //     specific request — deliberately never merged with the estimate
-//     above, so "what FarmLink guessed" and "what a provider actually
+//     above, so "what Anndata guessed" and "what a provider actually
 //     offered" and "what was finally accepted" always stay three distinct,
 //     independently-inspectable values (build spec Step 10).
 //   - LogisticsOptimizationResult: one immutable row per optimize() run,
@@ -2785,7 +2799,7 @@ model LogisticsRequest {
 
   status LogisticsRequestStatus @default(OPEN)
 
-  // Step 12 — FarmLink's own best-effort estimate, calculated by
+  // Step 12 — Anndata's own best-effort estimate, calculated by
   // LogisticsCostEstimator/HaversineRouteDistanceProvider. Always kept
   // distinct from any LogisticsQuote.quotedAmount (Step 10).
   estimatedDistanceKm      Decimal? @db.Decimal(10, 2)
@@ -3515,8 +3529,8 @@ model PaymentRecord {
 // "WHATSAPP_LINK") instead of adding a fourth table.
 // ---------------------------------------------------------------------------
 
-// Verified binding between a FarmLink user and a WhatsApp number. A row exists
-// only after the farmer proved control of BOTH the FarmLink account (they were
+// Verified binding between a Anndata user and a WhatsApp number. A row exists
+// only after the farmer proved control of BOTH the Anndata account (they were
 // logged in on the website when the one-time code was issued) and the WhatsApp
 // number (they sent that code from it). Phone-number equality alone is never
 // treated as proof of identity — User.mobile is not OTP-verified today.

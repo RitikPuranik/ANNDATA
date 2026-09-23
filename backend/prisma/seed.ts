@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 const DEMO_FARMER = {
   fullName: "Ramesh Patil",
   mobile: "9876543210",
-  email: "ramesh.demo@farmlink.test",
+  email: "ramesh.demo@anndata.test",
   password: "DemoFarmer123!",
   preferredLanguage: "mr" as const,
 };
@@ -140,7 +140,7 @@ async function seedDemoFpo(context: { maharashtraId: string; nashikDistrictId: s
 const DEMO_FPO_ADMIN = {
   fullName: "Sunita Deshmukh",
   mobile: "9876500000",
-  email: "sunita.fpo@farmlink.test",
+  email: "sunita.fpo@anndata.test",
   password: "DemoFpoAdmin123!",
 };
 

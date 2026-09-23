@@ -94,7 +94,7 @@ export class WhatsAppAccountController {
 
   issueCode = async (req: Request, res: Response): Promise<void> => {
     const { code, expiresAt } = await this.farmers.issueLinkCode(req.user!.id, meta(req));
-    sendSuccess(res, { code, expiresAt, instruction: `Send "LINK ${code}" to FarmLink's WhatsApp number${this.botNumber ? ` (${this.botNumber})` : ""}.` }, "WhatsApp link code created", 201);
+    sendSuccess(res, { code, expiresAt, instruction: `Send "LINK ${code}" to Anndata's WhatsApp number${this.botNumber ? ` (${this.botNumber})` : ""}.` }, "WhatsApp link code created", 201);
   };
 
   status = async (req: Request, res: Response): Promise<void> => {

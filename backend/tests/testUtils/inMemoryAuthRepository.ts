@@ -4,6 +4,7 @@ import type {
   CreatePasswordResetTokenData,
   CreateSessionData,
   CreateUserData,
+  CreateUserFromGoogleData,
 } from "../../src/modules/auth/auth.repository";
 
 // Mirrors the Prisma `User` shape closely enough for the auth module's own
@@ -13,9 +14,10 @@ export interface FakeUser {
   id: string;
   publicId: string;
   fullName: string;
-  mobile: string;
+  mobile: string | null;
   email: string | null;
-  passwordHash: string;
+  passwordHash: string | null;
+  googleId: string | null;
   role: string;
   accountStatus: string;
   phoneVerificationStatus: string;
@@ -52,14 +54,19 @@ export class InMemoryAuthRepository implements AuthRepository {
   sessions: FakeSession[] = [];
   resetTokens: FakeResetToken[] = [];
 
-  /** Test helper — not part of the AuthRepository interface. */
-  seedUser(overrides: Partial<FakeUser> & Pick<FakeUser, "mobile" | "passwordHash">): FakeUser {
+  /** Test helper — not part of the AuthRepository interface. Defaults to a
+   * password-based user (mobile+passwordHash set); pass mobile/passwordHash
+   * as null and a googleId to seed a Google-only account instead. */
+  seedUser(overrides: Partial<FakeUser> = {}): FakeUser {
     const now = new Date();
     const user: FakeUser = {
       id: randomUUID(),
       publicId: randomUUID(),
       fullName: "Test User",
+      mobile: null,
       email: null,
+      passwordHash: null,
+      googleId: null,
       role: "FARMER",
       accountStatus: "ACTIVE",
       phoneVerificationStatus: "PENDING",
@@ -87,6 +94,10 @@ export class InMemoryAuthRepository implements AuthRepository {
     return (this.users.find((u) => u.id === id) as never) ?? null;
   }
 
+  async findUserByGoogleId(googleId: string) {
+    return (this.users.find((u) => u.googleId === googleId) as never) ?? null;
+  }
+
   async findManyByIds(ids: string[]) {
     return this.users.filter((u) => ids.includes(u.id)) as never;
   }
@@ -100,6 +111,7 @@ export class InMemoryAuthRepository implements AuthRepository {
       mobile: data.mobile,
       email: data.email ?? null,
       passwordHash: data.passwordHash,
+      googleId: null,
       role: data.role,
       accountStatus: "PENDING_VERIFICATION",
       phoneVerificationStatus: "PENDING",
@@ -111,6 +123,36 @@ export class InMemoryAuthRepository implements AuthRepository {
       updatedAt: now,
     };
     this.users.push(user);
+    return user as never;
+  }
+
+  async createUserFromGoogle(data: CreateUserFromGoogleData) {
+    const now = new Date();
+    const user: FakeUser = {
+      id: randomUUID(),
+      publicId: randomUUID(),
+      fullName: data.fullName,
+      mobile: null,
+      email: data.email,
+      passwordHash: null,
+      googleId: data.googleId,
+      role: data.role,
+      accountStatus: "ACTIVE",
+      phoneVerificationStatus: "PENDING",
+      emailVerificationStatus: "VERIFIED",
+      identityVerificationStatus: "PENDING",
+      preferredLanguage: data.preferredLanguage,
+      lastLoginAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.users.push(user);
+    return user as never;
+  }
+
+  async linkGoogleAccount(userId: string, googleId: string) {
+    const user = this.users.find((u) => u.id === userId);
+    if (user) user.googleId = googleId;
     return user as never;
   }
 

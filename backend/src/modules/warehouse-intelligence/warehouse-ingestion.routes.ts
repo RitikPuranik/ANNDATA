@@ -31,10 +31,10 @@ export function createWarehouseIngestionRouter(syncService: WarehouseSyncService
    *   post:
    *     summary: Trigger the warehouse provider ingestion sync (ADMIN only)
    *     description: >
-   *       Runs every registered warehouse data provider (FarmLink,
+   *       Runs every registered warehouse data provider (Anndata,
    *       Government, Private Partner), normalizes and validates whatever
    *       records they return, runs conservative duplicate detection, and
-   *       upserts the result into the FarmLink warehouse database. One
+   *       upserts the result into the Anndata warehouse database. One
    *       provider failing or being unconfigured never fails the whole
    *       run — see the per-provider `status` in the response. A
    *       malformed individual record is skipped, never rolled back

@@ -219,7 +219,7 @@ function PaymentDetailContent({ id }: { id: string }) {
         <Card className="mt-6">
           <h3 className="mb-2 section-title">Record a payment</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            Report a payment you&rsquo;ve already made outside FarmLink — bank transfer, UPI, cash. This never moves
+            Report a payment you&rsquo;ve already made outside Anndata — bank transfer, UPI, cash. This never moves
             money itself; it keeps both sides in sync on what&rsquo;s been paid.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">

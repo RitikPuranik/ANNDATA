@@ -1,8 +1,8 @@
-# ANNDATA / FarmLink Intelligence Platform
+# ANNDATA / Anndata Intelligence Platform
 
 **SIH26132** — Strengthening market linkages, price discovery, storage intelligence, and transparent agricultural trade workflows.
 
-FarmLink is the backend intelligence and transaction platform behind **ANNDATA**, designed to connect farmers, FPOs, buyers, warehouses, transporters, and downstream trade workflows through a modular architecture.
+Anndata is the backend intelligence and transaction platform behind **ANNDATA**, designed to connect farmers, FPOs, buyers, warehouses, transporters, and downstream trade workflows through a modular architecture.
 
 The repository contains:
 
@@ -595,7 +595,7 @@ It does **not** execute:
 - Escrow
 - Payment gateway settlement
 
-The distinction is important: FarmLink records the financial state of a trade without pretending to move money that it does not control.
+The distinction is important: Anndata records the financial state of a trade without pretending to move money that it does not control.
 
 ---
 
@@ -643,7 +643,7 @@ POST /api/whatsapp/webhook
        └────────┴─────────┘
                 │
                 ▼
-          FarmLink services
+          Anndata services
                 │
                 ▼
            Meta WhatsApp
@@ -654,7 +654,7 @@ POST /api/whatsapp/webhook
 
 ## Public Guest Mode
 
-A person does **not** need a FarmLink account to start a WhatsApp conversation.
+A person does **not** need a Anndata account to start a WhatsApp conversation.
 
 Guests can:
 
@@ -663,8 +663,8 @@ Guests can:
 - Provide crop + quantity + location
 - Search public buyer demand
 - See safe buyer-preview information
-- Learn how FarmLink works
-- Receive links to the FarmLink website
+- Learn how Anndata works
+- Receive links to the Anndata website
 - Start a selling-intent conversation
 
 Example:
@@ -680,18 +680,18 @@ Quantity: 20 QTL
 Please provide your district/location.
 ```
 
-The public assistant does not create private FarmLink records for an anonymous user.
+The public assistant does not create private Anndata records for an anonymous user.
 
-Private operations such as viewing personal lots, offers, payments, shipments, or publishing a lot require a linked FarmLink account.
+Private operations such as viewing personal lots, offers, payments, shipments, or publishing a lot require a linked Anndata account.
 
 ## WhatsApp Identity
 
-WhatsApp identity and FarmLink account identity are deliberately separate.
+WhatsApp identity and Anndata account identity are deliberately separate.
 
 ```text
 WhatsApp sender
      │
-     ├── linked → FarmLink User ID
+     ├── linked → Anndata User ID
      │
      └── unlinked → guest / userId = null
 ```
@@ -1034,7 +1034,7 @@ npm test -- tests/whatsapp tests/integration/whatsapp.app.test.ts
 
 # Data Integrity Principles
 
-FarmLink follows strict domain-boundary rules.
+Anndata follows strict domain-boundary rules.
 
 ### Authorization is server-side
 
@@ -1235,7 +1235,7 @@ The ledger will consume the finalized payment handoff from Module 19 and provide
 
 # Project Direction
 
-ANNDATA/FarmLink is moving through a deliberate progression:
+ANNDATA/Anndata is moving through a deliberate progression:
 
 ```text
 Agricultural Identity
@@ -1267,4 +1267,4 @@ Dispute / Trust / Analytics
 
 The architecture is intentionally designed so each layer adds a new business capability without duplicating the foundations underneath it.
 
-🌾 **ANNDATA / FarmLink — from crop information to an explainable agricultural trade workflow.**
+🌾 **ANNDATA / Anndata — from crop information to an explainable agricultural trade workflow.**

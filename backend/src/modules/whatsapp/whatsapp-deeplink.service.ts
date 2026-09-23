@@ -1,7 +1,7 @@
 import type { WebsiteTarget } from "./whatsapp.types";
 
 /**
- * Single place that builds FarmLink website URLs for WhatsApp buttons.
+ * Single place that builds Anndata website URLs for WhatsApp buttons.
  *
  * Routes here mirror the REAL Next.js App Router pages under
  * frontend/src/app/(app) — a test asserts every path exists on disk. Where the
@@ -11,7 +11,7 @@ import type { WebsiteTarget } from "./whatsapp.types";
  * Links never contain tokens, credentials or personal data. The website
  * authenticates the farmer itself, and the backend re-authorises every id.
  */
-export class FarmLinkUrlService {
+export class AnndataUrlService {
   private readonly base: string;
 
   constructor(frontendUrl: string) {
@@ -40,7 +40,7 @@ export class FarmLinkUrlService {
   newFarm(): string { return this.url("/farms/new"); }
   crops(): string { return this.url("/crops"); }
   register(): string { return this.url("/login"); }
-  /** Where a number that is not registered yet is sent ("Continue on FarmLink"). */
+  /** Where a number that is not registered yet is sent ("Continue on Anndata"). */
   signup(): string { return this.url("/register"); }
   /** No payments page exists in the frontend yet → the dashboard is the closest page. */
   payments(): string { return this.dashboard(); }

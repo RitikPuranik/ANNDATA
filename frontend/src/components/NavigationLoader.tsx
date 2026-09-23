@@ -23,6 +23,7 @@ const POLL_MS = 120;
 export function NavigationLoader() {
   const pathname = usePathname();
   const [visible, setVisible] = React.useState(false);
+  const [message, setMessage] = React.useState("Loading…");
   const shownAt = React.useRef<number>(0);
   const hideTimer = React.useRef<number | null>(null);
   const pollTimer = React.useRef<number | null>(null);
@@ -45,10 +46,12 @@ export function NavigationLoader() {
   }, []);
 
   React.useEffect(() => {
-    const start = () => {
+    const start = (event: Event) => {
       clearTimers();
       shownAt.current = Date.now();
       startPathname.current = latestPathname.current;
+      const customEvent = event as CustomEvent<{ message?: string }>;
+      setMessage(customEvent.detail?.message ?? "Loading…");
       setVisible(true);
     };
 
@@ -111,7 +114,7 @@ export function NavigationLoader() {
           <LogoMark className="h-5 w-5" />
         </div>
         <div className="anndata-global-loader-line" />
-        <p className="anndata-global-loader-text">Loading…</p>
+        <p className="anndata-global-loader-text">{message}</p>
       </div>
     </div>
   );

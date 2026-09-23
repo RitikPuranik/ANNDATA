@@ -22,7 +22,7 @@ import { PreparationInsufficiencyReason } from "./price-history.types";
  * without colliding with or silently overwriting this baseline's
  * forecasts.
  */
-export const BASELINE_MODEL_PROVIDER = "FARMLINK_BASELINE_ENGINE";
+export const BASELINE_MODEL_PROVIDER = "ANNDATA_BASELINE_ENGINE";
 export const BASELINE_MODEL_VERSION = "WEIGHTED_MOVING_AVERAGE_TREND_V1";
 
 /** How the (capped, damped) recent-window regression slope classifies —

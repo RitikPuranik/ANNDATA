@@ -5,12 +5,21 @@ import {
   InvalidCredentialsError,
   ValidationError,
 } from "../../common/errors";
+import { env } from "../../config/env";
+import { logger } from "../../config/logger";
 import { trackEvent } from "../../config/posthog";
 import { AuditService } from "../audit/audit.service";
+import { createEmailService, EmailService } from "../notifications/email";
+import {
+  passwordResetConfirmationEmailTemplate,
+  passwordResetEmailTemplate,
+  welcomeEmailTemplate,
+} from "../notifications/email/email.templates";
 import { AuthRepository } from "./auth.repository";
 import {
   AuthTokens,
   AuthenticatedUserContext,
+  GoogleLoginInput,
   LoginInput,
   PublicUserDTO,
   RegisterInput,
@@ -24,6 +33,7 @@ import {
   signAccessToken,
   verifyPassword,
 } from "./auth.utils";
+import { verifyGoogleIdToken } from "./google.service";
 
 const BLOCKED_LOGIN_STATUSES = new Set(["SUSPENDED", "DEACTIVATED"]);
 
@@ -35,6 +45,8 @@ function toPublicUserDTO(user: User): PublicUserDTO {
     email: user.email,
     role: user.role,
     accountStatus: user.accountStatus,
+    hasGoogleLinked: !!user.googleId,
+    hasPassword: !!user.passwordHash,
     preferredLanguage: user.preferredLanguage,
     verification: {
       phone: user.phoneVerificationStatus,
@@ -52,6 +64,7 @@ export class AuthService {
   constructor(
     private readonly repo: AuthRepository,
     private readonly audit: AuditService,
+    private readonly emailService: EmailService = createEmailService(),
   ) {}
 
   async register(input: RegisterInput, meta: RequestMeta): Promise<{ user: PublicUserDTO }> {
@@ -96,6 +109,23 @@ export class AuthService {
     });
     trackEvent("signup_completed", user.publicId, { role: user.role });
 
+    if (user.email) {
+      const rendered = welcomeEmailTemplate(user.fullName);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send welcome email",
+        );
+      }
+    }
+
     return { user: toPublicUserDTO(user) };
   }
 
@@ -107,7 +137,7 @@ export class AuthService {
       throw new InvalidCredentialsError();
     }
 
-    const passwordValid = await verifyPassword(user.passwordHash, input.password);
+    const passwordValid = user.passwordHash ? await verifyPassword(user.passwordHash, input.password) : false;
     if (!passwordValid) {
       await this.audit.record({
         actorUserId: user.id,
@@ -152,6 +182,93 @@ export class AuthService {
       userAgent: meta.userAgent,
     });
     trackEvent("login_success", user.publicId, { role: user.role });
+
+    return { user: toPublicUserDTO(user), tokens };
+  }
+
+  /**
+   * Sign-in-or-signup with Google. The client sends the ID token it got
+   * from Google Identity Services; we verify it server-side (never trust
+   * the client's own claims about who signed in) and then:
+   *   1. an existing googleId match logs straight in;
+   *   2. otherwise an existing account with the same, Google-verified
+   *      email gets this Google identity linked and logs in;
+   *   3. otherwise a brand-new FARMER account is created.
+   * Mirrors login()'s blocked-status check and session issuance so
+   * Google-authenticated sessions behave identically to password ones
+   * everywhere else in the app.
+   */
+  async loginWithGoogle(
+    input: GoogleLoginInput,
+    meta: RequestMeta,
+  ): Promise<{ user: PublicUserDTO; tokens: AuthTokens }> {
+    const profile = await verifyGoogleIdToken(input.idToken);
+
+    let user = await this.repo.findUserByGoogleId(profile.googleId);
+    let isNewUser = false;
+
+    if (!user) {
+      const existingByEmail = await this.repo.findUserByEmail(profile.email);
+      if (existingByEmail) {
+        user = await this.repo.linkGoogleAccount(existingByEmail.id, profile.googleId);
+      } else {
+        user = await this.repo.createUserFromGoogle({
+          fullName: profile.fullName,
+          email: profile.email,
+          googleId: profile.googleId,
+          role: "FARMER",
+          preferredLanguage: "en",
+        });
+        isNewUser = true;
+      }
+    }
+
+    if (BLOCKED_LOGIN_STATUSES.has(user.accountStatus)) {
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "USER_LOGIN_FAILED",
+        entityType: "User",
+        entityId: user.id,
+        metadata: { reason: "account_status", accountStatus: user.accountStatus, method: "google" },
+        ipAddress: meta.ipAddress,
+        userAgent: meta.userAgent,
+      });
+      throw new AuthenticationError(
+        user.accountStatus === "DEACTIVATED"
+          ? "This account has been deactivated."
+          : "This account is suspended. Please contact support.",
+      );
+    }
+
+    const tokens = await this.issueSession(user, meta);
+    await this.repo.updateLastLogin(user.id);
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: isNewUser ? "USER_REGISTERED" : "USER_LOGIN",
+      entityType: "User",
+      entityId: user.id,
+      metadata: { role: user.role, method: "google" },
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+    });
+    trackEvent(isNewUser ? "signup_completed" : "login_success", user.publicId, {
+      role: user.role,
+      method: "google",
+    });
+
+    if (isNewUser && user.email) {
+      const rendered = welcomeEmailTemplate(user.fullName);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+      if (!result.success) {
+        logger.error({ userId: user.id, error: result.error }, "[AuthService] Failed to send welcome email");
+      }
+    }
 
     return { user: toPublicUserDTO(user), tokens };
   }
@@ -234,6 +351,12 @@ export class AuthService {
       throw new AuthenticationError("Your session is no longer valid. Please log in again.");
     }
 
+    if (!user.passwordHash) {
+      throw new ValidationError("Please correct the highlighted fields", {
+        currentPassword: "This account signed up with Google and has no password set yet.",
+      });
+    }
+
     const currentValid = await verifyPassword(user.passwordHash, currentPassword);
     if (!currentValid) {
       throw new ValidationError("Please correct the highlighted fields", {
@@ -258,6 +381,23 @@ export class AuthService {
       ipAddress: meta.ipAddress,
       userAgent: meta.userAgent,
     });
+
+    if (user.email) {
+      const rendered = passwordResetConfirmationEmailTemplate(user.fullName);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send password change confirmation email",
+        );
+      }
+    }
   }
 
   async requestPasswordReset(mobile: string, meta: RequestMeta): Promise<void> {
@@ -285,15 +425,30 @@ export class AuthService {
     });
     trackEvent("password_reset_started", user.publicId);
 
-    // SIH demo: delivery is mocked. In a real deployment this raw token is
-    // sent via SMS/email and never logged or returned to the client. Kept
-    // out of production; visible in development so the flow is testable
-    // end-to-end without a paid SMS/email integration, and in test so the
-    // integration suite can assert against a token it never receives over
-    // the wire.
+    // Keep local development/test visibility for the token, but this is
+    // supplemental only. The real delivery path below sends the reset link
+    // when the user has an email address.
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log(`[MockDelivery] Password reset token for ${user.mobile}: ${rawToken}`);
+    }
+
+    if (user.email) {
+      const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
+      const rendered = passwordResetEmailTemplate(user.fullName, resetUrl);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send password reset email",
+        );
+      }
     }
   }
 
@@ -321,5 +476,23 @@ export class AuthService {
       userAgent: meta.userAgent,
     });
     trackEvent("password_reset_completed", tokenRecord.userId);
+
+    const user = await this.repo.findUserById(tokenRecord.userId);
+    if (user?.email) {
+      const rendered = passwordResetConfirmationEmailTemplate(user.fullName);
+      const result = await this.emailService.sendEmail({
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+
+      if (!result.success) {
+        logger.error(
+          { userId: user.id, error: result.error },
+          "[AuthService] Failed to send password reset confirmation email",
+        );
+      }
+    }
   }
 }

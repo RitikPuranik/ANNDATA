@@ -254,13 +254,13 @@ describe("WarehouseSyncService", () => {
 
   it("links (never overwrites) when a record deterministically matches an existing warehouse", async () => {
     const { prisma, warehouses, sourceRefs } = makeFakePrisma();
-    // Pre-seed an existing FarmLink-owned warehouse at the exact same coordinates.
-    warehouses.set("existing-farmlink-wh", {
-      id: "existing-farmlink-wh",
+    // Pre-seed an existing Anndata-owned warehouse at the exact same coordinates.
+    warehouses.set("existing-anndata-wh", {
+      id: "existing-anndata-wh",
       ownerType: "FPO",
       ownerFpoId: "fpo-1",
       ownerUserId: null,
-      name: "Original FarmLink Name",
+      name: "Original Anndata Name",
       warehouseType: "AMBIENT",
       state: "Maharashtra",
       district: "Nashik",
@@ -275,12 +275,12 @@ describe("WarehouseSyncService", () => {
 
     expect(summary.totals).toMatchObject({ created: 0, updated: 0, linked: 1 });
     expect(warehouses.size).toBe(1); // no new warehouse created
-    const warehouse = warehouses.get("existing-farmlink-wh");
-    // Untouched — this sync run does not own a FarmLink warehouse's fields.
-    expect(warehouse.name).toBe("Original FarmLink Name");
+    const warehouse = warehouses.get("existing-anndata-wh");
+    // Untouched — this sync run does not own a Anndata warehouse's fields.
+    expect(warehouse.name).toBe("Original Anndata Name");
     expect(warehouse.address).toBe("Original address");
     expect(sourceRefs.size).toBe(1);
-    expect([...sourceRefs.values()][0].warehouseId).toBe("existing-farmlink-wh");
+    expect([...sourceRefs.values()][0].warehouseId).toBe("existing-anndata-wh");
   });
 
   it("creates an independent warehouse but flags a POSSIBLE_DUPLICATE rather than merging", async () => {
@@ -346,18 +346,18 @@ describe("WarehouseSyncService", () => {
     expect(summary.totals.created).toBe(1);
   });
 
-  it("never persists FarmLink-provider records through this path even if it returned any", async () => {
+  it("never persists Anndata-provider records through this path even if it returned any", async () => {
     const { prisma, warehouses } = makeFakePrisma();
-    const farmlinkProvider: WarehouseDataProvider = {
-      providerId: "farmlink",
-      providerType: "FARMLINK",
+    const anndataProvider: WarehouseDataProvider = {
+      providerId: "anndata",
+      providerType: "ANNDATA",
       fetchWarehouses: async () => ({
-        provider: { id: "farmlink", type: "FARMLINK" },
+        provider: { id: "anndata", type: "ANNDATA" },
         status: "SUCCESS",
-        warehouses: [externalRecord({ source: { providerId: "farmlink", providerType: "FARMLINK" } })],
+        warehouses: [externalRecord({ source: { providerId: "anndata", providerType: "ANNDATA" } })],
       }),
     };
-    const { service } = buildService(prisma, [farmlinkProvider]);
+    const { service } = buildService(prisma, [anndataProvider]);
     const summary = await service.run();
 
     expect(warehouses.size).toBe(0);
