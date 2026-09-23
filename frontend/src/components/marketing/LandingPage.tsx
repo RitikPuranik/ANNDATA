@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   ArrowRight,
   ShoppingBag,
@@ -11,6 +12,8 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { LogoMark } from '../Logo';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const heroStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Yellowtail&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -60,6 +63,7 @@ const heroStyles = `
 `
 
 export default function LandingPage() {
+  const { t } = useI18n()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
@@ -172,17 +176,6 @@ export default function LandingPage() {
         selection:text-[#262c1d]
       "
     >
-      {/* =====================================================
-          CUSTOM TYPOGRAPHY
-          Rendered via dangerouslySetInnerHTML (not JSX children)
-          on purpose: a raw <style>{`...`}</style> with children
-          text hydrates inconsistently under Turbopack (the SSR
-          HTML entity-encodes the string, the client render does
-          not), which throws a false-positive hydration mismatch.
-          dangerouslySetInnerHTML skips React's text-node diffing
-          for this tag entirely, so there's nothing to mismatch.
-      ===================================================== */}
-
       <style dangerouslySetInnerHTML={{ __html: heroStyles }} />
 
       {/* =====================================================
@@ -237,61 +230,10 @@ export default function LandingPage() {
               LOGO
           ================================================= */}
 
-          <a
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="
-              group
-              flex
-              shrink-0
-              items-center
-              gap-2.5
-              sm:gap-3
-            "
-          >
-            <div
-              className="
-                flex
-                h-9
-                w-9
-                shrink-0
-                items-center
-                justify-center
-                rounded-full
-                border
-                border-white/20
-                bg-white/10
-                backdrop-blur-md
-                transition-all
-                duration-300
-                group-hover:border-[#d6b841]
-                group-hover:bg-white/15
-              "
-            >
-              <Sprout
-                className="
-                  h-5
-                  w-5
-                  text-[#d6b841]
-                "
-              />
-            </div>
-
-            <span
-              className="
-                text-lg
-                font-black
-                tracking-tight
-                text-white
-                transition-colors
-                duration-300
-                group-hover:text-[#d6b841]
-                sm:text-xl
-              "
-            >
-              Anndataa
-            </span>
-          </a>
+          <Link href="/" className="group flex items-center gap-2.5 font-bold text-white transition-colors duration-300 group-hover:text-white/80">
+            <LogoMark className="h-9 w-9 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3" />
+            {t("app.name")}
+          </Link>
 
           {/* =================================================
               DESKTOP NAVIGATION + TAGLINE
@@ -371,42 +313,6 @@ export default function LandingPage() {
                 Ecosystem
               </a>
             </nav>
-
-            {/* TAGLINE */}
-
-            <div
-              className="
-                hidden
-                items-center
-                gap-2
-                border-l
-                border-white/15
-                pl-7
-                xl:flex
-              "
-            >
-              <span
-                className="
-                  h-1.5
-                  w-1.5
-                  rounded-full
-                  bg-[#d6b841]
-                "
-              />
-
-              <span
-                className="
-                  whitespace-nowrap
-                  text-[10px]
-                  font-semibold
-                  tracking-wide
-                  text-white/50
-                  lg:text-[11px]
-                "
-              >
-                Rooted in Farming. Built for the Future.
-              </span>
-            </div>
           </div>
 
           {/* =================================================
@@ -564,31 +470,6 @@ export default function LandingPage() {
               backdrop-blur-2xl
             "
           >
-            {/* MOBILE TAGLINE */}
-
-            <div
-              className="
-                mb-2
-                rounded-xl
-                border
-                border-white/10
-                bg-white/[0.04]
-                px-4
-                py-3
-                text-center
-              "
-            >
-              <p
-                className="
-                  text-[10px]
-                  font-semibold
-                  tracking-wide
-                  text-[#d6b841]
-                "
-              >
-                Rooted in Farming. Built for the Future.
-              </p>
-            </div>
 
             {/* HOME */}
 
