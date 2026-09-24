@@ -1,11 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { Language, PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/modules/auth/auth.utils";
 
 const prisma = new PrismaClient();
-
-// Development-only demo credentials. Never a real production password, and
-// this script is not wired into any production deploy step — run it
-// explicitly with `npm run prisma:seed` when you want a demo account.
 const DEMO_FARMER = {
   fullName: "Ramesh Patil",
   mobile: "9876543210",
@@ -14,63 +10,17 @@ const DEMO_FARMER = {
   preferredLanguage: "mr" as const,
 };
 
-// ---------------------------------------------------------------------------
-// Module 2 reference data. Build spec section 7: "For the current SIH
-// scope, prioritize Maharashtra, but design the database so other states
-// can be added later." All 36 Maharashtra districts are seeded, each with a
-// handful of representative talukas, so the cascading state → district →
-// taluka UI never hits an empty taluka dropdown regardless of which
-// district a user picks. This is not an exhaustive gazetteer (each
-// district has far more talukas in reality) — just enough real names to
-// exercise the UI end-to-end.
-// ---------------------------------------------------------------------------
-
 const MAHARASHTRA_DISTRICTS: Record<string, string[]> = {
-  // Konkan division
-  "Mumbai City": ["Mumbai City"],
-  "Mumbai Suburban": ["Andheri", "Borivali", "Kurla"],
-  Thane: ["Thane", "Kalyan", "Bhiwandi", "Ulhasnagar"],
-  Palghar: ["Palghar", "Vasai", "Dahanu", "Jawhar"],
-  Raigad: ["Alibag", "Panvel", "Pen", "Karjat"],
-  Ratnagiri: ["Ratnagiri", "Chiplun", "Khed", "Dapoli"],
-  Sindhudurg: ["Sawantwadi", "Kudal", "Malvan"],
-  // Nashik division
   Nashik: ["Niphad", "Dindori", "Chandwad", "Nashik"],
-  Dhule: ["Dhule", "Sakri", "Shirpur"],
-  Nandurbar: ["Nandurbar", "Shahada", "Navapur"],
-  Jalgaon: ["Jalgaon", "Bhusawal", "Chalisgaon", "Amalner"],
-  Ahmednagar: ["Rahata", "Shrirampur", "Kopargaon"],
-  // Pune division
   Pune: ["Haveli", "Baramati", "Junnar"],
-  Satara: ["Satara", "Karad", "Phaltan", "Wai"],
-  Sangli: ["Sangli", "Miraj", "Tasgaon", "Vita"],
+  Ahmednagar: ["Rahata", "Shrirampur", "Kopargaon"],
   Solapur: ["Karmala", "Barshi", "Pandharpur"],
   Kolhapur: ["Panhala", "Hatkanangale"],
-  // Chhatrapati Sambhajinagar division
   "Chhatrapati Sambhajinagar": ["Paithan", "Gangapur"],
-  Jalna: ["Jalna", "Bhokardan", "Ambad"],
-  Parbhani: ["Parbhani", "Gangakhed", "Jintur"],
-  Hingoli: ["Hingoli", "Kalamnuri", "Sengaon"],
-  Nanded: ["Nanded", "Deglur", "Kinwat"],
-  Latur: ["Latur", "Udgir", "Ahmadpur"],
-  Dharashiv: ["Dharashiv", "Tuljapur", "Omerga"],
-  // Amravati division
   Amravati: ["Achalpur", "Chandur"],
-  Akola: ["Akola", "Balapur", "Telhara"],
-  Buldhana: ["Buldhana", "Chikhli", "Khamgaon"],
-  Washim: ["Washim", "Karanja", "Risod"],
-  Yavatmal: ["Yavatmal", "Pusad", "Darwha"],
-  // Nagpur division
   Nagpur: ["Kamptee", "Hingna"],
-  Wardha: ["Wardha", "Hinganghat", "Arvi"],
-  Bhandara: ["Bhandara", "Tumsar", "Sakoli"],
-  Gondia: ["Gondia", "Tirora", "Deori"],
-  Chandrapur: ["Chandrapur", "Warora", "Ballarpur"],
-  Gadchiroli: ["Gadchiroli", "Armori", "Desaiganj"],
 };
 
-// Build spec section 17: seed at least this list. Category is a free-text
-// grouping label (not a controlled enum — see schema.prisma).
 const CROPS: { name: string; category: string; hi: string; mr: string }[] = [
   { name: "Onion", category: "Vegetable", hi: "प्याज़", mr: "कांदा" },
   { name: "Cotton", category: "Fibre", hi: "कपास", mr: "कापूस" },
@@ -129,7 +79,7 @@ async function seedCrops() {
     for (const [language, localizedName] of [
       ["hi", crop.hi],
       ["mr", crop.mr],
-    ] as const) {
+    ] as [Language, string][]) {
       await prisma.cropTranslation.upsert({
         where: { cropId_language: { cropId: row.id, language } },
         update: { localizedName },
@@ -147,10 +97,6 @@ async function seedDemoFpo(context: { maharashtraId: string; nashikDistrictId: s
   const existing = await prisma.fpo.findFirst({ where: { name, districtId: context.nashikDistrictId } });
   if (existing) return existing;
 
-  // Module 3: a fuller registration than Module 2's original minimal stub —
-  // see the Fpo model's own comment in schema.prisma. Seeded already
-  // VERIFIED/ACTIVE so the demo showcases a working FPO end-to-end rather
-  // than a still-pending registration.
   const fpo = await prisma.fpo.create({
     data: {
       name,
@@ -205,9 +151,6 @@ async function seedDemoFpoAdmin(fpoId: string) {
   console.log("Seeded demo FPO admin:", user.mobile, `(password: ${DEMO_FPO_ADMIN.password}, development only)`);
 }
 
-// Fictional names only (build spec section 88: "Do not create
-// realistic-looking real people's private data") — plain first/last name
-// pools combined by index, not modeled on any real individual.
 const FICTIONAL_FIRST_NAMES = [
   "Anil", "Sunil", "Vijay", "Prakash", "Manoj", "Suresh", "Ganesh", "Ravindra",
   "Ashok", "Dilip", "Sanjay", "Vinod", "Rajesh", "Mahesh", "Umesh", "Kiran",
@@ -215,14 +158,6 @@ const FICTIONAL_FIRST_NAMES = [
 ];
 const FICTIONAL_LAST_NAMES = ["Jadhav", "Pawar", "Shinde", "Kale", "Bhosale", "Gaikwad", "More", "Deshmukh", "Chavan", "Sathe"];
 const DEMO_VILLAGES = ["Niphad", "Pimpalgaon", "Ozar"];
-
-/**
- * Build spec section 88/89: ~50 fictional farmers spread across Onion/
- * Soybean/Wheat, joined as ACTIVE members. Deliberately does NOT write any
- * pre-computed aggregate number anywhere (section 89: "the aggregation
- * service must calculate it") — each row here is just one farmer's own
- * crop data; GET /api/fpos/:fpoId/crop-aggregation sums it live.
- */
 async function seedDemoFpoMembers(context: {
   fpoId: string;
   maharashtraId: string;
@@ -323,253 +258,6 @@ async function seedDemoFpoMembers(context: {
   console.log(`Seeded ${MEMBER_COUNT} fictional FPO members across Onion/Soybean/Wheat for the crop-aggregation demo.`);
 }
 
-// ---------------------------------------------------------------------------
-// Buyer-matching demo data (Module: buyer-matching). Seeds a handful of
-// already-VERIFIED buyers with ACTIVE demands across the crops the demo
-// farmer/FPO members actually grow (Onion, Soybean, Wheat) plus a couple
-// more (Cotton, Tomato, Potato) so a seller who lists a lot for any of
-// those crops sees non-empty results from GET /api/lots/:id/matches,
-// instead of an empty list on a freshly seeded database. Only VERIFIED
-// buyers with ACTIVE, unexpired demands are ever matched — see
-// BuyerMatchingService.matches().
-// ---------------------------------------------------------------------------
-
-const DEMO_BUYERS: Array<{
-  fullName: string;
-  mobile: string;
-  email: string;
-  organizationName: string;
-  businessType: "PROCESSOR" | "WHOLESALER" | "RETAILER" | "EXPORTER" | "INSTITUTIONAL_BUYER" | "TRADER" | "OTHER";
-  district: string;
-  latitude: number;
-  longitude: number;
-  demands: Array<{
-    cropName: string;
-    title: string;
-    requiredQuantity: number;
-    minimumQuantity?: number;
-    quantityUnit: "KG" | "QTL" | "TONNE";
-    targetPrice?: number;
-    minimumPrice?: number;
-    maximumPrice?: number;
-    grade?: "A" | "B" | "C" | "D";
-  }>;
-}> = [
-  {
-    fullName: "Anita Kulkarni",
-    mobile: "9800000001",
-    email: "anita.buyer@farmlink.test",
-    organizationName: "Mahalaxmi Onion Processors",
-    businessType: "PROCESSOR",
-    district: "Nashik",
-    latitude: 20.0113,
-    longitude: 74.0862,
-    demands: [
-      {
-        cropName: "Onion",
-        title: "Grade A/B onions for dehydration unit",
-        requiredQuantity: 500,
-        minimumQuantity: 50,
-        quantityUnit: "QTL",
-        targetPrice: 1800,
-        minimumPrice: 1500,
-        maximumPrice: 2200,
-        grade: "B",
-      },
-    ],
-  },
-  {
-    fullName: "Rohan Deshpande",
-    mobile: "9800000002",
-    email: "rohan.buyer@farmlink.test",
-    organizationName: "Godavari Agro Exports",
-    businessType: "EXPORTER",
-    district: "Nashik",
-    latitude: 19.9975,
-    longitude: 73.7898,
-    demands: [
-      {
-        cropName: "Onion",
-        title: "Export-grade onions, container loads",
-        requiredQuantity: 1000,
-        minimumQuantity: 200,
-        quantityUnit: "QTL",
-        targetPrice: 2100,
-        minimumPrice: 1900,
-        grade: "A",
-      },
-    ],
-  },
-  {
-    fullName: "Meera Joshi",
-    mobile: "9800000003",
-    email: "meera.buyer@farmlink.test",
-    organizationName: "Krishna Valley Soy Processing",
-    businessType: "PROCESSOR",
-    district: "Pune",
-    latitude: 18.5204,
-    longitude: 73.8567,
-    demands: [
-      {
-        cropName: "Soybean",
-        title: "Soybean for oil extraction",
-        requiredQuantity: 300,
-        minimumQuantity: 25,
-        quantityUnit: "QTL",
-        targetPrice: 4200,
-        minimumPrice: 3800,
-      },
-    ],
-  },
-  {
-    fullName: "Suresh Pawar",
-    mobile: "9800000004",
-    email: "suresh.buyer@farmlink.test",
-    organizationName: "Deccan Wholesale Grain Traders",
-    businessType: "WHOLESALER",
-    district: "Ahmednagar",
-    latitude: 19.0948,
-    longitude: 74.748,
-    demands: [
-      {
-        cropName: "Wheat",
-        title: "Bulk wheat for regional mandis",
-        requiredQuantity: 800,
-        minimumQuantity: 100,
-        quantityUnit: "QTL",
-        targetPrice: 2400,
-      },
-    ],
-  },
-  {
-    fullName: "Farida Shaikh",
-    mobile: "9800000005",
-    email: "farida.buyer@farmlink.test",
-    organizationName: "Vidarbha Cotton Mills",
-    businessType: "PROCESSOR",
-    district: "Nagpur",
-    latitude: 21.1458,
-    longitude: 79.0882,
-    demands: [
-      {
-        cropName: "Cotton",
-        title: "Raw cotton for ginning unit",
-        requiredQuantity: 400,
-        minimumQuantity: 40,
-        quantityUnit: "QTL",
-        targetPrice: 6500,
-        grade: "B",
-      },
-    ],
-  },
-  {
-    fullName: "Deepak Nair",
-    mobile: "9800000006",
-    email: "deepak.buyer@farmlink.test",
-    organizationName: "FreshMart Retail Supply Co.",
-    businessType: "RETAILER",
-    district: "Kolhapur",
-    latitude: 16.705,
-    longitude: 74.2433,
-    demands: [
-      {
-        cropName: "Tomato",
-        title: "Fresh tomatoes for retail chain",
-        requiredQuantity: 150,
-        minimumQuantity: 10,
-        quantityUnit: "QTL",
-        targetPrice: 1200,
-      },
-      {
-        cropName: "Potato",
-        title: "Potatoes for retail chain",
-        requiredQuantity: 200,
-        minimumQuantity: 20,
-        quantityUnit: "QTL",
-        targetPrice: 1400,
-      },
-    ],
-  },
-];
-
-async function seedDemoBuyers(cropIdByName: Record<string, string>) {
-  let demandCount = 0;
-
-  for (const b of DEMO_BUYERS) {
-    let user = await prisma.user.findUnique({ where: { mobile: b.mobile } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          fullName: b.fullName,
-          mobile: b.mobile,
-          email: b.email,
-          passwordHash: await hashPassword("DemoBuyer123!"),
-          role: "BUYER",
-          accountStatus: "ACTIVE",
-          preferredLanguage: "mr",
-          phoneVerificationStatus: "VERIFIED",
-          emailVerificationStatus: "PENDING",
-          identityVerificationStatus: "PENDING",
-        },
-      });
-    }
-
-    let profile = await prisma.buyerProfile.findUnique({ where: { userId: user.id } });
-    if (!profile) {
-      profile = await prisma.buyerProfile.create({
-        data: {
-          userId: user.id,
-          organizationName: b.organizationName,
-          businessType: b.businessType,
-          contactPerson: b.fullName,
-          phone: b.mobile,
-          email: b.email,
-          state: "Maharashtra",
-          district: b.district,
-          latitude: b.latitude,
-          longitude: b.longitude,
-          // Seeded as already VERIFIED — matches() only ever surfaces
-          // demands from verified buyers (build spec: unverified buyers
-          // must not appear to farmers), so a PENDING demo buyer would be
-          // invisible and defeat the point of this seed data.
-          verificationStatus: "VERIFIED",
-        },
-      });
-    }
-
-    for (const d of b.demands) {
-      const cropId = cropIdByName[d.cropName];
-      if (!cropId) continue;
-
-      const existing = await prisma.buyerDemand.findFirst({ where: { buyerId: profile.id, title: d.title } });
-      if (existing) continue;
-
-      await prisma.buyerDemand.create({
-        data: {
-          buyerId: profile.id,
-          cropId,
-          title: d.title,
-          requiredQuantity: d.requiredQuantity,
-          minimumQuantity: d.minimumQuantity ?? null,
-          quantityUnit: d.quantityUnit,
-          targetPrice: d.targetPrice ?? null,
-          minimumPrice: d.minimumPrice ?? null,
-          maximumPrice: d.maximumPrice ?? null,
-          grade: d.grade ?? null,
-          state: "Maharashtra",
-          district: b.district,
-          latitude: b.latitude,
-          longitude: b.longitude,
-          status: "ACTIVE",
-        },
-      });
-      demandCount += 1;
-    }
-  }
-
-  console.log(`Seeded ${DEMO_BUYERS.length} verified demo buyers with ${demandCount} active demands.`);
-}
-
 async function seedDemoFarmer(context: {
   nashikDistrictId: string;
   niphadTalukaId: string;
@@ -587,7 +275,6 @@ async function seedDemoFarmer(context: {
     }
   }
 
-  // Build spec section 61: fictional demo data only — never real farmer PII.
   const user =
     existingUser ??
     (await prisma.user.create({
@@ -667,7 +354,6 @@ async function main() {
 
   const { maharashtraId, districtIdByName, talukaIdByName } = await seedLocations();
   const cropIdByName = await seedCrops();
-  await seedDemoBuyers(cropIdByName);
   const demoFpo = await seedDemoFpo({
     maharashtraId,
     nashikDistrictId: districtIdByName.Nashik,
