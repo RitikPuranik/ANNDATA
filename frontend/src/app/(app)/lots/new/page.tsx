@@ -40,18 +40,19 @@ function NewLotContent() {
   const lotsQuery = useQuery({ queryKey: ["lots", "mine", "ALL"], queryFn: () => lotApi.listMine() });
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [showSummary, setShowSummary] = React.useState(false);
-  const farms = profileQuery.data?.farms ?? [];
-  const selectedFarmId = watch("farmId");
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
     watch,
+    formState: { errors, isSubmitting },
   } = useForm<LotFormValues>({
     resolver: zodResolver(lotSchema),
     defaultValues: { unit: "QTL", availabilityDate: new Date().toISOString().slice(0, 10) },
   });
+
+  const farms = profileQuery.data?.farms ?? [];
+  const selectedFarmId = watch("farmId");
 
   const createLot = useMutation({
     mutationFn: (values: LotFormValues) =>
