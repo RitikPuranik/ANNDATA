@@ -113,9 +113,9 @@ function NewLotContent() {
               <Label htmlFor="cropId">Crop</Label>
               <Select id="cropId" hasError={!!errors.cropId} {...register("cropId")}>
                 <option value="">Select a crop</option>
-                {(cropsQuery.data ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+                {cropsForSelectedFarm.map((farmerCrop) => (
+                  <option key={farmerCrop.crop.id} value={farmerCrop.crop.id}>
+                    {farmerCrop.crop.name}
                   </option>
                 ))}
               </Select>
