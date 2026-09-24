@@ -14,7 +14,6 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { LoadingBlock } from "@/components/StateBlocks";
 import { useFarmerProfileQuery } from "@/hooks/useFarmerProfile";
-import { useCropsQuery } from "@/hooks/useReferenceData";
 import { FeatureTour } from "@/components/FeatureTour";
 import { lotApi } from "@/services/lotApi";
 import { ApiRequestError } from "@/types/api";
@@ -36,7 +35,6 @@ function NewLotContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const profileQuery = useFarmerProfileQuery();
-  const cropsQuery = useCropsQuery();
   // Reuses the same ["lots", "mine", filter] cache the /lots list page fills,
   // just to know whether this is the farmer's very first lot for tour gating.
   const lotsQuery = useQuery({ queryKey: ["lots", "mine", "ALL"], queryFn: () => lotApi.listMine() });
@@ -70,7 +68,7 @@ function NewLotContent() {
     onError: (err) => setServerError(err instanceof ApiRequestError ? err.message : "We couldn't reach the server. Please check your connection and try again."),
   });
 
-  if (profileQuery.isLoading || cropsQuery.isLoading) return <LoadingBlock />;
+  if (profileQuery.isLoading) return <LoadingBlock />;
 
   const farms = profileQuery.data?.farms ?? [];
 
