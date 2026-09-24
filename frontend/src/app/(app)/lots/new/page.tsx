@@ -40,6 +40,8 @@ function NewLotContent() {
   const lotsQuery = useQuery({ queryKey: ["lots", "mine", "ALL"], queryFn: () => lotApi.listMine() });
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [showSummary, setShowSummary] = React.useState(false);
+  const farms = profileQuery.data?.farms ?? [];
+  const selectedFarmId = watch("farmId");
 
   const {
     register,
@@ -69,15 +71,12 @@ function NewLotContent() {
     onError: (err) => setServerError(err instanceof ApiRequestError ? err.message : "We couldn't reach the server. Please check your connection and try again."),
   });
 
-  if (profileQuery.isLoading) return <LoadingBlock />;
+  const cropsForSelectedFarm = React.useMemo(() => {
+    const farmerCrops = profileQuery.data?.crops ?? [];
+    return farmerCrops.filter((farmerCrop) => farmerCrop.farmId === selectedFarmId);
+  }, [profileQuery.data?.crops, selectedFarmId]);
 
-  const farms = profileQuery.data?.farms ?? [];
-  const selectedFarmId = watch("farmId");
-  const farmerCrops = profileQuery.data?.crops ?? [];
-  const cropsForSelectedFarm = React.useMemo(
-    () => farmerCrops.filter((farmerCrop) => farmerCrop.farmId === selectedFarmId),
-    [farmerCrops, selectedFarmId],
-  );
+  if (profileQuery.isLoading) return <LoadingBlock />;
 
   return (
     <div className="mx-auto max-w-xl">
