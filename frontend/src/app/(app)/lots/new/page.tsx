@@ -26,7 +26,7 @@ const lotSchema = z.object({
     .positive("Enter a quantity greater than 0."),
   unit: z.enum(["KG", "QTL", "TONNE"]),
   variety: z.string().optional(),
-  harvestDate: z.string().optional(),
+  harvestDate: z.string().min(1, "Please choose the harvest date."),
   availabilityDate: z.string().min(1, "Please choose when this will be available from."),
 });
 type LotFormValues = z.infer<typeof lotSchema>;
@@ -49,7 +49,7 @@ function NewLotContent() {
     formState: { errors, isSubmitting },
   } = useForm<LotFormValues>({
     resolver: zodResolver(lotSchema),
-    defaultValues: { unit: "QTL", availabilityDate: new Date().toISOString().slice(0, 10) },
+    defaultValues: { unit: undefined, harvestDate: "", availabilityDate: "" },
   });
 
   const farms = profileQuery.data?.farms ?? [];
@@ -158,6 +158,7 @@ function NewLotContent() {
               <div>
                 <Label htmlFor="unit">Unit</Label>
                 <Select id="unit" {...register("unit")}>
+                  <option value="">Select a unit</option>
                   <option value="KG">Kilograms (KG)</option>
                   <option value="QTL">Quintal (QTL)</option>
                   <option value="TONNE">Tonne</option>
@@ -172,8 +173,9 @@ function NewLotContent() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="harvestDate">Harvest date (optional)</Label>
-                <Input id="harvestDate" type="date" {...register("harvestDate")} />
+                <Label htmlFor="harvestDate">Harvest date</Label>
+                <Input id="harvestDate" type="date" hasError={!!errors.harvestDate} {...register("harvestDate")} />
+                <FieldError>{errors.harvestDate?.message}</FieldError>
               </div>
               <div>
                 <Label htmlFor="availabilityDate">Available from</Label>

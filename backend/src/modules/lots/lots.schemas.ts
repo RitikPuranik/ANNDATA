@@ -74,7 +74,7 @@ export const createLotSchema = z
     quantity: quantitySchema,
     unit: quantityUnitSchema,
     variety: varietySchema,
-    harvestDate: z.coerce.date().optional(),
+    harvestDate: z.coerce.date({ required_error: "Harvest date is required." }),
     availabilityDate: z.coerce.date({ required_error: "Availability date is required." }),
   })
   .strict()
