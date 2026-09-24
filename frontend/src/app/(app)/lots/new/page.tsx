@@ -45,6 +45,7 @@ function NewLotContent() {
     register,
     handleSubmit,
     watch,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<LotFormValues>({
     resolver: zodResolver(lotSchema),
@@ -69,7 +70,22 @@ function NewLotContent() {
       queryClient.invalidateQueries({ queryKey: ["lots"] });
       router.push(`/lots/${lot.publicId}`);
     },
-    onError: (err) => setServerError(err instanceof ApiRequestError ? err.message : "We couldn't reach the server. Please check your connection and try again."),
+    onError: (err) => {
+      if (err instanceof ApiRequestError) {
+        setServerError(err.message);
+
+        if (err.fields) {
+          for (const [field, message] of Object.entries(err.fields)) {
+            if (field === "farmId" || field === "cropId" || field === "quantity" || field === "unit" || field === "variety" || field === "harvestDate" || field === "availabilityDate") {
+              setError(field, { type: "server", message });
+            }
+          }
+        }
+        return;
+      }
+
+      setServerError("We couldn't reach the server. Please check your connection and try again.");
+    },
   });
 
   const cropsForSelectedFarm = React.useMemo(() => {
