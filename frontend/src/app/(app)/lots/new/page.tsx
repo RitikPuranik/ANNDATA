@@ -45,6 +45,7 @@ function NewLotContent() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    watch,
   } = useForm<LotFormValues>({
     resolver: zodResolver(lotSchema),
     defaultValues: { unit: "QTL", availabilityDate: new Date().toISOString().slice(0, 10) },
@@ -71,6 +72,12 @@ function NewLotContent() {
   if (profileQuery.isLoading) return <LoadingBlock />;
 
   const farms = profileQuery.data?.farms ?? [];
+  const selectedFarmId = watch("farmId");
+  const farmerCrops = profileQuery.data?.crops ?? [];
+  const cropsForSelectedFarm = React.useMemo(
+    () => farmerCrops.filter((farmerCrop) => farmerCrop.farmId === selectedFarmId),
+    [farmerCrops, selectedFarmId],
+  );
 
   return (
     <div className="mx-auto max-w-xl">
