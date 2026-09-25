@@ -308,7 +308,7 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
           <>
             <MarketFriendlyCard data={marketQuery.data} />
             <TechnicalDetails>
-              <InsightPanel data={marketQuery.data} />
+              <InsightPanel data={marketQuery.data} skipKeys={["id"]} />
             </TechnicalDetails>
           </>
         )}
@@ -325,7 +325,7 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
             <>
               <PriceSnapshotFriendlyCard data={snapshotQuery.data} />
               <TechnicalDetails>
-                <InsightPanel data={snapshotQuery.data} />
+                <InsightPanel data={snapshotQuery.data} skipKeys={["id"]} />
               </TechnicalDetails>
             </>
           )}

@@ -50,7 +50,11 @@ export function InsightPanel({ data, skipKeys = [] }: { data: unknown; skipKeys?
     return <p className="text-sm">{formatPrimitive(data)}</p>;
   }
 
-  const entries = Object.entries(data).filter(([k]) => !skipKeys.includes(k));
+  // skipKeys applies at every level of nesting (e.g. skipping "id" hides it
+  // whether it's on the top-level object or inside a nested "crop"/"mandi"
+  // section), and empty/null fields are dropped rather than shown as "—" —
+  // both keep this readable instead of turning into a raw data dump.
+  const entries = Object.entries(data).filter(([k, v]) => !skipKeys.includes(k) && v !== null && v !== undefined && v !== "");
   const primitiveEntries = entries.filter(([, v]) => !isPlainObject(v) && !Array.isArray(v));
   const objectEntries = entries.filter(([, v]) => isPlainObject(v));
   const arrayEntries = entries.filter(([, v]) => Array.isArray(v));
@@ -80,7 +84,7 @@ export function InsightPanel({ data, skipKeys = [] }: { data: unknown; skipKeys?
       {objectEntries.map(([key, value]) => (
         <div key={key} className="rounded-xl border border-border bg-secondary/40 p-4">
           <h4 className="mb-2 text-foreground sub-title">{humanize(key)}</h4>
-          <InsightPanel data={value} />
+          <InsightPanel data={value} skipKeys={skipKeys} />
         </div>
       ))}
 
@@ -102,7 +106,7 @@ export function InsightPanel({ data, skipKeys = [] }: { data: unknown; skipKeys?
             <div className="space-y-2">
               {arr.map((item, i) => (
                 <div key={i} className={cn("rounded-xl border border-border p-3", i % 2 === 0 ? "bg-card" : "bg-secondary/30")}>
-                  {isPlainObject(item) ? <InsightPanel data={item} /> : <p className="text-sm">{formatPrimitive(item)}</p>}
+                  {isPlainObject(item) ? <InsightPanel data={item} skipKeys={skipKeys} /> : <p className="text-sm">{formatPrimitive(item)}</p>}
                 </div>
               ))}
             </div>

@@ -11,8 +11,10 @@ import { Tabs } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { LoadingBlock, ErrorBlock } from "@/components/StateBlocks";
 import { InsightPanel } from "@/components/InsightPanel";
+import { TechnicalDetails } from "@/components/ui/TechnicalDetails";
 import { useCropsQuery } from "@/hooks/useReferenceData";
 import { marketApi } from "@/services/marketApi";
+import { PriceSnapshotFriendlyCard, PriceTrendsFriendlyCard, NearbyMarketsFriendlyCard } from "@/components/lots/MarketFriendlyCard";
 
 const TAB_ITEMS = [
   { value: "snapshot", label: "Price Snapshot" },
@@ -104,7 +106,12 @@ function MarketContent() {
           ) : snapshotQuery.isError ? (
             <p className="text-sm text-muted-foreground">No recent price data for this crop yet.</p>
           ) : (
-            <InsightPanel data={snapshotQuery.data} />
+            <>
+              <PriceSnapshotFriendlyCard data={snapshotQuery.data} />
+              <TechnicalDetails>
+                <InsightPanel data={snapshotQuery.data} skipKeys={["id"]} />
+              </TechnicalDetails>
+            </>
           )
         ) : tab === "trends" ? (
           trendsQuery.isLoading ? (
@@ -112,7 +119,12 @@ function MarketContent() {
           ) : trendsQuery.isError ? (
             <p className="text-sm text-muted-foreground">No trend data available for this crop yet.</p>
           ) : (
-            <InsightPanel data={trendsQuery.data} />
+            <>
+              <PriceTrendsFriendlyCard data={trendsQuery.data} />
+              <TechnicalDetails>
+                <InsightPanel data={trendsQuery.data} skipKeys={["id"]} />
+              </TechnicalDetails>
+            </>
           )
         ) : !coords ? (
           <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -127,7 +139,12 @@ function MarketContent() {
         ) : nearbyQuery.isError ? (
           <p className="text-sm text-muted-foreground">No nearby mandis found.</p>
         ) : (
-          <InsightPanel data={nearbyQuery.data} />
+          <>
+            <NearbyMarketsFriendlyCard data={nearbyQuery.data} />
+            <TechnicalDetails>
+              <InsightPanel data={nearbyQuery.data} skipKeys={["id"]} />
+            </TechnicalDetails>
+          </>
         )}
       </Card>
     </div>

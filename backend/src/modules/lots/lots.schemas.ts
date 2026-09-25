@@ -25,30 +25,14 @@ const varietySchema = z.string().trim().min(1).max(120, "Variety is too long.").
 // a harvest date may not be in the future — planned/future harvests are
 // deliberately out of scope for this module ("add a separate field rather
 // than abusing harvestDate").
-//
-// "In the future" is evaluated against India time (IST, UTC+5:30), not the
-// server process's own timezone. harvestDate arrives as a plain
-// "YYYY-MM-DD" string and z.coerce.date() parses that as UTC midnight; if
-// the server happens to run in UTC (common on cloud hosts) while every
-// user is in India, a farmer picking "today" in the evening IST is already
-// past UTC midnight for the *next* day and gets wrongly rejected as a
-// future date. Since this app is India-only (build spec section 7), IST is
-// the one correct reference point regardless of the server's own clock.
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-
-function endOfTodayIST(): Date {
-  const nowIst = new Date(Date.now() + IST_OFFSET_MS);
-  return new Date(
-    Date.UTC(nowIst.getUTCFullYear(), nowIst.getUTCMonth(), nowIst.getUTCDate(), 23, 59, 59, 999) - IST_OFFSET_MS,
-  );
-}
-
 function assertDateOrdering<T extends { harvestDate?: Date; availabilityDate: Date }>(
   data: T,
   ctx: z.RefinementCtx,
 ) {
   if (data.harvestDate) {
-    if (data.harvestDate.getTime() > endOfTodayIST().getTime()) {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (data.harvestDate.getTime() > today.getTime()) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["harvestDate"], message: "Harvest date cannot be in the future." });
     }
     if (data.harvestDate.getTime() > data.availabilityDate.getTime()) {
