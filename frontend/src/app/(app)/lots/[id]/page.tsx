@@ -421,7 +421,7 @@ function WarehousesTab({ cropId }: { cropId?: string }) {
   return (
     <Card>
       <h3 className="mb-3 flex items-center gap-2 section-title">
-        <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Where to store it, and what it'll cost
+        <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Where to store it, and what it&rsquo;ll cost
       </h3>
       {locError && <Alert variant="info" className="mb-3">{locError} Showing results without location bias.</Alert>}
       {recommendQuery.isLoading ? (

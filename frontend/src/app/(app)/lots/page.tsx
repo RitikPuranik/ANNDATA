@@ -31,10 +31,10 @@ const STATUS_LABEL: Record<LotStatus, string> = {
   PARTIALLY_COMMITTED: "Partly sold",
   COMMITTED: "Sold",
   STORED: "In storage",
+  IN_TRANSACTION: "Sale in progress",
+  DELIVERED: "Delivered",
   COMPLETED: "Done",
   CANCELLED: "Cancelled",
-  IN_TRANSACTION: "",
-  DELIVERED: ""
 };
 
 function LotsContent() {

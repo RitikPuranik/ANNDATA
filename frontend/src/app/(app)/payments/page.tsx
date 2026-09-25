@@ -101,7 +101,7 @@ function PaymentsContent() {
       <div className="mt-6 flex items-start gap-3 rounded-xl border border-border bg-secondary/40 p-4 text-sm text-muted-foreground">
         <Wallet className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
         <p>
-          Anndata does not move money itself. It only keeps track of what's owed and what's been paid — payments
+          Anndata does not move money itself. It only keeps track of what&rsquo;s owed and what&rsquo;s been paid — payments
           themselves happen directly between buyer and seller (bank transfer, UPI, cash, etc.).
         </p>
       </div>
