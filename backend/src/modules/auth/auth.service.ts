@@ -471,6 +471,10 @@ export class AuthService {
       throw new ValidationError("Please correct the highlighted fields", { otp: "This OTP is invalid." });
     }
 
+    if (!challenge.userId) {
+      throw new ValidationError("Please correct the highlighted fields", { otp: "This OTP is invalid." });
+    }
+
     const user = await this.repo.findUserById(challenge.userId);
     if (!user) {
       throw new ValidationError("Please correct the highlighted fields", { otp: "This OTP is invalid." });
