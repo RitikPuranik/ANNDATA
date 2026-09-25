@@ -87,8 +87,15 @@ export const changePasswordSchema = z
     path: ["newPassword"],
   });
 
-export const forgotPasswordSchema = z.object({
-  mobile: mobileSchema,
+export const forgotPasswordSchema = z.discriminatedUnion("channel", [
+  z.object({ channel: z.literal("email"), email: emailSchema }),
+  z.object({ channel: z.literal("sms"), mobile: mobileSchema }),
+]);
+
+export const verifyPasswordResetOtpSchema = z.object({
+  channel: z.enum(["email", "sms"]),
+  challengeId: z.string().uuid("Invalid OTP challenge."),
+  otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits."),
 });
 
 export const resetPasswordSchema = z.object({
@@ -101,4 +108,5 @@ export type LoginRequestBody = z.infer<typeof loginSchema>;
 export type GoogleLoginRequestBody = z.infer<typeof googleLoginSchema>;
 export type ChangePasswordRequestBody = z.infer<typeof changePasswordSchema>;
 export type ForgotPasswordRequestBody = z.infer<typeof forgotPasswordSchema>;
+export type VerifyPasswordResetOtpRequestBody = z.infer<typeof verifyPasswordResetOtpSchema>;
 export type ResetPasswordRequestBody = z.infer<typeof resetPasswordSchema>;
