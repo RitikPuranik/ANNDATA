@@ -9,6 +9,7 @@ import {
   LoginRequestBody,
   RegisterRequestBody,
   ResetPasswordRequestBody,
+  VerifyPasswordResetOtpRequestBody,
 } from "./auth.schemas";
 import { REFRESH_COOKIE_NAME, clearRefreshCookie, hashToken, setRefreshCookie } from "./auth.utils";
 import { RequestMeta } from "./auth.types";
@@ -92,9 +93,24 @@ export function createAuthController(authService: AuthService) {
 
   async function forgotPassword(req: Request, res: Response) {
     const body = req.body as ForgotPasswordRequestBody;
-    await authService.requestPasswordReset(body.mobile, meta(req));
-    // Always the same response, regardless of whether the account exists.
-    return sendSuccess(res, null, "If an account exists, reset instructions have been sent.");
+    const identifier = body.channel === "email" ? body.email : body.mobile;
+    const challenge = await authService.requestPasswordReset(body.channel, identifier, meta(req));
+    return sendSuccess(
+      res,
+      challenge ? { challengeId: challenge.challengeId, expiresAt: challenge.expiresAt } : null,
+      "If an account exists, an OTP has been sent.",
+    );
+  }
+
+  async function verifyPasswordResetOtp(req: Request, res: Response) {
+    const body = req.body as VerifyPasswordResetOtpRequestBody;
+    const { resetToken } = await authService.verifyPasswordResetOtp(
+      body.channel,
+      body.challengeId,
+      body.otp,
+      meta(req),
+    );
+    return sendSuccess(res, { resetToken }, "OTP verified successfully.");
   }
 
   async function resetPassword(req: Request, res: Response) {
@@ -113,6 +129,7 @@ export function createAuthController(authService: AuthService) {
     logoutAll,
     changePassword,
     forgotPassword,
+    verifyPasswordResetOtp,
     resetPassword,
   };
 }
