@@ -423,7 +423,7 @@ export class AuthService {
 
     const provider = channel === "email" ? this.otpProviders.email : this.otpProviders.sms;
     const purpose = channel === "email" ? "PASSWORD_RESET_EMAIL" : "PASSWORD_RESET_SMS";
-    const result = await provider.sendOtp(destination, purpose);
+    const result = await provider.sendOtp(destination, purpose, user.id);
 
     await this.audit.record({
       actorUserId: user.id,
