@@ -218,6 +218,12 @@ export function createApp(deps: AppDependencies): Express {
   app.use((req, res, next) => (isWhatsAppWebhook(req.path) ? next() : urlencodedParser(req, res, next)));
   app.use(cookieParser());
 
+  // Lightweight public health endpoint used by Render keep-alive checks.
+  // It intentionally does not require authentication or database access.
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
+
   // WhatsApp routes are mounted HERE, before any feature router. Several
   // modules mount a blanket `router.use(authenticate)` at "/api", which would
   // otherwise answer 401 for the (unauthenticated, signature-verified) Meta
