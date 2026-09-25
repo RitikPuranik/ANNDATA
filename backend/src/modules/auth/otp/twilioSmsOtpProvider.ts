@@ -29,12 +29,13 @@ async function twilioRequest(path: string, params: URLSearchParams): Promise<Rec
 export class TwilioSmsOtpProvider implements OtpProvider {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async sendOtp(destination: string, purpose: string): Promise<SendOtpResult> {
+  async sendOtp(destination: string, purpose: string, userId?: string): Promise<SendOtpResult> {
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
     const challenge = await this.prisma.otpChallenge.create({
       data: {
         destination,
         purpose,
+        userId,
         codeHash: hashToken(`twilio:${crypto.randomUUID()}`),
         expiresAt,
       },
