@@ -222,3 +222,27 @@ export function contactSupportEmailTemplate(input: {
   }\n\n${input.message}`;
   return { subject, html, text };
 }
+
+export function passwordResetOtpEmailTemplate(code: string): RenderedEmail {
+  const subject = "Your Anndata password reset OTP";
+  const html = shell(
+    "Your Anndata password reset OTP. It expires in 10 minutes.",
+    `${heading("Password reset OTP")}
+     ${paragraph("We received a request to reset your Anndata password. Use the verification code below to continue.")}
+     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px 0;">
+       <tr>
+         <td style="background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px 24px; text-align:center;">
+           <span style="font-size:32px; line-height:1; font-weight:700; letter-spacing:8px; color:${BRAND_COLOR};">${escapeHtml(code)}</span>
+         </td>
+       </tr>
+     </table>
+     ${infoBox("⏱ This OTP expires in <strong>10 minutes</strong> and can only be used once.")}
+     ${paragraph("If you didn't request a password reset, you can safely ignore this email.")}`,
+  );
+  const text = `Your Anndata password reset OTP is: ${code}
+
+This OTP expires in 10 minutes and can only be used once.
+
+If you didn't request a password reset, you can safely ignore this email.`;
+  return { subject, html, text };
+}
