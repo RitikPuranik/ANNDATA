@@ -14,11 +14,11 @@ export class EmailOtpProvider implements OtpProvider {
     private readonly emailService: EmailService,
   ) {}
 
-  async sendOtp(destination: string, purpose: string): Promise<SendOtpResult> {
+  async sendOtp(destination: string, purpose: string, userId?: string): Promise<SendOtpResult> {
     const code = generateNumericOtp(6);
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
     const challenge = await this.prisma.otpChallenge.create({
-      data: { destination, purpose, codeHash: hashToken(code), expiresAt },
+      data: { destination, purpose, userId, codeHash: hashToken(code), expiresAt },
     });
 
     const rendered = passwordResetOtpEmailTemplate(code);
