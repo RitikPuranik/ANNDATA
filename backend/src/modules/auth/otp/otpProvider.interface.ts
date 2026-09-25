@@ -16,6 +16,6 @@ export interface VerifyOtpResult {
  * later without touching call sites.
  */
 export interface OtpProvider {
-  sendOtp(destination: string, purpose: string): Promise<SendOtpResult>;
+  sendOtp(destination: string, purpose: string, userId?: string): Promise<SendOtpResult>;
   verifyOtp(challengeId: string, code: string, expectedPurpose?: string): Promise<VerifyOtpResult>;
 }
