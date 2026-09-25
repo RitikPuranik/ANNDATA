@@ -91,7 +91,7 @@ function WarehousesContent() {
           <Alert variant="info">No storage places found nearby right now.</Alert>
         ) : (
           <>
-            <WarehouseFriendlyCard data={nearbyQuery.data} />
+            <WarehouseFriendlyCard data={nearbyQuery.data ?? []} />
             <TechnicalDetails>
               <InsightPanel data={{ warehouses: nearbyQuery.data }} skipKeys={["id"]} />
             </TechnicalDetails>
