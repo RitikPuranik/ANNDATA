@@ -148,6 +148,10 @@ import { PrismaPaymentRecordRepository } from "./modules/payments/payment-record
 import { PaymentAuthorizationService } from "./modules/payments/payment.authorization";
 import { PaymentService } from "./modules/payments/payment.service";
 import { createPaymentRouter } from "./modules/payments/payment.routes";
+import { PrismaDigitalTransactionLedgerRepository } from "./modules/ledger/digital-transaction-ledger.repository";
+import { LedgerAuthorizationService } from "./modules/ledger/digital-transaction-ledger.authorization";
+import { DigitalTransactionLedgerService } from "./modules/ledger/digital-transaction-ledger.service";
+import { createDigitalTransactionLedgerRouter } from "./modules/ledger/digital-transaction-ledger.routes";
 
 export interface AppDependencies {
   authRepository: AuthRepository;
@@ -760,6 +764,23 @@ export function createApp(deps: AppDependencies): Express {
   );
 
   app.use("/api", createPaymentRouter(paymentService, deps.authRepository, deps.auditService));
+
+  // Module 20 — Digital Transaction Ledger. Consumes Module 19's own
+  // PaymentService.getRecordHandoff() (Step 28 — "the entire Module 20
+  // handoff contract"); PaymentService itself never implements ledger
+  // functionality. Wired as a post-write hook via
+  // paymentService.setLedgerHook() below so a payment obligation being
+  // created/a payment being recorded automatically produces the
+  // corresponding append-only ledger entries — Module 19 remains the
+  // only place payment status is decided; Module 20 only ever records
+  // what already happened there.
+  const ledgerRepository = new PrismaDigitalTransactionLedgerRepository(deps.prisma);
+  const ledgerAuthorization = new LedgerAuthorizationService(fpoAuthorization);
+  const ledgerService = new DigitalTransactionLedgerService(deps.prisma, ledgerRepository, ledgerAuthorization, deps.auditService);
+
+  paymentService.setLedgerHook(ledgerService);
+
+  app.use("/api", createDigitalTransactionLedgerRouter(ledgerService, deps.authRepository, deps.auditService));
 
   // WhatsApp Farmer Assistant — a thin channel on top of the services above.
   // Disabled by default (WHATSAPP_ENABLED=false): the webhook answers 503 and

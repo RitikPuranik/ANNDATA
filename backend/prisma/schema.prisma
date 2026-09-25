@@ -3658,3 +3658,130 @@ model WhatsAppMessage {
   @@map("whatsapp_messages")
 }
 
+// ---------------------------------------------------------------------------
+// Module 20 — Digital Transaction Ledger
+//
+// An append-only, auditable financial history. NOT a payment gateway: this
+// module never moves money — it records financial events and the resulting
+// financial state derived from Module 13 (accepted trade), Module 14 (net
+// realization), Module 18 (delivery reconciliation) and Module 19 (payment
+// status). Once a row is written it is never updated or deleted — a
+// correction is always a new REVERSAL row referencing the original via
+// reversalOfEntryId (see digital-transaction-ledger.service.ts).
+//
+// Design decisions (see docs/modules/module-20-digital-transaction-ledger.md
+// for the full write-up):
+//  - transactionId groups every ledger entry belonging to one sale's
+//    financial flow. It is deliberately set to the Module 18 Delivery id —
+//    the one durable anchor Module 13/14/18/19 all already key off — never
+//    the ledger row's own id (Delivery already enforces one obligation per
+//    delivery; see PaymentObligation.deliveryId's own @unique).
+//  - tradeId/lotId/farmerId/buyerId/sourceEntityId are plain indexed String
+//    columns, not Prisma relations. This keeps the migration additive and
+//    isolated — Module 20 reads other modules' data through their own
+//    services/repositories (never re-querying it independently to
+//    reconstruct history) and does not require touching TradeOffer,
+//    CropLot, FarmerProfile, BuyerProfile or User with new back-relation
+//    fields.
+//  - balanceAfter is NOT persisted. A stored running balance would need
+//    every concurrent write to this table serialized under a row lock to
+//    stay correct (the same problem Module 19's own
+//    PaymentObligationRepository.lockForUpdate() exists to solve for a
+//    single obligation) — but ledger entries fan in from many independent
+//    sources (Module 14/18/19) and are never limited to one lock target.
+//    Balance is instead reconstructed deterministically at read time by
+//    summing balance-affecting entries in (transactionId, createdAt, id)
+//    order — see calculateBalance() in the service.
+//  - Idempotency is enforced by a database uniqueness constraint on
+//    (sourceModule, sourceEntityId, sourceEventId, eventType) — a payment
+//    webhook/retry/replay can therefore never create a second ledger row
+//    for the same upstream event, even under concurrent requests.
+enum LedgerEventType {
+  TRADE_VALUE_RECORDED
+  NET_REALIZATION_RECORDED
+  LOGISTICS_COST_RECORDED
+  STORAGE_COST_RECORDED
+  OTHER_DEDUCTION_RECORDED
+  DELIVERY_ADJUSTMENT
+  PAYMENT_OBLIGATION_CREATED
+  PAYMENT_RECORDED
+  PARTIAL_PAYMENT
+  FINAL_PAYMENT
+  REFUND
+  REVERSAL
+  MANUAL_ADJUSTMENT
+}
+
+// CREDIT: amount increases the farmer/seller's receivable balance for this
+// transaction (e.g. the obligation being created, a refund reversing a
+// prior payment). DEBIT: amount reduces it (e.g. a payment being applied).
+// See ledger-direction.ts for the exact per-event-type mapping.
+enum LedgerDirection {
+  CREDIT
+  DEBIT
+}
+
+enum LedgerSourceModule {
+  MODULE_13_TRADE
+  MODULE_14_NET_REALIZATION
+  MODULE_18_RECONCILIATION
+  MODULE_19_PAYMENT
+  MANUAL_ADJUSTMENT
+  REVERSAL
+}
+
+model DigitalTransactionLedger {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  // Stable group identifier for every entry in one sale's financial flow —
+  // never this row's own id. See the module-level comment above.
+  transactionId String
+
+  tradeId  String?
+  lotId    String?
+  farmerId String?
+  buyerId  String?
+
+  eventType LedgerEventType
+  direction LedgerDirection
+
+  amount   Decimal @db.Decimal(16, 2)
+  currency String  @default("INR")
+
+  sourceModule   LedgerSourceModule
+  // The id of the upstream row this entry was derived from (e.g. a
+  // PaymentRecord.id, a NetRealizationCalculation.id, a
+  // DeliveryReconciliation.id). Null only for MANUAL_ADJUSTMENT.
+  sourceEntityId String?
+  // The specific upstream event/state transition being recorded — part of
+  // the idempotency key. For a payment this is the PaymentRecord id itself
+  // (Module 19 payments are already idempotent per obligation — see
+  // PaymentRecord.idempotencyKey — so replaying the same record can only
+  // ever resolve to the same sourceEventId here).
+  sourceEventId String?
+
+  description String?
+  // Immutable financial snapshot captured at write time (Step: "Immutable
+  // Historical Snapshots") — never reconstructed later from Module 14/18/19's
+  // *current* state.
+  metadata Json?
+
+  reversalOfEntryId String?
+  reversalOfEntry   DigitalTransactionLedger?  @relation("LedgerReversal", fields: [reversalOfEntryId], references: [id], onDelete: Restrict)
+  reversals         DigitalTransactionLedger[] @relation("LedgerReversal")
+
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([sourceModule, sourceEntityId, sourceEventId, eventType], name: "ledger_idempotency_key")
+  @@index([transactionId, createdAt])
+  @@index([tradeId])
+  @@index([farmerId])
+  @@index([buyerId])
+  @@index([sourceModule, sourceEntityId])
+  @@index([createdAt])
+  @@map("digital_transaction_ledger")
+}
+

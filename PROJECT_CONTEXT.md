@@ -23,8 +23,13 @@
 7. Module 7 — Buyer Management & Matching: implemented
 8. Module 8 — Sell vs Store Decision Engine: implemented (deterministic engine authoritative; optional/advisory-only AI layer — see `docs/modules/module-08-sell-vs-store.md`)
 14. Module 14 — Net Realization Calculator: implemented (fully deterministic, no AI/ML; never fabricates a missing price or cost — see `docs/modules/module-14-net-realization.md`)
+16. Module 16 — Logistics Quote & Optimization: implemented (see `docs/modules/module-16-logistics-quote-optimization.md`)
+17. Module 17 — Shipment & GPS Tracking: implemented (see `docs/modules/module-17-shipment-gps-tracking.md`)
+18. Module 18 — Delivery & Quality Reconciliation: implemented (see `docs/modules/module-18-delivery-quality-reconciliation.md`)
+19. Module 19 — Payment Status Tracking: implemented (not a payment gateway — status tracking only)
+20. Module 20 — Digital Transaction Ledger: implemented (append-only, auditable financial history; not a payment gateway — see `docs/modules/module-20-digital-transaction-ledger.md`. `TRADE_VALUE_RECORDED`/`LOGISTICS_COST_RECORDED`/`STORAGE_COST_RECORDED`/`OTHER_DEDUCTION_RECORDED`/`DELIVERY_ADJUSTMENT`/`REFUND` are implemented but not yet auto-wired from Module 13/14/18, since no existing business rule produces those figures independently yet — see the doc's own "Not yet wired automatically" note)
 
-Next planned business modules include Logistics, Shipment/Tracking, Delivery, Payment Status, Ledger, Grievance, Notifications, multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
+Next planned business modules include Grievance, Notifications, multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
 
 ## Backend — Actual Current Stack
 - Express.js 4.x
@@ -62,6 +67,14 @@ Next planned business modules include Logistics, Shipment/Tracking, Delivery, Pa
 - `modules/sell-vs-store/` — Module 8 deterministic Sell vs Store decision engine (input resolution -> scoring -> persistence), plus an optional, advisory-only AI layer (`ai/`) that can never override the deterministic result
 - `app.ts` — dependency-injected Express app factory
 - `server.ts` — composition root; only place that constructs the real PrismaClient
+- `modules/payments/` — Module 19 payment obligation/record tracking (status only, not a gateway)
+- `modules/ledger/` — Module 20 append-only Digital Transaction Ledger (see `docs/modules/module-20-digital-transaction-ledger.md`)
+
+Modules 15–19 (Transporter/Vehicle Network, Logistics, Shipment/GPS,
+Delivery/Quality Reconciliation, Payment Status) each have their own
+directory under `modules/` following the same convention as above; see
+their individual docs under `docs/modules/` for the full list — this
+section was not kept in sync with every module added after Module 8.
 
 ## Important Backend Architecture Rules
 - Reuse the existing Prisma client. Do not instantiate another one.

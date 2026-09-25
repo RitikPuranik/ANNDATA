@@ -40,7 +40,7 @@ The system is being developed module-by-module. Later modules consume earlier do
 | 17 | Shipment & GPS Tracking | ✅ Complete |
 | 18 | Delivery & Quality Reconciliation | ✅ Complete |
 | 19 | Payment Status Tracking | ✅ Complete |
-| 20 | Digital Transaction Ledger | ⏳ Next major module |
+| 20 | Digital Transaction Ledger | ✅ Complete |
 | 21 | Dispute & Grievance Management | ❌ Planned |
 | 22 | Notifications & Alerts | 🟡 Shared infrastructure/hooks exist; full module pending |
 | 23 | Multilingual / Voice / Low-Connectivity | ❌ Planned |
@@ -56,7 +56,7 @@ The system is being developed module-by-module. Later modules consume earlier do
 
 Module 19 is implemented as a **payment status system**, not a payment gateway. It records obligations and payment records/statuses but does not itself move money through UPI, cards, banks, or escrow.
 
-Module 20 has a defined handoff contract exposed by Module 19, but the actual Digital Transaction Ledger is not yet implemented.
+Module 20 is implemented as an **append-only, auditable financial history** built on Module 19's handoff contract — it is also not a payment gateway and never moves money. `TRADE_VALUE_RECORDED`/`LOGISTICS_COST_RECORDED`/`STORAGE_COST_RECORDED`/`OTHER_DEDUCTION_RECORDED`/`DELIVERY_ADJUSTMENT`/`REFUND` event types exist but are not yet auto-wired from Module 13/14/18, since no existing business rule in those modules currently produces those figures independently — see `docs/modules/module-20-digital-transaction-ledger.md` for the full breakdown of what is and isn't wired.
 
 Module 30 is the completed **Meta WhatsApp Business Cloud API integration**, including webhook handling, signature verification, inbound/outbound messaging, public guest conversations, linked-farmer workflows, idempotency, rate limiting, conversation persistence, and Meta provider integration.
 
@@ -596,6 +596,24 @@ It does **not** execute:
 - Payment gateway settlement
 
 The distinction is important: Anndata records the financial state of a trade without pretending to move money that it does not control.
+
+---
+
+## Module 20 — Digital Transaction Ledger
+
+An append-only, auditable financial history built on top of Module 19's own payment handoff. This is also intentionally **not a payment gateway** — it never moves money, initiates a transfer, or fabricates a payment outcome; it only records what Module 13/14/18/19 have already established.
+
+It supports:
+
+- Immutable, append-only ledger entries (never updated or deleted — corrections are new compensating `REVERSAL` entries)
+- Idempotent recording via a database uniqueness constraint on `(sourceModule, sourceEntityId, sourceEventId, eventType)` — a payment webhook retry or replay can never create a duplicate entry
+- Transaction grouping (keyed on the Module 18 delivery id), farmer/buyer/source-module filtering
+- `PAYMENT_OBLIGATION_CREATED` / `PAYMENT_RECORDED` / `PARTIAL_PAYMENT` / `FINAL_PAYMENT` recorded automatically from Module 19 via an optional `PaymentLedgerHook`
+- A Module 14 net-realization snapshot recorder (available, not yet auto-triggered — see the module doc)
+- Admin-only reversals and manual adjustments, both requiring an explicit reason and both fully audited
+- Deterministic transaction summaries sourced from Module 19's own authoritative `PaymentObligation` balance, never a second payment-state machine
+
+Full architecture, direction/balance semantics, and what is intentionally not yet wired: `docs/modules/module-20-digital-transaction-ledger.md`.
 
 ---
 
@@ -1210,16 +1228,15 @@ Before modifying a module, read:
 ## Immediate
 
 ```text
-Module 20
-Digital Transaction Ledger
+Module 21
+Dispute & Grievance Management
 ```
 
-The ledger will consume the finalized payment handoff from Module 19 and provide the immutable transaction history required for the platform's financial traceability.
+Module 20 (Digital Transaction Ledger) is complete — it consumed the finalized payment handoff from Module 19 and provides the immutable transaction history required for the platform's financial traceability. See `docs/modules/module-20-digital-transaction-ledger.md`.
 
 ## Following Modules
 
 ```text
-20  Digital Transaction Ledger
 21  Dispute & Grievance Management
 22  Notifications & Alerts
 23  Multilingual / Voice / Low-Connectivity

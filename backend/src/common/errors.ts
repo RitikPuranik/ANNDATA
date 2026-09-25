@@ -161,6 +161,17 @@ export type ErrorCode =
   | "DUPLICATE_PAYMENT_SUBMISSION"
   | "UNAUTHORIZED_PAYMENT_ACCESS"
   | "PAYMENT_RECORD_NOT_REVERSIBLE"
+  // Module 20 — Digital Transaction Ledger. LEDGER_ENTRY_NOT_FOUND is NOT
+  // included here — thrown via the generic NotFoundError (same convention
+  // as every module above) — and UNAUTHORIZED_LEDGER_ACCESS is thrown via
+  // the generic AuthorizationError. Every other code here is a 422
+  // business-rule violation.
+  | "INVALID_LEDGER_AMOUNT"
+  | "LEDGER_ENTRY_ALREADY_REVERSED"
+  | "LEDGER_REVERSAL_AMOUNT_MISMATCH"
+  | "LEDGER_REVERSAL_OF_REVERSAL"
+  | "LEDGER_UNKNOWN_SOURCE_EVENT"
+  | "LEDGER_MANUAL_ADJUSTMENT_REQUIRES_REASON"
   | "UNEXPECTED_ERROR";
 
 export class AppError extends Error {
@@ -453,6 +464,29 @@ export class PaymentDomainError extends AppError {
       | "INVALID_PAYMENT_TRANSITION"
       | "DUPLICATE_PAYMENT_SUBMISSION"
       | "PAYMENT_RECORD_NOT_REVERSIBLE"
+    >,
+    statusCode = 422,
+  ) {
+    super(message, statusCode, code);
+  }
+}
+
+/**
+ * Module 20's equivalent of PaymentDomainError. LEDGER_ENTRY_NOT_FOUND is
+ * NOT included here — thrown via the generic NotFoundError — and
+ * UNAUTHORIZED_LEDGER_ACCESS is thrown via the generic AuthorizationError.
+ */
+export class LedgerDomainError extends AppError {
+  constructor(
+    message: string,
+    code: Extract<
+      ErrorCode,
+      | "INVALID_LEDGER_AMOUNT"
+      | "LEDGER_ENTRY_ALREADY_REVERSED"
+      | "LEDGER_REVERSAL_AMOUNT_MISMATCH"
+      | "LEDGER_REVERSAL_OF_REVERSAL"
+      | "LEDGER_UNKNOWN_SOURCE_EVENT"
+      | "LEDGER_MANUAL_ADJUSTMENT_REQUIRES_REASON"
     >,
     statusCode = 422,
   ) {
