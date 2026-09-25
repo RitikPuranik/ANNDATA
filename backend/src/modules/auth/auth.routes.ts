@@ -19,6 +19,7 @@ import {
   loginSchema,
   registerRequestSchema,
   resetPasswordSchema,
+  verifyPasswordResetOtpSchema,
 } from "./auth.schemas";
 import { createAuthController } from "./auth.controller";
 
@@ -240,6 +241,13 @@ export function createAuthRouter(authService: AuthService, repo: AuthRepository,
    *       200: { description: Password reset, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessResponse' } } } }
    *       400: { description: Invalid or expired token, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
    */
+  router.post(
+    "/verify-password-reset-otp",
+    passwordResetRateLimiter(),
+    validateBody(verifyPasswordResetOtpSchema),
+    asyncHandler(controller.verifyPasswordResetOtp),
+  );
+
   router.post(
     "/reset-password",
     passwordResetRateLimiter(),
