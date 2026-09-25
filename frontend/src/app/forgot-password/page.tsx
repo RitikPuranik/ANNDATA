@@ -7,7 +7,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label, FieldError, FieldHint, Alert } from "@/components/ui/primitives";
+import { Label, FieldHint, Alert } from "@/components/ui/primitives";
 import { authApi } from "@/services/authApi";
 import { ApiRequestError } from "@/types/api";
 import { mobileSchema } from "@/features/auth/auth.schemas";
@@ -26,8 +26,6 @@ export default function ForgotPasswordPage() {
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isVerifying, setIsVerifying] = React.useState(false);
-
-  const identifier = channel === "email" ? email.trim() : mobile.trim();
 
   function switchChannel(next: Channel) {
     setChannel(next);
@@ -197,7 +195,6 @@ export default function ForgotPasswordPage() {
             Use a different method or resend
           </button>
 
-          <FieldError>{null}</FieldError>
         </form>
       )}
     </AuthLayout>
