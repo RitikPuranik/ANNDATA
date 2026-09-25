@@ -9,6 +9,8 @@ import { swaggerSpec } from "./config/swagger";
 import { AuthRepository } from "./modules/auth/auth.repository";
 import { AuditService } from "./modules/audit/audit.service";
 import { AuthService } from "./modules/auth/auth.service";
+import { createEmailService } from "./modules/notifications/email";
+import { createOtpProviders } from "./modules/auth/otp";
 import { createAuthRouter } from "./modules/auth/auth.routes";
 import { createUsersRouter } from "./modules/users/users.routes";
 import { ReferenceDataRepository } from "./modules/reference-data/reference-data.repository";
@@ -223,7 +225,9 @@ export function createApp(deps: AppDependencies): Express {
   const whatsappRoutes = express.Router();
   app.use(whatsappRoutes);
 
-  const authService = new AuthService(deps.authRepository, deps.auditService);
+  const emailService = createEmailService();
+  const otpProviders = createOtpProviders(deps.prisma, emailService);
+  const authService = new AuthService(deps.authRepository, deps.auditService, emailService, otpProviders);
 
   const referenceDataService = new ReferenceDataService(deps.referenceDataRepository);
   const farmerProfileResolver = new FarmerProfileResolver(deps.farmerProfileRepository);
