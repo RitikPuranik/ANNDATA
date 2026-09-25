@@ -29,7 +29,9 @@
 19. Module 19 — Payment Status Tracking: implemented (not a payment gateway — status tracking only)
 20. Module 20 — Digital Transaction Ledger: implemented (append-only, auditable financial history; not a payment gateway — see `docs/modules/module-20-digital-transaction-ledger.md`. `TRADE_VALUE_RECORDED`/`LOGISTICS_COST_RECORDED`/`STORAGE_COST_RECORDED`/`OTHER_DEDUCTION_RECORDED`/`DELIVERY_ADJUSTMENT`/`REFUND` are implemented but not yet auto-wired from Module 13/14/18, since no existing business rule produces those figures independently yet — see the doc's own "Not yet wired automatically" note)
 
-Next planned business modules include Grievance, Notifications, multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
+21. Module 21 — Dispute & Grievance Management: implemented (dispute/grievance lifecycle with state machine, evidence, comments/internal notes, assignment, resolution; never a payment system — financial consequences are only ever references into Module 19/20 — see `docs/modules/module-21-dispute-grievance-management.md`)
+
+Next planned business modules include Notifications, multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
 
 ## Backend — Actual Current Stack
 - Express.js 4.x
@@ -69,6 +71,7 @@ Next planned business modules include Grievance, Notifications, multilingual/voi
 - `server.ts` — composition root; only place that constructs the real PrismaClient
 - `modules/payments/` — Module 19 payment obligation/record tracking (status only, not a gateway)
 - `modules/ledger/` — Module 20 append-only Digital Transaction Ledger (see `docs/modules/module-20-digital-transaction-ledger.md`)
+- `modules/disputes/` — Module 21 Dispute & Grievance Management (state machine, evidence, comments/internal notes, assignment, resolution; references Module 19/20 for any financial consequence, never invents one — see `docs/modules/module-21-dispute-grievance-management.md`)
 
 Modules 15–19 (Transporter/Vehicle Network, Logistics, Shipment/GPS,
 Delivery/Quality Reconciliation, Payment Status) each have their own

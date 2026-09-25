@@ -172,6 +172,21 @@ export type ErrorCode =
   | "LEDGER_REVERSAL_OF_REVERSAL"
   | "LEDGER_UNKNOWN_SOURCE_EVENT"
   | "LEDGER_MANUAL_ADJUSTMENT_REQUIRES_REASON"
+  // Module 21 — Dispute & Grievance Management. DISPUTE_NOT_FOUND is NOT
+  // included here — thrown via the generic NotFoundError — and
+  // UNAUTHORIZED_DISPUTE_ACCESS is thrown via the generic
+  // AuthorizationError. Every other code here is a 422 business-rule
+  // violation thrown via DisputeDomainError.
+  | "DISPUTE_REFERENCE_ENTITY_REQUIRED"
+  | "DISPUTE_REFERENCE_ENTITY_NOT_OWNED"
+  | "DUPLICATE_OPEN_DISPUTE"
+  | "INVALID_DISPUTE_TRANSITION"
+  | "DISPUTE_NOT_MUTABLE"
+  | "DISPUTE_ALREADY_ASSIGNED"
+  | "DISPUTE_RESOLUTION_REQUIRES_CODE"
+  | "DISPUTE_NOT_RESOLVED"
+  | "DISPUTE_REOPEN_NOT_ALLOWED"
+  | "DISPUTE_EVIDENCE_NOT_FOUND"
   | "UNEXPECTED_ERROR";
 
 export class AppError extends Error {
@@ -487,6 +502,34 @@ export class LedgerDomainError extends AppError {
       | "LEDGER_REVERSAL_OF_REVERSAL"
       | "LEDGER_UNKNOWN_SOURCE_EVENT"
       | "LEDGER_MANUAL_ADJUSTMENT_REQUIRES_REASON"
+    >,
+    statusCode = 422,
+  ) {
+    super(message, statusCode, code);
+  }
+}
+
+/**
+ * Module 21's equivalent of LedgerDomainError/PaymentDomainError.
+ * DISPUTE_NOT_FOUND / DISPUTE_EVIDENCE_NOT_FOUND-as-404 and
+ * UNAUTHORIZED_DISPUTE_ACCESS are NOT thrown through here — the former use
+ * the generic NotFoundError, the latter the generic AuthorizationError,
+ * same convention as every module above.
+ */
+export class DisputeDomainError extends AppError {
+  constructor(
+    message: string,
+    code: Extract<
+      ErrorCode,
+      | "DISPUTE_REFERENCE_ENTITY_REQUIRED"
+      | "DISPUTE_REFERENCE_ENTITY_NOT_OWNED"
+      | "DUPLICATE_OPEN_DISPUTE"
+      | "INVALID_DISPUTE_TRANSITION"
+      | "DISPUTE_NOT_MUTABLE"
+      | "DISPUTE_ALREADY_ASSIGNED"
+      | "DISPUTE_RESOLUTION_REQUIRES_CODE"
+      | "DISPUTE_NOT_RESOLVED"
+      | "DISPUTE_REOPEN_NOT_ALLOWED"
     >,
     statusCode = 422,
   ) {

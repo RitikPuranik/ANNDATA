@@ -153,6 +153,10 @@ import { createPaymentRouter } from "./modules/payments/payment.routes";
 import { PrismaDigitalTransactionLedgerRepository } from "./modules/ledger/digital-transaction-ledger.repository";
 import { LedgerAuthorizationService } from "./modules/ledger/digital-transaction-ledger.authorization";
 import { DigitalTransactionLedgerService } from "./modules/ledger/digital-transaction-ledger.service";
+import { PrismaDisputeRepository } from "./modules/disputes/dispute.repository";
+import { DisputeAuthorizationService } from "./modules/disputes/dispute.authorization";
+import { DisputeService } from "./modules/disputes/dispute.service";
+import { createDisputeRouter } from "./modules/disputes/dispute.routes";
 import { createDigitalTransactionLedgerRouter } from "./modules/ledger/digital-transaction-ledger.routes";
 
 export interface AppDependencies {
@@ -217,6 +221,12 @@ export function createApp(deps: AppDependencies): Express {
   app.use((req, res, next) => (isWhatsAppWebhook(req.path) ? next() : jsonParser(req, res, next)));
   app.use((req, res, next) => (isWhatsAppWebhook(req.path) ? next() : urlencodedParser(req, res, next)));
   app.use(cookieParser());
+
+  // Lightweight public health endpoint used by Render keep-alive checks.
+  // It intentionally does not require authentication or database access.
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
 
   // WhatsApp routes are mounted HERE, before any feature router. Several
   // modules mount a blanket `router.use(authenticate)` at "/api", which would
@@ -785,6 +795,17 @@ export function createApp(deps: AppDependencies): Express {
   paymentService.setLedgerHook(ledgerService);
 
   app.use("/api", createDigitalTransactionLedgerRouter(ledgerService, deps.authRepository, deps.auditService));
+
+  // Module 21 — Dispute & Grievance Management. References Module 4/13/17/
+  // 18/19 entities by id but never duplicates their data; a resolution's
+  // financial consequence is only ever a reference to an already-existing
+  // Module 19 PaymentObligation / Module 20 DigitalTransactionLedger row
+  // (created through those services' own endpoints, not this module).
+  const disputeRepository = new PrismaDisputeRepository(deps.prisma);
+  const disputeAuthorization = new DisputeAuthorizationService();
+  const disputeService = new DisputeService(deps.prisma, disputeRepository, disputeAuthorization, deps.auditService);
+
+  app.use("/api", createDisputeRouter(disputeService, deps.authRepository, deps.auditService));
 
   // WhatsApp Farmer Assistant — a thin channel on top of the services above.
   // Disabled by default (WHATSAPP_ENABLED=false): the webhook answers 503 and

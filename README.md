@@ -41,7 +41,7 @@ The system is being developed module-by-module. Later modules consume earlier do
 | 18 | Delivery & Quality Reconciliation | ✅ Complete |
 | 19 | Payment Status Tracking | ✅ Complete |
 | 20 | Digital Transaction Ledger | ✅ Complete |
-| 21 | Dispute & Grievance Management | ❌ Planned |
+| 21 | Dispute & Grievance Management | ✅ Complete |
 | 22 | Notifications & Alerts | 🟡 Shared infrastructure/hooks exist; full module pending |
 | 23 | Multilingual / Voice / Low-Connectivity | ❌ Planned |
 | 24 | Fraud & Risk Detection | ❌ Planned |
@@ -57,6 +57,12 @@ The system is being developed module-by-module. Later modules consume earlier do
 Module 19 is implemented as a **payment status system**, not a payment gateway. It records obligations and payment records/statuses but does not itself move money through UPI, cards, banks, or escrow.
 
 Module 20 is implemented as an **append-only, auditable financial history** built on Module 19's handoff contract — it is also not a payment gateway and never moves money. `TRADE_VALUE_RECORDED`/`LOGISTICS_COST_RECORDED`/`STORAGE_COST_RECORDED`/`OTHER_DEDUCTION_RECORDED`/`DELIVERY_ADJUSTMENT`/`REFUND` event types exist but are not yet auto-wired from Module 13/14/18, since no existing business rule in those modules currently produces those figures independently — see `docs/modules/module-20-digital-transaction-ledger.md` for the full breakdown of what is and isn't wired.
+
+Module 21 is implemented as a **dispute/grievance record and lifecycle
+system**, not a payment system — a resolution's financial consequence is
+only ever a reference to an already-existing Module 19 `PaymentObligation`
+/ Module 20 ledger entry, never an amount this module invents or moves
+itself. See `docs/modules/module-21-dispute-grievance-management.md`.
 
 Module 30 is the completed **Meta WhatsApp Business Cloud API integration**, including webhook handling, signature verification, inbound/outbound messaging, public guest conversations, linked-farmer workflows, idempotency, rate limiting, conversation persistence, and Meta provider integration.
 

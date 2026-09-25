@@ -248,6 +248,8 @@ model User {
 
   sessions            Session[]
   auditLogs           AuditLog[]
+  disputesRaised      Dispute[] @relation("DisputesRaised")
+  disputesAssigned    Dispute[] @relation("DisputesAssigned")
   passwordResetTokens PasswordResetToken[]
   otpChallenges       OtpChallenge[]
 
@@ -674,6 +676,7 @@ model FarmerProfile {
   @@index([userId])
   @@index([fpoId])
   @@map("farmer_profiles")
+  disputes Dispute[]
 }
 
 model Farm {
@@ -1001,6 +1004,7 @@ model CropLot {
   @@index([availabilityDate])
   @@index([createdAt])
   @@map("crop_lots")
+  disputes Dispute[]
 }
 
 // Append-only transition log (build spec section 37/38/69) — kept
@@ -1527,6 +1531,7 @@ model BuyerProfile {
   @@index([verificationStatus])
   @@index([state, district])
   @@map("buyer_profiles")
+  disputes Dispute[]
 }
 
 model BuyerDemand {
@@ -1613,6 +1618,7 @@ model TradeOffer {
   @@index([buyerId, status])
   @@index([buyerDemandId, status])
   @@map("trade_offers")
+  disputes Dispute[]
 }
 
 model TradeOfferRevision {
@@ -2586,6 +2592,7 @@ model TransporterProfile {
   @@index([isActive])
   @@index([providerType])
   @@map("transporter_profiles")
+  disputes Dispute[]
 }
 
 // A vehicle belongs to exactly one transporter (Part 3 — no fleet-sharing
@@ -3038,6 +3045,7 @@ model Shipment {
   @@index([lotId])
   @@index([createdAt])
   @@map("shipments")
+  disputes Dispute[]
 }
 
 // Step 9/29 — one row per GPS/location ping. Never stored on Vehicle
@@ -3231,6 +3239,7 @@ model Delivery {
   @@index([status])
   @@index([createdAt])
   @@map("deliveries")
+  disputes Dispute[]
 }
 
 // Step 3 — one row per weighing event (never a single mutable row), so a
@@ -3471,6 +3480,7 @@ model PaymentObligation {
   @@index([dueAt])
   @@index([createdAt])
   @@map("payment_obligations")
+  disputes Dispute[]
 }
 
 // Step 5 — a payment that has been externally made and is being reported/
@@ -3785,3 +3795,292 @@ model DigitalTransactionLedger {
   @@map("digital_transaction_ledger")
 }
 
+// ---------------------------------------------------------------------------
+// Module 21 — Dispute & Grievance Management
+//
+// A dispute/grievance record for farmers, buyers, transporters and other
+// participants to raise issues against ANNDATA transactions (lot, trade
+// offer, shipment, delivery, payment obligation, ledger entry) or, where no
+// transaction applies, a general platform grievance. Not a payment system:
+// financial consequences are always carried out through Module 19
+// (PaymentObligation/PaymentRecord) and recorded through Module 20
+// (DigitalTransactionLedger) — this module only decides that an adjustment
+// is justified and links to the resulting record. See
+// docs/modules/module-21-dispute-grievance-management.md.
+// ---------------------------------------------------------------------------
+
+enum DisputeType {
+  QUALITY_DISPUTE
+  QUANTITY_DISPUTE
+  PRICE_DISPUTE
+  PAYMENT_DISPUTE
+  DELIVERY_DISPUTE
+  LOGISTICS_DISPUTE
+  DAMAGE_DISPUTE
+  REJECTION_DISPUTE
+  DELAY_DISPUTE
+  OFFER_DISPUTE
+  WEIGHT_DISPUTE
+  GRIEVANCE
+  OTHER
+}
+
+// Distinguishes a dispute tied to a concrete transaction from a general
+// platform grievance (Step 4) without duplicating the model — a single
+// `category` column driven off which reference IDs are actually present.
+enum DisputeCategory {
+  TRANSACTION
+  GRIEVANCE
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  INVESTIGATION
+  AWAITING_PARTY_RESPONSE
+  RESOLUTION_PROPOSED
+  RESOLVED
+  REJECTED
+  CLOSED
+  CANCELLED
+}
+
+enum DisputePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DisputeRaisedByRole {
+  FARMER
+  FPO_ADMIN
+  BUYER
+  TRANSPORTER
+  ADMIN
+}
+
+enum DisputeResolutionCode {
+  NO_ACTION_REQUIRED
+  CLAIM_REJECTED
+  CLAIM_ACCEPTED
+  PARTIAL_CLAIM_ACCEPTED
+  REFUND_REQUIRED
+  PAYMENT_ADJUSTMENT_REQUIRED
+  QUANTITY_ADJUSTMENT
+  QUALITY_ADJUSTMENT
+  DELIVERY_ADJUSTMENT
+  LOGISTICS_ADJUSTMENT
+  OTHER
+}
+
+enum DisputeEvidenceType {
+  IMAGE
+  DOCUMENT
+  DELIVERY_PROOF
+  QUALITY_REPORT
+  WEIGHING_RECORD
+  PAYMENT_REFERENCE
+  SHIPMENT_INFORMATION
+  OTHER
+}
+
+enum DisputeCommentVisibility {
+  PUBLIC_COMMENT
+  INTERNAL_NOTE
+}
+
+enum DisputeHistoryEventType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  COMMENT_ADDED
+  EVIDENCE_ADDED
+  EVIDENCE_REMOVED
+  INVESTIGATION_STARTED
+  RESPONSE_REQUESTED
+  RESOLUTION_PROPOSED
+  RESOLVED
+  REJECTED
+  REOPENED
+  CLOSED
+  CANCELLED
+  FINANCIAL_ADJUSTMENT_REQUESTED
+  FINANCIAL_ADJUSTMENT_COMPLETED
+}
+
+model Dispute {
+  id             String @id @default(uuid())
+  publicId       String @unique @default(uuid())
+  // Server-generated, immutable — e.g. "DSP-2026-000123" (see
+  // dispute-number.ts), same convention as CropLot.lotNumber /
+  // Delivery.deliveryNumber.
+  disputeNumber  String @unique
+
+  type     DisputeType
+  category DisputeCategory @default(TRANSACTION)
+
+  title       String
+  description String
+
+  status   DisputeStatus   @default(OPEN)
+  priority DisputePriority @default(MEDIUM)
+
+  raisedByUserId String
+  raisedByRole   DisputeRaisedByRole
+
+  // Party references — always resolved/validated server-side from the
+  // caller's own identity and the referenced transaction entity, never
+  // trusted from the client as a bare ownership claim (Step 8/22).
+  farmerId      String?
+  buyerId       String?
+  transporterId String?
+
+  // Transaction entity references (Step 5/23) — all optional; a GRIEVANCE
+  // category dispute may have none of them set. Never a hard FK onto
+  // another module's table (mirrors Delivery.tradeOfferId's own
+  // onDelete: SetNull reasoning) so a dispute's history survives even if
+  // an upstream record is later restructured.
+  lotId               String?
+  tradeOfferId         String?
+  shipmentId          String?
+  deliveryId          String?
+  paymentObligationId String?
+  ledgerEntryId       String?
+
+  assignedToUserId String?
+  assignedAt       DateTime?
+  assignedByUserId String?
+
+  resolutionCode      DisputeResolutionCode?
+  resolutionSummary   String?
+  requestedResolution String?
+  finalResolution     String?
+
+  // Step 16/17/26 — never a raw amount invented here. When a resolution
+  // requires a financial consequence, this only *references* the
+  // authoritative record Module 19/20 already created for it.
+  financialAdjustmentPaymentObligationId String?
+  financialAdjustmentLedgerEntryId       String?
+
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  cancelledAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  raisedBy      User          @relation("DisputesRaised", fields: [raisedByUserId], references: [id], onDelete: Restrict)
+  assignedTo    User?         @relation("DisputesAssigned", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  farmer        FarmerProfile? @relation(fields: [farmerId], references: [id], onDelete: SetNull)
+  buyer         BuyerProfile?  @relation(fields: [buyerId], references: [id], onDelete: SetNull)
+  transporter   TransporterProfile? @relation(fields: [transporterId], references: [id], onDelete: SetNull)
+  lot           CropLot?      @relation(fields: [lotId], references: [id], onDelete: SetNull)
+  tradeOffer    TradeOffer?   @relation(fields: [tradeOfferId], references: [id], onDelete: SetNull)
+  shipment      Shipment?     @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  delivery      Delivery?     @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  paymentObligation PaymentObligation? @relation(fields: [paymentObligationId], references: [id], onDelete: SetNull)
+
+  evidence DisputeEvidence[]
+  comments DisputeComment[]
+  history  DisputeHistoryEvent[]
+
+  @@index([status])
+  @@index([category])
+  @@index([type])
+  @@index([priority])
+  @@index([raisedByUserId])
+  @@index([farmerId])
+  @@index([buyerId])
+  @@index([transporterId])
+  @@index([lotId])
+  @@index([tradeOfferId])
+  @@index([shipmentId])
+  @@index([deliveryId])
+  @@index([paymentObligationId])
+  @@index([assignedToUserId])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("disputes")
+}
+
+// Step 10 — metadata/reference only (never binary storage in Postgres),
+// same shape as DeliveryEvidence/QualityImage.
+model DisputeEvidence {
+  id        String @id @default(uuid())
+  disputeId String
+
+  evidenceType    DisputeEvidenceType
+  storageProvider String
+  externalId      String
+  secureUrl       String
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  checksum        String?
+  description     String?
+
+  uploadedByUserId String
+  uploadedAt       DateTime @default(now())
+
+  // Step 19 — evidence is never hard-deleted; a "removed" evidence row is
+  // soft-marked so the dispute-history EVIDENCE_REMOVED event and this row
+  // both remain part of the permanent record.
+  removedAt       DateTime?
+  removedByUserId String?
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@map("dispute_evidence")
+}
+
+// Step 11/12 — append-only communication history. PUBLIC_COMMENT is visible
+// to every party on the dispute; INTERNAL_NOTE only to ADMIN/assigned staff
+// (enforced in the service/serializer layer, never left to the client).
+model DisputeComment {
+  id        String @id @default(uuid())
+  disputeId String
+
+  visibility DisputeCommentVisibility @default(PUBLIC_COMMENT)
+
+  authorUserId String
+  authorRole   DisputeRaisedByRole
+  message      String
+
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_comments")
+}
+
+// Step 19 — append-only event log, same convention as LotStatusHistory /
+// ShipmentEvent. Never mutated once written.
+model DisputeHistoryEvent {
+  id        String @id @default(uuid())
+  disputeId String
+
+  eventType DisputeHistoryEventType
+
+  actorUserId String?
+  actorRole   DisputeRaisedByRole?
+
+  previousState String?
+  newState      String?
+
+  description String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@index([eventType])
+  @@map("dispute_history_events")
+}
