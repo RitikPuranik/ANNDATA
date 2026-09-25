@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { PrismaClient } from "@prisma/client";
 import { env } from "../../../config/env";
 import { logger } from "../../../config/logger";
@@ -36,7 +37,7 @@ export class TwilioSmsOtpProvider implements OtpProvider {
         destination,
         purpose,
         userId,
-        codeHash: hashToken(`twilio:${crypto.randomUUID()}`),
+        codeHash: hashToken(`twilio:${randomUUID()}`),
         expiresAt,
       },
     });
