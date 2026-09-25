@@ -11,7 +11,7 @@
 
 const TRANSLATE_ENDPOINT = "https://translate.googleapis.com/translate_a/single";
 const CLIENT_CANDIDATES = ["dict-chrome-ex", "gtx"];
-const BATCH_SIZE = 30;
+const BATCH_SIZE = 40;
 const CONCURRENCY = 4;
 const STORAGE_PREFIX = "anndata.i18n.v3.";
 

@@ -13,8 +13,11 @@ import { hasLetters } from "@/i18n/scriptDetection";
  * - Never adds/removes/reorders DOM nodes.
  * - Always preserves the immutable original English source text for every node
  *   in a WeakMap, ensuring switching languages NEVER translates already-translated text.
- * - Restores original English before translating into a new language.
- * - Fully debounced, deduplicated, and cached to prevent network lag.
+ * - Smooth language transitions: when switching between two non-English languages
+ *   (e.g. Bengali -> Tamil), the DOM directly transitions from the old language
+ *   to the new language with ZERO flash/flicker of English.
+ * - Restores original English only when the user explicitly chooses English.
+ * - Fully deduplicated and cached to eliminate latency.
  */
 
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "IFRAME", "TEXTAREA"]);
@@ -100,8 +103,6 @@ export function AutoTranslate() {
           // Retrieve or lock the authentic original English text
           let orig = textOriginals.get(node as Text);
           if (orig === undefined) {
-            // First time seeing this text node. Since the app is in English by default
-            // and we revertAll() on language switch, this is the authentic original text.
             orig = raw;
             textOriginals.set(node as Text, orig);
           }
@@ -229,8 +230,9 @@ export function AutoTranslate() {
 
   // Language switch handler:
   // 1. Invalidate any in-flight translations for old language
-  // 2. Revert DOM back to authentic original English
-  // 3. If new language is not English, translate directly from English originals
+  // 2. If target is English, revert DOM to authentic English immediately
+  // 3. If target is another language, KEEP current display and translate directly
+  //    into target language (no intermediate flash to English!)
   React.useEffect(() => {
     currentLangRef.current = language;
     generationRef.current += 1;
@@ -240,9 +242,10 @@ export function AutoTranslate() {
       scheduledRef.current = null;
     }
 
-    revertAll();
-
-    if (language !== "en") {
+    if (language === "en") {
+      revertAll();
+    } else {
+      // Direct translation without reverting to English in between!
       collectAndTranslate(language, generationRef.current);
     }
   }, [language, collectAndTranslate, revertAll]);
