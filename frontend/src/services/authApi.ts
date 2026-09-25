@@ -60,10 +60,18 @@ export const authApi = {
     });
   },
 
-  async forgotPassword(mobile: string) {
-    return apiRequest<null>("/api/auth/forgot-password", {
+  async forgotPassword(payload: { channel: "email"; email: string } | { channel: "sms"; mobile: string }) {
+    return apiRequest<{ challengeId: string; expiresAt: string } | null>("/api/auth/forgot-password", {
       method: "POST",
-      body: { mobile },
+      body: payload,
+      skipAuthRetry: true,
+    });
+  },
+
+  async verifyPasswordResetOtp(payload: { channel: "email" | "sms"; challengeId: string; otp: string }) {
+    return apiRequest<{ resetToken: string }>("/api/auth/verify-password-reset-otp", {
+      method: "POST",
+      body: payload,
       skipAuthRetry: true,
     });
   },
