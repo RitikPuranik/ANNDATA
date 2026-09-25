@@ -33,6 +33,14 @@ const envObjectSchema = z.object({
   // when it's unset.
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
 
+  // Password recovery SMS OTP via Twilio Verify.
+  TWILIO_ENABLED: strictBoolean,
+  TWILIO_ACCOUNT_SID: z.string().optional().default(""),
+  TWILIO_AUTH_TOKEN: z.string().optional().default(""),
+  TWILIO_VERIFY_SERVICE_SID: z.string().optional().default(""),
+  TWILIO_VERIFY_BASE_URL: z.string().url().default("https://verify.twilio.com/v2"),
+  TWILIO_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+
   REDIS_URL: z.string().optional(),
 
   POSTHOG_API_KEY: z.string().optional().default(""),
@@ -171,6 +179,18 @@ const envObjectSchema = z.object({
 });
 
 const envSchema = envObjectSchema.superRefine((value, ctx) => {
+  if (value.TWILIO_ENABLED) {
+    const required = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID"] as const;
+    for (const key of required) {
+      if (!value[key]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when TWILIO_ENABLED=true`,
+        });
+      }
+    }
+  }
   if (value.WHATSAPP_ENABLED) {
     const required = [
       "WHATSAPP_ACCESS_TOKEN",
