@@ -10,8 +10,10 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { LoadingBlock } from "@/components/StateBlocks";
 import { InsightPanel } from "@/components/InsightPanel";
+import { TechnicalDetails } from "@/components/ui/TechnicalDetails";
 import { useCropsQuery } from "@/hooks/useReferenceData";
 import { warehouseApi } from "@/services/warehouseApi";
+import { WarehouseFriendlyCard } from "@/components/warehouses/WarehouseFriendlyCard";
 
 function WarehousesContent() {
   const cropsQuery = useCropsQuery();
@@ -48,14 +50,14 @@ function WarehousesContent() {
   return (
     <div>
       <PageHeader
-        title="Warehouses"
-        description="Find nearby storage and check how well-suited it is for your crop before you commit to selling or storing."
+        title="Storage"
+        description="Find a place near you to keep your crop safe until you're ready to sell."
       />
 
       <Card className="mb-6">
         <div className="grid gap-3 sm:grid-cols-[2fr_auto]">
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Crop (optional)</label>
+            <label className="mb-1.5 block text-sm font-medium">Which crop? (optional)</label>
             <Select value={cropId} onChange={(e) => setCropId(e.target.value)} disabled={cropsQuery.isLoading}>
               <option value="">Any crop</option>
               {(cropsQuery.data ?? []).map((c) => (
@@ -67,7 +69,7 @@ function WarehousesContent() {
           </div>
           <div className="flex items-end">
             <Button className="w-auto px-4 py-3.5 text-sm" onClick={useLocation}>
-              <MapPin className="h-4 w-4" aria-hidden /> Find near me
+              <MapPin className="h-4 w-4" aria-hidden /> Find storage near me
             </Button>
           </div>
         </div>
@@ -76,19 +78,24 @@ function WarehousesContent() {
 
       <Card>
         <h2 className="mb-3 flex items-center gap-2 section-title">
-          <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Results
+          <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Places near you
         </h2>
         {!coords ? (
           <div className="flex flex-col items-center gap-3 py-8 text-center">
             <MapPin className="h-8 w-8 text-muted-foreground" aria-hidden />
-            <p className="text-sm text-muted-foreground">Share your location to see warehouses near you.</p>
+            <p className="text-sm text-muted-foreground">Tap the button above to see storage places near you.</p>
           </div>
         ) : nearbyQuery.isLoading ? (
           <LoadingBlock />
         ) : nearbyQuery.isError ? (
-          <Alert variant="info">No warehouses found nearby right now.</Alert>
+          <Alert variant="info">No storage places found nearby right now.</Alert>
         ) : (
-          <InsightPanel data={nearbyQuery.data} />
+          <>
+            <WarehouseFriendlyCard data={nearbyQuery.data} />
+            <TechnicalDetails>
+              <InsightPanel data={{ warehouses: nearbyQuery.data }} skipKeys={["id"]} />
+            </TechnicalDetails>
+          </>
         )}
       </Card>
     </div>

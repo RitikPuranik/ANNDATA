@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -13,6 +13,7 @@ import {
   PackageX,
   MapPin,
   History,
+  IndianRupee,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageHeader } from "@/components/ui/stat-card";
@@ -22,6 +23,8 @@ import { Badge, toneForStatus } from "@/components/ui/badge";
 import { LoadingBlock, ErrorBlock } from "@/components/StateBlocks";
 import { useAuth } from "@/hooks/useAuth";
 import { shipmentApi } from "@/services/shipmentApi";
+import { deliveryApi } from "@/services/deliveryApi";
+import { paymentsApi } from "@/services/paymentsApi";
 import { ApiRequestError } from "@/types/api";
 
 const STEPS = ["CREATED", "CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "IN_TRANSIT", "ARRIVED", "DELIVERED"];
@@ -42,6 +45,100 @@ function StatusTimeline({ status }: { status: string }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * Bridges Shipment (Module 17) -> Delivery/Reconciliation (Module 18) ->
+ * Payments (Module 19). Only shown once the shipment has actually been
+ * delivered, since that's the earliest point a delivery record can exist.
+ * Money is never moved here — this only opens the payment-status screens.
+ */
+function PaymentBridgeCard({ shipmentId }: { shipmentId: string }) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [error, setError] = React.useState<string | null>(null);
+  const isBuyerSide = user?.role === "BUYER" || user?.role === "ADMIN";
+
+  const deliveryQuery = useQuery({
+    queryKey: ["deliveries", "byShipment", shipmentId],
+    queryFn: () => deliveryApi.findByShipment(shipmentId),
+    retry: false,
+  });
+
+  const delivery = deliveryQuery.data;
+  const isReconciled = delivery?.status === "RECONCILED";
+
+  const obligationQuery = useQuery({
+    queryKey: ["payments", "obligations", "byDelivery", delivery?.deliveryId],
+    queryFn: () => paymentsApi.listObligations({ deliveryId: delivery!.deliveryId }),
+    enabled: !!delivery && isReconciled,
+    retry: false,
+  });
+
+  const createObligation = useMutation({
+    mutationFn: () => paymentsApi.createObligation(delivery!.deliveryId),
+    onSuccess: (o) => router.push(`/payments/${o.publicId}`),
+    onError: (e) => setError(e instanceof ApiRequestError ? e.message : "Couldn't set up the payment."),
+  });
+
+  if (deliveryQuery.isLoading || !delivery) return null;
+  if (!isReconciled) {
+    return (
+      <Card className="mt-6">
+        <h3 className="mb-1 flex items-center gap-2 section-title">
+          <IndianRupee className="h-[18px] w-[18px]" aria-hidden /> Payment
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Payment isn&rsquo;t ready to set up yet — the delivered quantity and quality still need to be checked and agreed
+          by both sides first.
+        </p>
+      </Card>
+    );
+  }
+
+  const existing = obligationQuery.data?.items?.[0];
+
+  return (
+    <Card className="mt-6">
+      <h3 className="mb-3 flex items-center gap-2 section-title">
+        <IndianRupee className="h-[18px] w-[18px]" aria-hidden /> Payment
+      </h3>
+      {error && (
+        <Alert variant="error" className="mb-3">
+          {error}
+        </Alert>
+      )}
+      {obligationQuery.isLoading ? (
+        <LoadingBlock />
+      ) : existing ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-semibold">
+              {existing.currency} {existing.finalPayableAmount.toLocaleString("en-IN")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {existing.amountDue > 0 ? `${existing.currency} ${existing.amountDue.toLocaleString("en-IN")} still due` : "Fully settled"}
+            </p>
+          </div>
+          <Button variant="outline" className="w-auto px-4 py-2 text-sm" onClick={() => router.push(`/payments/${existing.publicId}`)}>
+            View payment
+          </Button>
+        </div>
+      ) : isBuyerSide ? (
+        <div>
+          <p className="mb-3 text-sm text-muted-foreground">
+            This delivery has been checked and agreed. Set up the payment record so both sides can track what&rsquo;s
+            owed and what&rsquo;s been paid.
+          </p>
+          <Button className="w-auto px-4" isLoading={createObligation.isPending} onClick={() => createObligation.mutate()}>
+            <IndianRupee className="h-4 w-4" aria-hidden /> Set up payment
+          </Button>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Waiting for the buyer to set up the payment for this delivery.</p>
+      )}
+    </Card>
   );
 }
 
@@ -170,6 +267,8 @@ function ShipmentDetailContent({ id }: { id: string }) {
           </div>
         )}
       </Card>
+
+      {s.status === "DELIVERED" && <PaymentBridgeCard shipmentId={id} />}
 
       <Card className="mt-6">
         <h3 className="mb-4 flex items-center gap-2 section-title">

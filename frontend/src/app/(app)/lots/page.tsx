@@ -16,14 +16,24 @@ import { LotStatus } from "@/types/domain";
 
 const STATUS_FILTERS: { value: LotStatus | "ALL"; label: string }[] = [
   { value: "ALL", label: "All" },
-  { value: "DRAFT", label: "Draft" },
-  { value: "AVAILABLE", label: "Available" },
-  { value: "PARTIALLY_COMMITTED", label: "Partly committed" },
-  { value: "COMMITTED", label: "Committed" },
-  { value: "STORED", label: "Stored" },
-  { value: "COMPLETED", label: "Completed" },
+  { value: "DRAFT", label: "Not listed yet" },
+  { value: "AVAILABLE", label: "For sale" },
+  { value: "PARTIALLY_COMMITTED", label: "Partly sold" },
+  { value: "COMMITTED", label: "Sold" },
+  { value: "STORED", label: "In storage" },
+  { value: "COMPLETED", label: "Done" },
   { value: "CANCELLED", label: "Cancelled" },
 ];
+
+const STATUS_LABEL: Record<LotStatus, string> = {
+  DRAFT: "Not listed yet",
+  AVAILABLE: "For sale",
+  PARTIALLY_COMMITTED: "Partly sold",
+  COMMITTED: "Sold",
+  STORED: "In storage",
+  COMPLETED: "Done",
+  CANCELLED: "Cancelled",
+};
 
 function LotsContent() {
   const [filter, setFilter] = React.useState<LotStatus | "ALL">("ALL");
@@ -35,13 +45,13 @@ function LotsContent() {
   return (
     <div>
       <PageHeader
-        title="My Lots"
-        description="Produce you've listed for sale, with its status through discovery, quality, and trade."
+        title="My Produce"
+        description="Crop you've listed to sell — see where each batch stands, from listing to payment."
         actions={
           <Link href="/lots/new">
             <Button className="w-auto px-4 py-2.5 text-sm">
               <Plus className="h-4 w-4" aria-hidden />
-              New lot
+              Add crop to sell
             </Button>
           </Link>
         }
@@ -66,7 +76,7 @@ function LotsContent() {
       ) : lotsQuery.isError ? (
         <ErrorBlock message="Couldn't load your lots." onRetry={() => lotsQuery.refetch()} />
       ) : (lotsQuery.data ?? []).length === 0 ? (
-        <EmptyState message="No lots match this filter yet." actionLabel="Create a lot" onAction={() => (window.location.href = "/lots/new")} />
+        <EmptyState message="Nothing here yet." actionLabel="Add crop to sell" onAction={() => (window.location.href = "/lots/new")} />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {lotsQuery.data!.map((lot) => (
@@ -79,7 +89,7 @@ function LotsContent() {
                 <div className="h-full w-full transition-transform duration-500 group-hover:scale-105">
                   <CropVisual name={lot.crop?.name} category={lot.crop?.category} imageUrl={lot.imageUrl} variant="cover" />
                 </div>
-                <span className="absolute right-2.5 top-2.5"><Badge solid tone={toneForStatus(lot.status)}>{lot.status.replace(/_/g, " ")}</Badge></span>
+                <span className="absolute right-2.5 top-2.5"><Badge solid tone={toneForStatus(lot.status)}>{STATUS_LABEL[lot.status] ?? lot.status.replace(/_/g, " ")}</Badge></span>
                 {lot.crop?.category && (
                   <span className="absolute bottom-2 left-2 rounded-full bg-white/85 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#3c3832] shadow-[0_2px_10px_rgba(0,0,0,.14)] ring-1 ring-black/5 backdrop-blur-sm">
                     {lot.crop.category}

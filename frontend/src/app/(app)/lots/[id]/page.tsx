@@ -27,7 +27,9 @@ import { InsightPanel } from "@/components/InsightPanel";
 import { TechnicalDetails } from "@/components/ui/TechnicalDetails";
 import { QualityFriendlyCard } from "@/components/lots/QualityFriendlyCard";
 import { MarketFriendlyCard, PriceSnapshotFriendlyCard } from "@/components/lots/MarketFriendlyCard";
-import { DecisionFriendlyCard } from "@/components/lots/DecisionFriendlyCard";
+import { DecisionFriendlyCard, RESULT_SHORT_LABEL, confidenceWord } from "@/components/lots/DecisionFriendlyCard";
+import { BuyerMatchFriendlyCard } from "@/components/lots/BuyerMatchFriendlyCard";
+import { StorageRecommendationFriendlyCard } from "@/components/warehouses/WarehouseFriendlyCard";
 import { lotApi } from "@/services/lotApi";
 import { qualityApi } from "@/services/qualityApi";
 import { marketApi } from "@/services/marketApi";
@@ -298,12 +300,12 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
     <div className="space-y-6">
       <Card>
         <h3 className="mb-3 flex items-center gap-2 section-title">
-          <LineChart className="h-6 w-6" aria-hidden /> Best market for this lot
+          <LineChart className="h-6 w-6" aria-hidden /> Best place to sell
         </h3>
         {marketQuery.isLoading ? (
           <LoadingBlock />
         ) : marketQuery.isError ? (
-          <p className="text-sm text-muted-foreground">Market recommendations aren&rsquo;t available for this lot right now.</p>
+          <p className="text-sm text-muted-foreground">We don&rsquo;t have a market pick for this lot yet.</p>
         ) : (
           <>
             <MarketFriendlyCard data={marketQuery.data} />
@@ -316,7 +318,7 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
 
       {cropId && (
         <Card>
-          <h3 className="mb-3 section-title">Price snapshot</h3>
+          <h3 className="mb-3 section-title">Today&rsquo;s price</h3>
           {snapshotQuery.isLoading ? (
             <LoadingBlock />
           ) : snapshotQuery.isError ? (
@@ -333,50 +335,51 @@ function MarketTab({ id, cropId }: { id: string; cropId?: string }) {
       )}
 
       <Card>
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 section-title">
-            <Scale className="h-6 w-6" aria-hidden /> Sell now or store?
+            <Scale className="h-6 w-6" aria-hidden /> Sell now, or wait?
           </h3>
           <Button
             className="w-auto px-4 py-2 text-sm"
             isLoading={decisionMutation.isPending}
             onClick={() => decisionMutation.mutate()}
           >
-            Run analysis
+            {decisionMutation.data ? "Check again" : "Get my answer"}
           </Button>
         </div>
+        <p className="mb-3 text-sm text-muted-foreground">We&rsquo;ll look at the price, quality, and storage for this lot and tell you what&rsquo;s best.</p>
         {decisionMutation.isError && (
           <Alert variant="error" className="mb-3">
-            Couldn&rsquo;t generate a decision — this can happen when there isn&rsquo;t enough market, quality, or storage data yet.
+            We couldn&rsquo;t work this out right now — try again in a bit.
           </Alert>
         )}
-        {decisionMutation.data ? (
+        {decisionMutation.data && (
           <>
             <DecisionFriendlyCard decision={decisionMutation.data} />
             <TechnicalDetails>
               <InsightPanel data={decisionMutation.data} />
             </TechnicalDetails>
           </>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Run the analysis to get a deterministic sell-now vs. store recommendation based on market conditions, quality, and storage
-            availability.
-          </p>
         )}
 
         {!!historyQuery.data?.length && (
           <div className="mt-5 border-t border-border pt-4">
-            <h4 className="mb-2 text-muted-foreground sub-title">Past decisions</h4>
-            <div className="space-y-2">
+            <h4 className="mb-3 text-muted-foreground sub-title">What we told you before</h4>
+            <ol className="space-y-4 border-l border-border pl-4">
               {historyQuery.data.map((d: any, i: number) => (
-                <div key={d.publicId ?? i} className="rounded-lg border border-border p-3 text-sm">
-                  <DecisionFriendlyCard decision={d} />
-                  <TechnicalDetails>
+                <li key={d.publicId ?? i} className="relative">
+                  <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
+                  <p className="text-sm font-medium">
+                    {RESULT_SHORT_LABEL[d.result] ?? "Checked"}
+                    {d.confidenceScore !== null && d.confidenceScore !== undefined ? ` · ${confidenceWord(d.confidenceScore)}` : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{new Date(d.createdAt).toLocaleString()}</p>
+                  <TechnicalDetails label="Show details">
                     <InsightPanel data={d} />
                   </TechnicalDetails>
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         )}
       </Card>
@@ -418,15 +421,20 @@ function WarehousesTab({ cropId }: { cropId?: string }) {
   return (
     <Card>
       <h3 className="mb-3 flex items-center gap-2 section-title">
-        <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Storage recommendations
+        <WarehouseIcon className="h-[18px] w-[18px]" aria-hidden /> Where to store it, and what it'll cost
       </h3>
       {locError && <Alert variant="info" className="mb-3">{locError} Showing results without location bias.</Alert>}
       {recommendQuery.isLoading ? (
         <LoadingBlock />
       ) : recommendQuery.isError ? (
-        <p className="text-sm text-muted-foreground">No warehouse recommendations available right now.</p>
+        <p className="text-sm text-muted-foreground">No storage recommendations available right now.</p>
       ) : (
-        <InsightPanel data={recommendQuery.data} />
+        <>
+          <StorageRecommendationFriendlyCard data={recommendQuery.data} />
+          <TechnicalDetails>
+            <InsightPanel data={recommendQuery.data} />
+          </TechnicalDetails>
+        </>
       )}
     </Card>
   );
@@ -465,7 +473,10 @@ function BuyerMatchesTab({ id }: { id: string }) {
                     Send offer
                   </Button>
                 </div>
-                <InsightPanel data={m} skipKeys={["buyer", "demand"]} />
+                <BuyerMatchFriendlyCard match={m} />
+                <TechnicalDetails>
+                  <InsightPanel data={m} skipKeys={["buyer", "demand"]} />
+                </TechnicalDetails>
               </div>
             ))}
           </div>
@@ -590,9 +601,9 @@ function SendOfferCard({
 const TAB_ITEMS = [
   { value: "overview", label: "Overview" },
   { value: "quality", label: "Quality" },
-  { value: "market", label: "Market & Decision" },
+  { value: "market", label: "Sell or Store" },
   { value: "warehouses", label: "Storage" },
-  { value: "matches", label: "Buyer Matches" },
+  { value: "matches", label: "Buyers" },
 ];
 
 function LotDetailContent({ id }: { id: string }) {
@@ -603,10 +614,10 @@ function LotDetailContent({ id }: { id: string }) {
     <div>
       <PageHeader
         title={lotQuery.data ? `${lotQuery.data.crop?.name}${lotQuery.data.variety ? ` · ${lotQuery.data.variety}` : ""}` : "Lot"}
-        description="Everything about this lot — status, quality, market fit, storage, and buyers."
+        description="Everything about this batch — status, quality, price, storage, and buyers, in one place."
         breadcrumb={
           <a href="/lots" className="hover:underline">
-            ← Back to lots
+            ← Back to my produce
           </a>
         }
       />

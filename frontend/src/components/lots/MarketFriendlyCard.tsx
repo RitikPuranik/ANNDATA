@@ -178,6 +178,14 @@ interface PriceSnapshot {
   dataQuality: { lastUpdated: string; freshness: "FRESH" | "RECENT" | "STALE" | "OUTDATED" };
 }
 
+/** Turns backend period codes like "7D" / "30D" into plain words. */
+export function periodLabel(period: string) {
+  const match = /^(\d+)D$/.exec(period);
+  if (!match) return period;
+  const days = match[1];
+  return days === "1" ? "yesterday" : `the last ${days} days`;
+}
+
 export const FRESHNESS_COPY: Record<string, string> = {
   FRESH: "Up to date",
   RECENT: "Fairly recent",
@@ -200,13 +208,13 @@ export function PriceSnapshotFriendlyCard({ data }: { data: PriceSnapshot }) {
           </p>
         </div>
         <div className="friendly-stat">
-          <p className="friendly-stat-label">Trend ({data.trend.period})</p>
+          <p className="friendly-stat-label">Compared to {periodLabel(data.trend.period)}</p>
           <p className="friendly-stat-value" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
             <TrendIcon trend={data.trend.direction} /> {trendLabel(data.trend.direction)}
           </p>
         </div>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">{FRESHNESS_COPY[data.dataQuality.freshness] ?? "Freshness unknown"}</p>
+      <p className="mt-3 text-xs text-muted-foreground">{FRESHNESS_COPY[data.dataQuality.freshness] ?? "We\u2019re not sure how fresh this is."}</p>
     </div>
   );
 }
@@ -270,7 +278,7 @@ export function PriceTrendsFriendlyCard({ data }: { data: PriceTrendsData }) {
           </p>
         </div>
         <div className="friendly-stat">
-          <p className="friendly-stat-label">Change over {data.period}</p>
+          <p className="friendly-stat-label">Change over {periodLabel(data.period)}</p>
           <p className="friendly-stat-value" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
             <TrendIcon trend={summary.trend} /> {trendLabel(summary.trend)}
             {change !== null && change !== undefined && (

@@ -24,22 +24,37 @@ const RESULT_COPY: Record<
   SELL_NOW: {
     tone: "success",
     icon: CheckCircle2,
-    title: "Recommendation: Sell now",
-    fallback: "Based on current market prices, quality, and storage conditions, selling now looks like the better option.",
+    title: "Sell now",
+    fallback: "Prices, quality, and storage all point the same way — this looks like a good time to sell.",
   },
   STORE: {
     tone: "warning",
     icon: Warehouse,
-    title: "Recommendation: Store for now",
-    fallback: "Based on current market prices, quality, and storage conditions, holding onto this lot a bit longer looks like the better option.",
+    title: "Wait a bit and store it",
+    fallback: "Holding on to this lot a little longer looks like the better option right now.",
   },
   INSUFFICIENT_DATA: {
     tone: "neutral",
     icon: HelpCircle,
     title: "Not enough information yet",
-    fallback: "We don't have enough recent market, quality, or storage data to give a confident recommendation for this lot yet.",
+    fallback: "We don't have enough recent information about this lot to say for sure yet. Try again after adding a quality check.",
   },
 };
+
+/** Short, plain label for the result — used in compact history rows. */
+export const RESULT_SHORT_LABEL: Record<string, string> = {
+  SELL_NOW: "Sell now",
+  STORE: "Wait and store",
+  INSUFFICIENT_DATA: "Not enough info",
+};
+
+/** Turns a 0–1 confidence score into a plain word instead of a raw percentage. */
+export function confidenceWord(score: number | null | undefined) {
+  if (score === null || score === undefined) return "";
+  if (score >= 0.8) return "Very sure";
+  if (score >= 0.5) return "Fairly sure";
+  return "Not very sure";
+}
 
 export function DecisionFriendlyCard({ decision }: { decision: SellStoreDecision }) {
   const copy = RESULT_COPY[decision.result] ?? RESULT_COPY.INSUFFICIENT_DATA;
@@ -61,8 +76,10 @@ export function DecisionFriendlyCard({ decision }: { decision: SellStoreDecision
       {decision.confidenceScore !== null && (
         <div className="friendly-stat-row">
           <div className="friendly-stat">
-            <p className="friendly-stat-label">How confident</p>
-            <p className="friendly-stat-value">{Math.round(decision.confidenceScore * 100)}%</p>
+            <p className="friendly-stat-label">How sure we are</p>
+            <p className="friendly-stat-value" style={{ fontSize: 20 }}>
+              {confidenceWord(decision.confidenceScore)}
+            </p>
           </div>
         </div>
       )}

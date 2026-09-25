@@ -14,6 +14,12 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+function isIdKey(key: string) {
+  // Covers "id", "publicId", "lotId", "cropId", "buyerDemandPublicId", etc. —
+  // internal identifiers a farmer has no use for and shouldn't have to see.
+  return key.toLowerCase() === "id" || /Id$/.test(key);
+}
+
 const STATUS_LIKE_KEYS = ["status", "outcome", "recommendation", "decision", "grade", "eligibility", "compatibility", "suitability", "freshness"];
 
 function formatPrimitive(value: unknown): React.ReactNode {
@@ -54,7 +60,7 @@ export function InsightPanel({ data, skipKeys = [] }: { data: unknown; skipKeys?
   // whether it's on the top-level object or inside a nested "crop"/"mandi"
   // section), and empty/null fields are dropped rather than shown as "—" —
   // both keep this readable instead of turning into a raw data dump.
-  const entries = Object.entries(data).filter(([k, v]) => !skipKeys.includes(k) && v !== null && v !== undefined && v !== "");
+  const entries = Object.entries(data).filter(([k, v]) => !skipKeys.includes(k) && !isIdKey(k) && v !== null && v !== undefined && v !== "");
   const primitiveEntries = entries.filter(([, v]) => !isPlainObject(v) && !Array.isArray(v));
   const objectEntries = entries.filter(([, v]) => isPlainObject(v));
   const arrayEntries = entries.filter(([, v]) => Array.isArray(v));

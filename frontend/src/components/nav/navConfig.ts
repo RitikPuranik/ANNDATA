@@ -18,6 +18,7 @@ import {
   Landmark,
   Truck,
   PackageCheck,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { UserRole } from "@/types/api";
@@ -43,6 +44,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/trade-offers", label: "Offers", icon: Handshake },
     { href: "/logistics", label: "Transport", icon: Truck },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
+    { href: "/payments", label: "Payments", icon: Wallet },
     { href: "/net-realization", label: "My Earnings", icon: ReceiptText },
     { href: "/fpo-membership", label: "My FPO", icon: Building2 },
   ],
@@ -51,6 +53,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/buyer/demands", label: "My Demands", icon: ClipboardList },
     { href: "/trade-offers", label: "Offers", icon: Handshake },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
+    { href: "/payments", label: "Payments", icon: Wallet },
   ],
   FPO_ADMIN: [
     { href: "/fpo", label: "Dashboard", icon: LayoutDashboard },
@@ -59,6 +62,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/fpo/aggregation", label: "Aggregation", icon: BarChart3 },
     { href: "/logistics", label: "Transport", icon: Truck },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
+    { href: "/payments", label: "Payments", icon: Wallet },
   ],
   ADMIN: [
     { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -69,6 +73,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/admin/transporters", label: "Transport Network", icon: Truck },
     { href: "/logistics", label: "Transport", icon: Truck },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
+    { href: "/payments", label: "Payments", icon: Wallet },
   ],
   GOVERNMENT_VIEWER: [
     { href: "/government", label: "FPO Insights", icon: Landmark },
