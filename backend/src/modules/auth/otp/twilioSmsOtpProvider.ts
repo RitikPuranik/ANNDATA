@@ -54,9 +54,10 @@ export class TwilioSmsOtpProvider implements OtpProvider {
     return { challengeId: challenge.id, expiresAt };
   }
 
-  async verifyOtp(challengeId: string, code: string): Promise<VerifyOtpResult> {
+  async verifyOtp(challengeId: string, code: string, expectedPurpose?: string): Promise<VerifyOtpResult> {
     const challenge = await this.prisma.otpChallenge.findUnique({ where: { id: challengeId } });
     if (!challenge) return { success: false, reason: "INVALID" };
+    if (expectedPurpose && challenge.purpose !== expectedPurpose) return { success: false, reason: "INVALID" };
     if (challenge.consumedAt) return { success: false, reason: "ALREADY_USED" };
     if (challenge.expiresAt < new Date()) return { success: false, reason: "EXPIRED" };
     if (challenge.attempts >= MAX_ATTEMPTS) return { success: false, reason: "TOO_MANY_ATTEMPTS" };
