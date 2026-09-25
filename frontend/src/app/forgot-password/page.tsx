@@ -138,7 +138,7 @@ export default function ForgotPasswordPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Enter your registered email"
               />
-              <FieldHint>We'll send a 6-digit OTP to this email.</FieldHint>
+              <FieldHint>We&apos;ll send a 6-digit OTP to this email.</FieldHint>
             </div>
           ) : (
             <div>
@@ -152,7 +152,7 @@ export default function ForgotPasswordPage() {
                 onChange={(event) => setMobile(event.target.value)}
                 placeholder="10-digit mobile number"
               />
-              <FieldHint>We'll send the OTP by SMS through Twilio.</FieldHint>
+              <FieldHint>We&apos;ll send the OTP by SMS through Twilio.</FieldHint>
             </div>
           )}
 

@@ -3,36 +3,26 @@
 import * as React from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { translateBatch } from "@/i18n/translateClient";
-import { hasLetters, looksAlreadyInLanguage } from "@/i18n/scriptDetection";
+import { hasLetters } from "@/i18n/scriptDetection";
 
 /**
  * Whole-page auto-translator.
  *
- * en.json + t() only covers strings a developer remembered to wrap. This
- * component instead walks the actual rendered DOM, finds every bit of
- * visible text (and placeholder/aria-label/title attributes) that hasn't
- * been translated yet, and translates it in place — so the app is fully
- * multilingual even where a page has plain hardcoded English text, without
- * anyone needing to touch that page's code.
- *
- * How it stays safe around React:
- * - It only ever edits a Text node's `.nodeValue` or an attribute value,
- *   never adds/removes/reorders DOM nodes, so React's own reconciliation
- *   isn't confused by it.
- * - A MutationObserver watches for new text React renders later (new
- *   pages, async data) and translates that too.
- * - Every original value is remembered so switching back to English (or
- *   to a different language) restores the exact original text first,
- *   rather than compounding translations.
- *
- * Opting an element out: add `translate="no"` (a real HTML attribute) or
- * `data-i18n-skip` to any element whose text should never be sent to the
- * translation service — see the privacy note in I18nProvider's caller.
+ * Walks the rendered DOM and translates visible text and accessible attributes
+ * in place. Safe around React:
+ * - Never adds/removes/reorders DOM nodes.
+ * - Always preserves the immutable original English source text for every node
+ *   in a WeakMap, ensuring switching languages NEVER translates already-translated text.
+ * - Smooth language transitions: when switching between two non-English languages
+ *   (e.g. Bengali -> Tamil), the DOM directly transitions from the old language
+ *   to the new language with ZERO flash/flicker of English.
+ * - Restores original English only when the user explicitly chooses English.
+ * - Fully deduplicated and cached to eliminate latency.
  */
 
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "IFRAME", "TEXTAREA"]);
 const ATTRS = ["placeholder", "aria-label", "title"];
-const DEBOUNCE_MS = 200;
+const DEBOUNCE_MS = 250;
 
 function isSkippable(start: Element | null): boolean {
   let el = start;
@@ -46,107 +36,221 @@ function isSkippable(start: Element | null): boolean {
 
 export function AutoTranslate() {
   const { language } = useI18n();
-  const textOriginals = React.useRef(new Map<Text, string>()).current;
-  const attrOriginals = React.useRef(new Map<Element, Map<string, string>>()).current;
+
+  // Immutable mapping: Text node -> original English text
+  // Once set, this is NEVER overwritten or cleared, guaranteeing translations
+  // are always based on the original English text.
+  const textOriginals = React.useRef(new WeakMap<Text, string>()).current;
+
+  // Active nodes and elements currently modified in the DOM
+  const activeNodesRef = React.useRef<Set<Text>>(new Set());
+  const activeElementsRef = React.useRef<Set<Element>>(new Set());
+
   const applyingRef = React.useRef(false);
   const currentLangRef = React.useRef(language);
+  const generationRef = React.useRef(0);
   const scheduledRef = React.useRef<number | null>(null);
 
+  const revertAll = React.useCallback(() => {
+    applyingRef.current = true;
+
+    for (const node of activeNodesRef.current) {
+      if (node.isConnected) {
+        const orig = textOriginals.get(node);
+        if (orig !== undefined) {
+          node.nodeValue = orig;
+        }
+      }
+      (node as unknown as { __i18n_lang?: string }).__i18n_lang = "en";
+      (node as unknown as { __i18n_pending?: string | null }).__i18n_pending = null;
+    }
+    activeNodesRef.current.clear();
+
+    for (const el of activeElementsRef.current) {
+      if (el.isConnected) {
+        ATTRS.forEach((attr) => {
+          const orig = el.getAttribute(`data-i18n-orig-${attr}`);
+          if (orig !== null) {
+            el.setAttribute(attr, orig);
+            el.removeAttribute(`data-i18n-lang-${attr}`);
+            el.removeAttribute(`data-i18n-pending-${attr}`);
+          }
+        });
+      }
+    }
+    activeElementsRef.current.clear();
+
+    applyingRef.current = false;
+  }, [textOriginals]);
+
   const collectAndTranslate = React.useCallback(
-    async (targetLang: string) => {
+    async (targetLang: string, expectedGeneration: number) => {
       if (typeof document === "undefined" || targetLang === "en") return;
 
-      const newTextNodes: Text[] = [];
+      const nodesToTranslate: { node: Text; orig: string; trimmed: string }[] = [];
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
-          const text = node.nodeValue;
-          if (!text || !text.trim() || !hasLetters(text)) return NodeFilter.FILTER_REJECT;
+          const raw = node.nodeValue;
+          if (!raw || !raw.trim()) return NodeFilter.FILTER_REJECT;
+
           const parent = (node as Text).parentElement;
           if (!parent || isSkippable(parent)) return NodeFilter.FILTER_REJECT;
-          if (textOriginals.has(node as Text)) return NodeFilter.FILTER_REJECT;
-          if (looksAlreadyInLanguage(text, targetLang)) return NodeFilter.FILTER_REJECT;
+
+          const customNode = node as unknown as { __i18n_lang?: string; __i18n_pending?: string | null };
+          if (customNode.__i18n_lang === targetLang) return NodeFilter.FILTER_REJECT;
+          if (customNode.__i18n_pending === targetLang) return NodeFilter.FILTER_REJECT;
+
+          // Retrieve or lock the authentic original English text
+          let orig = textOriginals.get(node as Text);
+          if (orig === undefined) {
+            orig = raw;
+            textOriginals.set(node as Text, orig);
+          }
+
+          const trimmed = orig.trim();
+          if (!hasLetters(trimmed)) return NodeFilter.FILTER_REJECT;
+
           return NodeFilter.FILTER_ACCEPT;
         },
       });
-      let current: Node | null;
-      while ((current = walker.nextNode())) newTextNodes.push(current as Text);
 
-      const attrTargets: { el: Element; attr: string; text: string }[] = [];
+      let current: Node | null;
+      while ((current = walker.nextNode())) {
+        const textNode = current as Text;
+        const orig = textOriginals.get(textNode) || textNode.nodeValue || "";
+        const trimmed = orig.trim();
+        (textNode as unknown as { __i18n_pending?: string | null }).__i18n_pending = targetLang;
+        nodesToTranslate.push({ node: textNode, orig, trimmed });
+      }
+
+      const attrTargets: { el: Element; attr: string; orig: string; trimmed: string }[] = [];
       document.querySelectorAll(ATTRS.map((a) => `[${a}]`).join(",")).forEach((el) => {
         if (isSkippable(el)) return;
+
         ATTRS.forEach((attr) => {
           const val = el.getAttribute(attr);
-          if (!val || !val.trim() || !hasLetters(val)) return;
-          if (attrOriginals.get(el)?.has(attr)) return;
-          if (looksAlreadyInLanguage(val, targetLang)) return;
-          attrTargets.push({ el, attr, text: val });
+          if (!val || !val.trim()) return;
+
+          let orig = el.getAttribute(`data-i18n-orig-${attr}`);
+          if (!orig) {
+            orig = val;
+            el.setAttribute(`data-i18n-orig-${attr}`, orig);
+          }
+
+          const trimmed = orig.trim();
+          if (!hasLetters(trimmed)) return;
+
+          if (el.getAttribute(`data-i18n-lang-${attr}`) === targetLang) return;
+          if (el.getAttribute(`data-i18n-pending-${attr}`) === targetLang) return;
+
+          el.setAttribute(`data-i18n-pending-${attr}`, targetLang);
+          attrTargets.push({ el, attr, orig, trimmed });
         });
       });
 
-      if (newTextNodes.length === 0 && attrTargets.length === 0) return;
+      if (nodesToTranslate.length === 0 && attrTargets.length === 0) return;
 
-      const sourceTexts = [...newTextNodes.map((n) => n.nodeValue || ""), ...attrTargets.map((t) => t.text)];
-      const translated = await translateBatch(sourceTexts, targetLang, "en");
+      // Extract unique trimmed English strings to translate
+      const uniqueTrimmed = Array.from(
+        new Set([
+          ...nodesToTranslate.map((item) => item.trimmed),
+          ...attrTargets.map((item) => item.trimmed),
+        ]),
+      );
 
-      // If the language moved on while this batch was in flight, its
-      // results are stale — drop them rather than mixing languages.
-      if (currentLangRef.current !== targetLang) return;
+      const translatedUnique = await translateBatch(uniqueTrimmed, targetLang, "en");
+
+      // Discard stale results if the language changed while this request was in flight
+      if (
+        currentLangRef.current !== targetLang ||
+        generationRef.current !== expectedGeneration
+      ) {
+        // Clear pending flags
+        nodesToTranslate.forEach(({ node }) => {
+          (node as unknown as { __i18n_pending?: string | null }).__i18n_pending = null;
+        });
+        attrTargets.forEach(({ el, attr }) => {
+          el.removeAttribute(`data-i18n-pending-${attr}`);
+        });
+        return;
+      }
+
+      const translationMap = new Map<string, string>();
+      uniqueTrimmed.forEach((origText, idx) => {
+        translationMap.set(origText, translatedUnique[idx] || origText);
+      });
 
       applyingRef.current = true;
-      newTextNodes.forEach((node, i) => {
-        textOriginals.set(node, node.nodeValue || "");
-        node.nodeValue = translated[i] || node.nodeValue;
+
+      nodesToTranslate.forEach(({ node, orig, trimmed }) => {
+        (node as unknown as { __i18n_pending?: string | null }).__i18n_pending = null;
+        if (!node.isConnected) return;
+
+        const translated = translationMap.get(trimmed);
+        if (translated) {
+          const leading = orig.match(/^(\s*)/)?.[1] ?? "";
+          const trailing = orig.match(/(\s*)$/)?.[1] ?? "";
+          node.nodeValue = `${leading}${translated}${trailing}`;
+          (node as unknown as { __i18n_lang?: string }).__i18n_lang = targetLang;
+          activeNodesRef.current.add(node);
+        }
       });
-      attrTargets.forEach((t, i) => {
-        const value = translated[newTextNodes.length + i] || t.text;
-        if (!attrOriginals.has(t.el)) attrOriginals.set(t.el, new Map());
-        attrOriginals.get(t.el)!.set(t.attr, t.text);
-        t.el.setAttribute(t.attr, value);
+
+      attrTargets.forEach(({ el, attr, orig, trimmed }) => {
+        el.removeAttribute(`data-i18n-pending-${attr}`);
+        if (!el.isConnected) return;
+
+        const translated = translationMap.get(trimmed);
+        if (translated) {
+          const leading = orig.match(/^(\s*)/)?.[1] ?? "";
+          const trailing = orig.match(/(\s*)$/)?.[1] ?? "";
+          el.setAttribute(attr, `${leading}${translated}${trailing}`);
+          el.setAttribute(`data-i18n-lang-${attr}`, targetLang);
+          activeElementsRef.current.add(el);
+        }
       });
+
       requestAnimationFrame(() => {
         applyingRef.current = false;
       });
     },
-    [textOriginals, attrOriginals],
+    [textOriginals],
   );
-
-  const revertAll = React.useCallback(() => {
-    applyingRef.current = true;
-    textOriginals.forEach((original, node) => {
-      if (node.isConnected) node.nodeValue = original;
-    });
-    textOriginals.clear();
-    attrOriginals.forEach((attrs, el) => {
-      attrs.forEach((original, attr) => {
-        if (el.isConnected) el.setAttribute(attr, original);
-      });
-    });
-    attrOriginals.clear();
-    requestAnimationFrame(() => {
-      applyingRef.current = false;
-    });
-  }, [textOriginals, attrOriginals]);
 
   const scheduleTranslate = React.useCallback(
     (targetLang: string) => {
       if (scheduledRef.current) return;
       scheduledRef.current = window.setTimeout(() => {
         scheduledRef.current = null;
-        collectAndTranslate(targetLang);
+        collectAndTranslate(targetLang, generationRef.current);
       }, DEBOUNCE_MS);
     },
     [collectAndTranslate],
   );
 
-  // Language switch: undo whatever's there, then translate fresh into the
-  // newly-selected language (never chain translations of translations).
+  // Language switch handler:
+  // 1. Invalidate any in-flight translations for old language
+  // 2. If target is English, revert DOM to authentic English immediately
+  // 3. If target is another language, KEEP current display and translate directly
+  //    into target language (no intermediate flash to English!)
   React.useEffect(() => {
     currentLangRef.current = language;
-    revertAll();
-    if (language !== "en") collectAndTranslate(language);
+    generationRef.current += 1;
+
+    if (scheduledRef.current) {
+      window.clearTimeout(scheduledRef.current);
+      scheduledRef.current = null;
+    }
+
+    if (language === "en") {
+      revertAll();
+    } else {
+      // Direct translation without reverting to English in between!
+      collectAndTranslate(language, generationRef.current);
+    }
   }, [language, collectAndTranslate, revertAll]);
 
-  // Catch text that appears later: new pages, async data, modals, etc.
+  // Observe newly mounted or dynamic content (async data, page navigation, dialogs)
   React.useEffect(() => {
     if (typeof document === "undefined") return;
     const observer = new MutationObserver(() => {

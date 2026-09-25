@@ -3,90 +3,163 @@
 /**
  * Dynamic, on-demand translation client.
  *
- * There is deliberately no per-language dictionary file here (no hi.json,
- * mr.json, es.json, ...). English (`en.json`) stays as the single source
- * of truth for UI copy, and every other language is produced at runtime by
- * calling a live machine-translation endpoint — see I18nProvider.tsx for
- * the caching layer that makes repeat switches instant.
- *
- * Speed: translating ~130 short strings one request at a time is what made
- * the first switch to a new language slow. Instead we pack many strings
- * into a single request (joined by a marker the translator won't touch),
- * split the result back apart, and only fall back to one-by-one requests
- * for the rare batch where that split doesn't line up cleanly. That turns
- * ~130 network round trips into a handful of them.
+ * English (`en.json` + DOM text) is the single source of truth. Every other
+ * language is translated on the fly with multi-level caching (in-memory +
+ * localStorage) and indexed batching to ensure switches are fast, reliable,
+ * and resilient against rate limits.
  */
 
 const TRANSLATE_ENDPOINT = "https://translate.googleapis.com/translate_a/single";
-
-// How many strings we try to translate in a single request. Kept small
-// enough to stay well under URL length limits for typical short UI copy.
+const CLIENT_CANDIDATES = ["dict-chrome-ex", "gtx"];
 const BATCH_SIZE = 40;
-// How many requests (batches, or individual fallback calls) run at once.
-const CONCURRENCY = 8;
-// A separator unlikely to appear in UI copy and unlikely to be reworded by
-// a translator, used to glue many strings into one request and split them
-// back apart afterwards.
-const BATCH_SEPARATOR = " || ";
+const CONCURRENCY = 4;
+const STORAGE_PREFIX = "anndata.i18n.v3.";
 
-// Matches our own `{{varName}}` interpolation tokens (see I18nProvider's
-// `interpolate`). We swap these out before sending text to the translator
-// and put them back afterwards so a machine translation never mangles a
-// placeholder like {{name}}.
+// In-memory cache: "source:target:trimmedText" -> translatedText
+const memoryCache = new Map<string, string>();
+
+function getCacheKey(source: string, target: string, text: string): string {
+  return `${source}:${target}:${text.trim()}`;
+}
+
+function loadLocalCache(target: string): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(`${STORAGE_PREFIX}${target}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalCache(target: string, entries: Record<string, string>) {
+  if (typeof window === "undefined" || Object.keys(entries).length === 0) return;
+  try {
+    const existing = loadLocalCache(target);
+    const merged = { ...existing, ...entries };
+    const keys = Object.keys(merged);
+    const MAX_ENTRIES = 2000;
+    if (keys.length > MAX_ENTRIES) {
+      const trimmed: Record<string, string> = {};
+      keys.slice(-MAX_ENTRIES).forEach((k) => {
+        trimmed[k] = merged[k];
+      });
+      window.localStorage.setItem(`${STORAGE_PREFIX}${target}`, JSON.stringify(trimmed));
+    } else {
+      window.localStorage.setItem(`${STORAGE_PREFIX}${target}`, JSON.stringify(merged));
+    }
+  } catch {
+    // If quota exceeded, do not throw
+  }
+}
+
+// Matches our own `{{varName}}` interpolation tokens
 const PLACEHOLDER_PATTERN = /\{\{\s*(\w+)\s*\}\}/g;
 
 function protectPlaceholders(text: string): { safeText: string; restore: (translated: string) => string } {
   const tokens: string[] = [];
-  const safeText = text.replace(PLACEHOLDER_PATTERN, (match) => {
-    tokens.push(match);
-    return `[[${tokens.length - 1}]]`;
-  });
-  const restore = (translated: string) =>
-    translated.replace(/\[\[\s*(\d+)\s*\]\]/g, (_, i) => tokens[Number(i)] ?? "");
+  const safeText = text
+    .replace(PLACEHOLDER_PATTERN, (match) => {
+      tokens.push(match);
+      return `[[${tokens.length - 1}]]`;
+    })
+    .replace(/\r?\n+/g, " __NL__ ");
+
+  const restore = (translated: string) => {
+    const restoredNewlines = translated.replace(/\s*__NL__\s*/g, "\n");
+    return restoredNewlines.replace(/\[\[\s*(\d+)\s*\]\]/g, (_, i) => tokens[Number(i)] ?? "");
+  };
+
   return { safeText, restore };
 }
 
-async function fetchTranslation(text: string, target: string, source: string): Promise<string> {
-  const params = new URLSearchParams({ client: "gtx", sl: source, tl: target, dt: "t", q: text });
-  const res = await fetch(`${TRANSLATE_ENDPOINT}?${params.toString()}`);
-  if (!res.ok) throw new Error(`Translation request failed with status ${res.status}`);
-  const data = await res.json();
-  const segments = Array.isArray(data?.[0]) ? data[0] : [];
-  return segments.map((segment: unknown[]) => (Array.isArray(segment) ? segment[0] ?? "" : "")).join("");
+async function fetchFromEndpoint(text: string, target: string, source: string, clientIndex = 0): Promise<string> {
+  const client = CLIENT_CANDIDATES[clientIndex] || "dict-chrome-ex";
+  const params = new URLSearchParams({
+    client,
+    sl: source,
+    tl: target,
+    dt: "t",
+    q: text,
+  });
+
+  try {
+    const res = await fetch(`${TRANSLATE_ENDPOINT}?${params.toString()}`);
+    if (!res.ok) {
+      if (clientIndex + 1 < CLIENT_CANDIDATES.length) {
+        return fetchFromEndpoint(text, target, source, clientIndex + 1);
+      }
+      throw new Error(`Translation status: ${res.status}`);
+    }
+    const data = await res.json();
+    const segments = Array.isArray(data?.[0]) ? data[0] : [];
+    return segments.map((segment: unknown[]) => (Array.isArray(segment) ? segment[0] ?? "" : "")).join("");
+  } catch (err) {
+    if (clientIndex + 1 < CLIENT_CANDIDATES.length) {
+      return fetchFromEndpoint(text, target, source, clientIndex + 1);
+    }
+    throw err;
+  }
 }
 
 async function translateOne(text: string, target: string, source: string, attempt = 0): Promise<string> {
-  if (!text || !text.trim()) return text;
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+
+  const cacheKey = getCacheKey(source, target, trimmed);
+  if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey)!;
+
   const { safeText, restore } = protectPlaceholders(text);
   try {
-    const translated = await fetchTranslation(safeText, target, source);
-    return translated ? restore(translated) : text;
+    const translated = await fetchFromEndpoint(safeText, target, source);
+    const result = translated ? restore(translated) : text;
+    memoryCache.set(cacheKey, result);
+    return result;
   } catch {
-    if (attempt < 1) return translateOne(text, target, source, attempt + 1);
-    // Never let a translation failure break the UI: keep the original text.
+    if (attempt < 1) {
+      return translateOne(text, target, source, attempt + 1);
+    }
     return text;
   }
 }
 
 /**
- * Translates a whole batch of strings (already known to be non-empty) in
- * one network request, joined by BATCH_SEPARATOR. Returns null (rather
- * than throwing) if anything about the round trip looks unreliable — a
- * request failure, or the translator returning a different number of
- * pieces than we sent — so the caller can fall back to translating that
- * batch's strings individually instead of risking misaligned text.
+ * Translates a indexed chunk of strings in a single network request.
+ * Uses index markers (`${i}::: ${text}`) separated by newlines so lines
+ * never get scrambled or lost.
  */
-async function translateJoinedBatch(texts: string[], target: string, source: string): Promise<string[] | null> {
+async function translateIndexedChunk(
+  texts: string[],
+  target: string,
+  source: string,
+): Promise<(string | null)[]> {
   const protections = texts.map(protectPlaceholders);
-  const joined = protections.map((p) => p.safeText).join(BATCH_SEPARATOR);
+  const joined = protections.map((p, i) => `${i}::: ${p.safeText}`).join("\n");
 
   try {
-    const translatedJoined = await fetchTranslation(joined, target, source);
-    const parts = translatedJoined.split(/\s*\|\s*\|\s*/).map((p) => p.trim());
-    if (parts.length !== texts.length) return null;
-    return parts.map((part, i) => protections[i].restore(part) || texts[i]);
+    const translatedJoined = await fetchFromEndpoint(joined, target, source);
+    const lines = translatedJoined.split("\n");
+    const resultMap = new Map<number, string>();
+    let currentIndex = -1;
+
+    for (const line of lines) {
+      const match = line.match(/^(\d+)\s*:::\s*(.*)$/);
+      if (match) {
+        currentIndex = parseInt(match[1], 10);
+        resultMap.set(currentIndex, match[2].trim());
+      } else if (currentIndex >= 0 && line.trim()) {
+        resultMap.set(currentIndex, `${resultMap.get(currentIndex) || ""} ${line.trim()}`);
+      }
+    }
+
+    return texts.map((_, i) => {
+      if (resultMap.has(i)) {
+        return protections[i].restore(resultMap.get(i)!);
+      }
+      return null;
+    });
   } catch {
-    return null;
+    return texts.map(() => null);
   }
 }
 
@@ -106,25 +179,76 @@ async function withConcurrency<T, R>(items: T[], limit: number, worker: (item: T
 }
 
 /**
- * Translates a batch of strings from `source` to `target`. Strings are
- * packed BATCH_SIZE at a time into single requests (run with bounded
- * concurrency), with automatic per-string fallback for any batch whose
- * result doesn't split back apart cleanly.
+ * Translates an arbitrary list of strings with automatic caching,
+ * deduplication, and indexed batching.
  */
 export async function translateBatch(texts: string[], target: string, source = "en"): Promise<string[]> {
   if (!target || target === source || texts.length === 0) return texts;
 
-  const chunks: string[][] = [];
-  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    chunks.push(texts.slice(i, i + BATCH_SIZE));
+  // Preload local storage cache into memoryCache for target if not loaded
+  const localCache = loadLocalCache(target);
+  for (const [k, v] of Object.entries(localCache)) {
+    const key = getCacheKey(source, target, k);
+    if (!memoryCache.has(key)) {
+      memoryCache.set(key, v);
+    }
   }
 
-  const chunkResults = await withConcurrency(chunks, CONCURRENCY, async (chunk) => {
-    const joined = await translateJoinedBatch(chunk, target, source);
-    if (joined) return joined;
-    // Fall back to translating this chunk's strings one at a time.
-    return withConcurrency(chunk, CONCURRENCY, (text) => translateOne(text, target, source));
-  });
+  // Identify which unique strings need translation
+  const neededUnique = new Set<string>();
+  for (const text of texts) {
+    const trimmed = text.trim();
+    if (!trimmed) continue;
+    const key = getCacheKey(source, target, trimmed);
+    if (!memoryCache.has(key)) {
+      neededUnique.add(trimmed);
+    }
+  }
 
-  return chunkResults.flat();
+  const missingList = Array.from(neededUnique);
+
+  if (missingList.length > 0) {
+    const chunks: string[][] = [];
+    for (let i = 0; i < missingList.length; i += BATCH_SIZE) {
+      chunks.push(missingList.slice(i, i + BATCH_SIZE));
+    }
+
+    const newLocalEntries: Record<string, string> = {};
+
+    await withConcurrency(chunks, CONCURRENCY, async (chunk) => {
+      const chunkResults = await translateIndexedChunk(chunk, target, source);
+
+      for (let i = 0; i < chunk.length; i++) {
+        const originalText = chunk[i];
+        let translated = chunkResults[i];
+
+        // Fall back to single-item translation if the batch didn't return this index
+        if (!translated) {
+          translated = await translateOne(originalText, target, source);
+        }
+
+        if (translated) {
+          const key = getCacheKey(source, target, originalText);
+          memoryCache.set(key, translated);
+          newLocalEntries[originalText] = translated;
+        }
+      }
+    });
+
+    saveLocalCache(target, newLocalEntries);
+  }
+
+  // Reconstruct the output matching the input order
+  return texts.map((text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return text;
+    const key = getCacheKey(source, target, trimmed);
+    const translated = memoryCache.get(key);
+    if (!translated) return text;
+
+    // Preserve leading and trailing whitespace
+    const leading = text.match(/^(\s*)/)?.[1] ?? "";
+    const trailing = text.match(/(\s*)$/)?.[1] ?? "";
+    return `${leading}${translated}${trailing}`;
+  });
 }

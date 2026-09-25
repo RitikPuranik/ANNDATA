@@ -9,21 +9,46 @@ const OTP_TTL_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
 
 function toE164(indianMobile: string): string {
-  return indianMobile.startsWith("+") ? indianMobile : `+91${indianMobile}`;
+  const normalized = indianMobile.trim().replace(/[\s()-]/g, "");
+  if (normalized.startsWith("+")) return normalized;
+  if (normalized.startsWith("91") && normalized.length === 12) return `+${normalized}`;
+  if (normalized.startsWith("0") && normalized.length === 11) return `+91${normalized.slice(1)}`;
+  return `+91${normalized}`;
 }
 
 async function twilioRequest(path: string, params: URLSearchParams): Promise<Record<string, unknown>> {
   const credentials = Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString("base64");
-  const response = await fetch(`${env.TWILIO_VERIFY_BASE_URL}${path}`, {
+  const url = `${env.TWILIO_VERIFY_BASE_URL}${path}`;
+
+  const response = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Basic ${credentials}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
     body: params.toString(),
     signal: AbortSignal.timeout(env.TWILIO_TIMEOUT_MS),
   });
-  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) {
-    throw new Error(typeof body.message === "string" ? body.message : "Twilio Verify request failed.");
+
+  const rawBody = await response.text().catch(() => "");
+  let body: Record<string, unknown> = {};
+  try {
+    body = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
+  } catch {
+    // Keep the raw response for diagnostics below.
   }
+
+  if (!response.ok) {
+    const message =
+      typeof body.message === "string"
+        ? body.message
+        : rawBody.trim()
+          ? rawBody.trim().slice(0, 500)
+          : `Twilio Verify request failed with HTTP ${response.status}.`;
+
+    throw new Error(`Twilio HTTP ${response.status}: ${message}`);
+  }
+
   return body;
 }
 
@@ -48,8 +73,17 @@ export class TwilioSmsOtpProvider implements OtpProvider {
         new URLSearchParams({ To: toE164(destination), Channel: "sms" }),
       );
     } catch (error) {
-      await this.prisma.otpChallenge.delete({ where: { id: challenge.id } });
-      logger.error({ destination, purpose, error }, "[TwilioSmsOtpProvider] Failed to send OTP");
+      await this.prisma.otpChallenge.delete({ where: { id: challenge.id } }).catch(() => undefined);
+      logger.error(
+        {
+          destination,
+          purpose,
+          error: error instanceof Error ? error.message : String(error),
+          twilioServiceConfigured: Boolean(env.TWILIO_VERIFY_SERVICE_SID),
+          twilioAccountConfigured: Boolean(env.TWILIO_ACCOUNT_SID),
+        },
+        "[TwilioSmsOtpProvider] Failed to send OTP",
+      );
       throw new Error("Unable to send the OTP right now.");
     }
 
@@ -74,7 +108,11 @@ export class TwilioSmsOtpProvider implements OtpProvider {
       if (result.status !== "approved") return { success: false, reason: "INVALID" };
       await this.prisma.otpChallenge.update({ where: { id: challengeId }, data: { consumedAt: new Date() } });
       return { success: true };
-    } catch {
+    } catch (error) {
+      logger.warn(
+        { challengeId, error: error instanceof Error ? error.message : String(error) },
+        "[TwilioSmsOtpProvider] OTP verification request failed",
+      );
       return { success: false, reason: "INVALID" };
     }
   }
