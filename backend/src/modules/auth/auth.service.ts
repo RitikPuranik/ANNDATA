@@ -34,6 +34,7 @@ import {
   verifyPassword,
 } from "./auth.utils";
 import { verifyGoogleIdToken } from "./google.service";
+import { OtpProvider } from "./otp/otpProvider.interface";
 
 const BLOCKED_LOGIN_STATUSES = new Set(["SUSPENDED", "DEACTIVATED"]);
 
@@ -65,6 +66,7 @@ export class AuthService {
     private readonly repo: AuthRepository,
     private readonly audit: AuditService,
     private readonly emailService: EmailService = createEmailService(),
+    private readonly otpProviders?: { email: OtpProvider; sms: OtpProvider },
   ) {}
 
   async register(input: RegisterInput, meta: RequestMeta): Promise<{ user: PublicUserDTO }> {
@@ -400,56 +402,98 @@ export class AuthService {
     }
   }
 
-  async requestPasswordReset(mobile: string, meta: RequestMeta): Promise<void> {
-    const user = await this.repo.findUserByMobile(mobile);
-    // Deliberately silent on a miss — the controller always returns the
-    // same generic message regardless of what happens here.
-    if (!user) return;
+  async requestPasswordReset(
+    channel: "email" | "sms",
+    identifier: string,
+    meta: RequestMeta,
+  ): Promise<{ challengeId: string; expiresAt: Date } | null> {
+    const user = channel === "email"
+      ? await this.repo.findUserByEmail(identifier.toLowerCase())
+      : await this.repo.findUserByMobile(identifier);
+
+    // Keep the public response generic so account existence is not disclosed.
+    if (!user) return null;
+
+    const destination = channel === "email" ? user.email : user.mobile;
+    if (!destination) return null;
+
+    if (!this.otpProviders) {
+      throw new AuthenticationError("OTP delivery is not configured.");
+    }
+
+    const provider = channel === "email" ? this.otpProviders.email : this.otpProviders.sms;
+    const purpose = channel === "email" ? "PASSWORD_RESET_EMAIL" : "PASSWORD_RESET_SMS";
+    const result = await provider.sendOtp(destination, purpose);
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "PASSWORD_RESET_OTP_REQUESTED",
+      entityType: "User",
+      entityId: user.id,
+      metadata: { channel },
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+    });
+    trackEvent("password_reset_started", user.publicId, { channel });
+
+    return result;
+  }
+
+  async verifyPasswordResetOtp(
+    channel: "email" | "sms",
+    challengeId: string,
+    code: string,
+    meta: RequestMeta,
+  ): Promise<{ resetToken: string }> {
+    if (!this.otpProviders) {
+      throw new AuthenticationError("OTP delivery is not configured.");
+    }
+
+    const provider = channel === "email" ? this.otpProviders.email : this.otpProviders.sms;
+    const purpose = channel === "email" ? "PASSWORD_RESET_EMAIL" : "PASSWORD_RESET_SMS";
+    const verification = await provider.verifyOtp(challengeId, code, purpose);
+
+    if (!verification.success) {
+      const message =
+        verification.reason === "EXPIRED"
+          ? "This OTP has expired. Please request a new one."
+          : verification.reason === "TOO_MANY_ATTEMPTS"
+            ? "Too many incorrect attempts. Please request a new OTP."
+            : verification.reason === "ALREADY_USED"
+              ? "This OTP has already been used."
+              : "The OTP is incorrect.";
+
+      throw new ValidationError("Please correct the highlighted fields", { otp: message });
+    }
+
+    const challenge = await this.repo.findOtpChallengeById(challengeId);
+    if (!challenge) {
+      throw new ValidationError("Please correct the highlighted fields", { otp: "This OTP is invalid." });
+    }
+
+    const user = await this.repo.findUserById(challenge.userId);
+    if (!user) {
+      throw new ValidationError("Please correct the highlighted fields", { otp: "This OTP is invalid." });
+    }
 
     const rawToken = generateSecureToken();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
     await this.repo.createPasswordResetToken({
       userId: user.id,
       tokenHash: hashToken(rawToken),
-      expiresAt,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
     });
 
     await this.audit.record({
       actorUserId: user.id,
-      action: "PASSWORD_RESET_REQUESTED",
+      action: "PASSWORD_RESET_OTP_VERIFIED",
       entityType: "User",
       entityId: user.id,
+      metadata: { channel },
       ipAddress: meta.ipAddress,
       userAgent: meta.userAgent,
     });
-    trackEvent("password_reset_started", user.publicId);
 
-    // Keep local development/test visibility for the token, but this is
-    // supplemental only. The real delivery path below sends the reset link
-    // when the user has an email address.
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.log(`[MockDelivery] Password reset token for ${user.mobile}: ${rawToken}`);
-    }
-
-    if (user.email) {
-      const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
-      const rendered = passwordResetEmailTemplate(user.fullName, resetUrl);
-      const result = await this.emailService.sendEmail({
-        to: user.email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-      });
-
-      if (!result.success) {
-        logger.error(
-          { userId: user.id, error: result.error },
-          "[AuthService] Failed to send password reset email",
-        );
-      }
-    }
+    return { resetToken: rawToken };
   }
 
   async resetPassword(rawToken: string, newPassword: string, meta: RequestMeta): Promise<void> {
