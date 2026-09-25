@@ -41,10 +41,16 @@ export const registerFormSchema = z
   });
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-export const forgotPasswordFormSchema = z.object({
-  mobile: mobileSchema,
-});
+export const forgotPasswordFormSchema = z.discriminatedUnion("channel", [
+  z.object({ channel: z.literal("email"), email: z.string().trim().email("validation.email") }),
+  z.object({ channel: z.literal("sms"), mobile: mobileSchema }),
+]);
 export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordFormSchema>;
+
+export const verifyPasswordResetOtpSchema = z.object({
+  otp: z.string().regex(/^\d{6}$/, "validation.otp"),
+});
+export type VerifyPasswordResetOtpFormValues = z.infer<typeof verifyPasswordResetOtpSchema>;
 
 export const resetPasswordFormSchema = z.object({
   token: z.string().min(1, "validation.resetToken"),
