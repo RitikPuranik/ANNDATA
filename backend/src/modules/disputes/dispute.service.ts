@@ -2,6 +2,7 @@ import { DisputeRaisedByRole, PrismaClient } from "@prisma/client";
 import { AuthorizationError, DisputeDomainError, NotFoundError, ValidationError } from "../../common/errors";
 import { AuditService } from "../audit/audit.service";
 import { AuthenticatedUserContext } from "../auth/auth.types";
+import type { NotificationHook } from "../notifications/notification-event.publisher";
 import { DisputeAuthorizationService } from "./dispute.authorization";
 import { CreateDisputeData, DisputeRepository } from "./dispute.repository";
 import { canReopenDispute, canTransitionDispute, DisputeStatus as DisputeStatusLiteral, isTerminalDisputeStatus } from "./dispute-state-machine";
@@ -69,6 +70,16 @@ export class DisputeService {
     private readonly authorization: DisputeAuthorizationService,
     private readonly audit: AuditService,
   ) {}
+
+  // Module 22 — Notifications & Alerts. Optional, set post-construction
+  // exactly like PaymentService.setLedgerHook — DisputeService itself
+  // stays entirely unaware of the notification pipeline's existence
+  // beyond this one seam.
+  private notificationHook: NotificationHook | null = null;
+
+  setNotificationHook(hook: NotificationHook): void {
+    this.notificationHook = hook;
+  }
 
   private async resolveCallerFarmerProfileId(user: AuthenticatedUserContext): Promise<string | null> {
     if (user.role !== "FARMER") return null;
@@ -281,6 +292,17 @@ export class DisputeService {
       entityType: "Dispute",
       entityId: dispute.id,
       metadata: { disputeNumber: dispute.disputeNumber, type: input.type, category },
+    });
+
+    // Module 22 — Section 26: "Dispute created: 'Your dispute has been submitted.'"
+    void this.notificationHook?.notify({
+      recipientUserId: dispute.raisedByUserId,
+      type: "DISPUTE_CREATED",
+      sourceModule: "MODULE_21_DISPUTE",
+      sourceEventId: `${dispute.id}:CREATED`,
+      vars: { disputeNumber: dispute.disputeNumber },
+      relatedEntityType: "Dispute",
+      relatedEntityId: dispute.id,
     });
 
     return this.toDTO(dispute);
@@ -642,6 +664,16 @@ export class DisputeService {
       metadata: { resolutionCode: input.resolutionCode },
     });
 
+    void this.notificationHook?.notify({
+      recipientUserId: dispute.raisedByUserId,
+      type: "DISPUTE_RESOLVED",
+      sourceModule: "MODULE_21_DISPUTE",
+      sourceEventId: `${dispute.id}:RESOLVED`,
+      vars: { disputeNumber: dispute.disputeNumber },
+      relatedEntityType: "Dispute",
+      relatedEntityId: dispute.id,
+    });
+
     return this.toDTO(updated);
   }
 
@@ -671,6 +703,16 @@ export class DisputeService {
       metadata: null,
     });
     await this.audit.record({ actorUserId: user.id, action: "DISPUTE_REJECTED", entityType: "Dispute", entityId: dispute.id });
+
+    void this.notificationHook?.notify({
+      recipientUserId: dispute.raisedByUserId,
+      type: "DISPUTE_REJECTED",
+      sourceModule: "MODULE_21_DISPUTE",
+      sourceEventId: `${dispute.id}:REJECTED`,
+      vars: { disputeNumber: dispute.disputeNumber },
+      relatedEntityType: "Dispute",
+      relatedEntityId: dispute.id,
+    });
 
     return this.toDTO(updated);
   }
@@ -706,6 +748,16 @@ export class DisputeService {
     });
     await this.audit.record({ actorUserId: user.id, action: "DISPUTE_REOPENED", entityType: "Dispute", entityId: dispute.id, metadata: { reason } });
 
+    void this.notificationHook?.notify({
+      recipientUserId: dispute.raisedByUserId,
+      type: "DISPUTE_REOPENED",
+      sourceModule: "MODULE_21_DISPUTE",
+      sourceEventId: `${dispute.id}:REOPENED`,
+      vars: { disputeNumber: dispute.disputeNumber },
+      relatedEntityType: "Dispute",
+      relatedEntityId: dispute.id,
+    });
+
     return this.toDTO(updated);
   }
 
@@ -731,6 +783,16 @@ export class DisputeService {
       metadata: null,
     });
     await this.audit.record({ actorUserId: user.id, action: "DISPUTE_CLOSED", entityType: "Dispute", entityId: dispute.id });
+
+    void this.notificationHook?.notify({
+      recipientUserId: dispute.raisedByUserId,
+      type: "DISPUTE_CLOSED",
+      sourceModule: "MODULE_21_DISPUTE",
+      sourceEventId: `${dispute.id}:CLOSED`,
+      vars: { disputeNumber: dispute.disputeNumber },
+      relatedEntityType: "Dispute",
+      relatedEntityId: dispute.id,
+    });
 
     return this.toDTO(updated);
   }

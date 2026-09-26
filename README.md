@@ -64,6 +64,15 @@ only ever a reference to an already-existing Module 19 `PaymentObligation`
 / Module 20 ledger entry, never an amount this module invents or moves
 itself. See `docs/modules/module-21-dispute-grievance-management.md`.
 
+Module 22 is implemented as a **centralized notification orchestration
+system**, not a source of truth for anything it reports on — every event
+it communicates (offers, payments, shipments, disputes, market/forecast
+alerts, security events) remains owned by its originating module. Module
+21's `DisputeService` is wired end-to-end as the reference integration;
+most other event sources are not yet auto-wired (the pipeline, templates,
+and API are complete either way). See
+`docs/modules/module-22-notifications-alerts.md`.
+
 Module 30 is the completed **Meta WhatsApp Business Cloud API integration**, including webhook handling, signature verification, inbound/outbound messaging, public guest conversations, linked-farmer workflows, idempotency, rate limiting, conversation persistence, and Meta provider integration.
 
 ---

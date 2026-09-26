@@ -79,6 +79,12 @@ export interface WhatsAppModule {
   farmerService: WhatsAppFarmerService;
   router: WhatsAppCommandRouter;
   config: WhatsAppConfig;
+  // Exposed additively (Module 22 — Notifications & Alerts) so
+  // WhatsAppNotificationProvider can reuse this exact instance instead of
+  // constructing a second WhatsApp client (Section 39: "do not create a
+  // second WhatsApp API client"). Never used to duplicate any of the
+  // conversational/NLU behavior above it.
+  provider: WhatsAppProvider;
 }
 
 /**
@@ -121,5 +127,6 @@ export function createWhatsAppModule(deps: WhatsAppModuleDeps): WhatsAppModule {
     farmerService,
     router,
     config,
+    provider,
   };
 }

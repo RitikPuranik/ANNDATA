@@ -31,7 +31,9 @@
 
 21. Module 21 — Dispute & Grievance Management: implemented (dispute/grievance lifecycle with state machine, evidence, comments/internal notes, assignment, resolution; never a payment system — financial consequences are only ever references into Module 19/20 — see `docs/modules/module-21-dispute-grievance-management.md`)
 
-Next planned business modules include Notifications, multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
+22. Module 22 — Notifications & Alerts: implemented (centralized notification orchestration — in-app/WhatsApp/email/SMS-ready delivery, per-user preferences with quiet hours and mandatory security overrides, en/hi/mr localized templates, idempotent creation, cron-driven retry for transient provider failures, ADMIN system announcements; never a source of truth for the events it communicates — see `docs/modules/module-22-notifications-alerts.md`. `DisputeService` (Module 21) is wired end-to-end as the reference integration; Module 13/16/17/18/19/20/6/7/8/4/1 event sources are not yet auto-wired — see the doc's own "Event integration" section)
+
+Next planned business modules include multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
 
 ## Backend — Actual Current Stack
 - Express.js 4.x
@@ -72,6 +74,7 @@ Next planned business modules include Notifications, multilingual/voice/offline,
 - `modules/payments/` — Module 19 payment obligation/record tracking (status only, not a gateway)
 - `modules/ledger/` — Module 20 append-only Digital Transaction Ledger (see `docs/modules/module-20-digital-transaction-ledger.md`)
 - `modules/disputes/` — Module 21 Dispute & Grievance Management (state machine, evidence, comments/internal notes, assignment, resolution; references Module 19/20 for any financial consequence, never invents one — see `docs/modules/module-21-dispute-grievance-management.md`)
+- `modules/notifications/` — Module 22 Notifications & Alerts (centralized orchestration: recipient/preference resolution, en/hi/mr templates, in-app/WhatsApp/email/SMS-ready providers, idempotent delivery + cron retry, ADMIN announcements — see `docs/modules/module-22-notifications-alerts.md`)
 
 Modules 15–19 (Transporter/Vehicle Network, Logistics, Shipment/GPS,
 Delivery/Quality Reconciliation, Payment Status) each have their own

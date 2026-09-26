@@ -205,7 +205,13 @@ export type AuditAction =
   | "DISPUTE_REOPENED"
   | "DISPUTE_CLOSED"
   | "DISPUTE_CANCELLED"
-  | "DISPUTE_FINANCIAL_ADJUSTMENT_REQUESTED";
+  | "DISPUTE_FINANCIAL_ADJUSTMENT_REQUESTED"
+  // Module 22 — Notifications & Alerts. Only management-plane actions are
+  // audited (Section 43: "do not audit every read operation") — ordinary
+  // notification creation/delivery/read/archive is not audited here; its
+  // own history lives on the Notification/NotificationDelivery rows.
+  | "NOTIFICATION_PREFERENCE_UPDATED"
+  | "NOTIFICATION_ANNOUNCEMENT_CREATED";
 
 export interface AuditEvent {
   actorUserId?: string | null;

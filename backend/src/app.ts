@@ -22,6 +22,7 @@ import { FarmersService } from "./modules/farmers/farmers.service";
 import { createFarmersRouter } from "./modules/farmers/farmers.routes";
 import { FarmsRepository } from "./modules/farms/farms.repository";
 import { createWhatsAppModule } from "./modules/whatsapp";
+import { createNotificationModule } from "./modules/notifications/notification.module";
 import { FarmsService } from "./modules/farms/farms.service";
 import { createFarmsRouter } from "./modules/farms/farms.routes";
 import { FarmerCropRepository } from "./modules/crops/farmer-crop.repository";
@@ -855,6 +856,26 @@ export function createApp(deps: AppDependencies): Express {
   whatsappRoutes.use(whatsapp.webhookRouter);
   whatsappRoutes.use(whatsapp.accountRouter);
   app.locals.whatsapp = whatsapp;
+
+  // Module 22 — Notifications & Alerts. Constructed last so it can reuse
+  // the exact emailService/whatsapp.provider instances already built
+  // above (Section 38/39: never a second email or WhatsApp client) and so
+  // it can attach itself, via setNotificationHook(), as a post-write hook
+  // on every business service that already exists by this point — the
+  // same "wire the hook after the fact" convention paymentService.
+  // setLedgerHook() uses for Module 20.
+  const notifications = createNotificationModule({
+    prisma: deps.prisma,
+    auditService: deps.auditService,
+    authRepository: deps.authRepository,
+    emailService,
+    whatsAppProvider: whatsapp.provider,
+  });
+
+  disputeService.setNotificationHook(notifications.publisher);
+
+  app.use("/api", notifications.router);
+  app.locals.notifications = notifications;
 
   app.use(notFoundHandler);
   app.use(errorHandler);

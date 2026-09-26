@@ -307,6 +307,11 @@ model User {
   // (see WhatsAppLink). Additive back-relation only; no Module 1 column changes.
   whatsAppLink WhatsAppLink?
 
+  // Module 22 — Notifications & Alerts. Additive back-relations only; no
+  // other Module 1 field/relation changes.
+  notifications           Notification[]
+  notificationPreference  NotificationPreference?
+
   @@index([mobile])
   @@index([email])
   @@index([publicId])
@@ -4083,4 +4088,300 @@ model DisputeHistoryEvent {
   @@index([disputeId, createdAt])
   @@index([eventType])
   @@map("dispute_history_events")
+}
+
+// ===========================================================================
+// Module 22 — Notifications & Alerts
+//
+// A centralized notification ORCHESTRATION system: it never duplicates the
+// business logic of the modules it reports on (Module 13 offers, Module 17
+// shipments, Module 18 delivery, Module 19 payments, Module 20 ledger,
+// Module 21 disputes, Module 6 market intelligence, ...). Those modules
+// remain the sole source of truth for their own state; this module only
+// ever communicates it.
+//
+// Notification = one logical "recipient X should know about event Y" record
+// (what Module 22's own doc calls a "notification record"). Each
+// Notification fans out into one or more NotificationDelivery rows (one per
+// channel actually attempted) — the "notification delivery" tracked
+// separately per Section 5 of the build spec.
+// ===========================================================================
+
+enum NotificationChannel {
+  IN_APP
+  WHATSAPP
+  EMAIL
+  SMS
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+// Coarse grouping used for preference toggles (Section 10/11) and for the
+// API's ?category= filter (Section 32) — deliberately coarser than
+// NotificationType so a user configures "payments", not forty toggles.
+enum NotificationCategory {
+  OFFER
+  PAYMENT
+  SHIPMENT
+  QUALITY
+  DISPUTE
+  LOGISTICS
+  MARKET
+  FORECAST
+  SELL_STORE
+  LOT
+  ACCOUNT_SECURITY
+  SYSTEM
+}
+
+// Section 3 — controlled notification/event type system. Every event this
+// module is prepared to render a template for; NOT every one of these is
+// wired to fire automatically yet (see NotificationEventPublisher's own
+// comment for exactly which source modules currently call in) — the same
+// "implemented but not yet auto-wired" distinction Module 20 already makes
+// for its own event types.
+enum NotificationType {
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  OFFER_EXPIRED
+
+  PAYMENT_PENDING
+  PAYMENT_RECEIVED
+  PAYMENT_PARTIAL
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+
+  SHIPMENT_CREATED
+  TRANSPORTER_ASSIGNED
+  SHIPMENT_DISPATCHED
+  SHIPMENT_IN_TRANSIT
+  SHIPMENT_DELAYED
+  SHIPMENT_DELIVERED
+
+  QUALITY_CHECK_COMPLETED
+  QUALITY_MISMATCH
+  DELIVERY_RECONCILIATION_COMPLETED
+
+  DISPUTE_CREATED
+  DISPUTE_RESPONSE_REQUIRED
+  DISPUTE_UPDATED
+  DISPUTE_RESOLVED
+  DISPUTE_REJECTED
+  DISPUTE_REOPENED
+  DISPUTE_CLOSED
+
+  LOGISTICS_QUOTE_RECEIVED
+  LOGISTICS_QUOTE_EXPIRED
+
+  MARKET_PRICE_ALERT
+  MARKET_TREND_ALERT
+  FORECAST_ALERT
+
+  LOT_CREATED
+  LOT_UPDATED
+  LOT_STATUS_CHANGED
+
+  ACCOUNT_SECURITY_ALERT
+  PASSWORD_CHANGED
+  LOGIN_ALERT
+
+  SYSTEM_ANNOUNCEMENT
+}
+
+// Mirrors LedgerSourceModule's own naming convention. Identifies which
+// business module raised the domain event a Notification communicates —
+// required for traceability (Section 4: "the notification must be
+// traceable back to its source"), never a second source of truth.
+enum NotificationSourceModule {
+  MODULE_13_TRADE_OFFER
+  MODULE_16_LOGISTICS
+  MODULE_17_SHIPMENT
+  MODULE_18_DELIVERY
+  MODULE_19_PAYMENT
+  MODULE_20_LEDGER
+  MODULE_21_DISPUTE
+  MODULE_6_MARKET
+  MODULE_7_FORECAST
+  MODULE_8_SELL_STORE
+  MODULE_4_LOT
+  MODULE_1_SECURITY
+  ADMIN_ANNOUNCEMENT
+}
+
+// Section 6 — controlled delivery statuses. Preserves provider semantics
+// (Section 6: "do not claim DELIVERED when the provider only confirmed
+// SENT"): a WhatsApp/email accept only ever moves a delivery to SENT; only
+// an explicit provider delivery confirmation (today: none is wired — see
+// notification-delivery.service.ts) may move it to DELIVERED.
+enum NotificationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+model Notification {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  recipientUserId String
+  recipient       User   @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  type     NotificationType
+  category NotificationCategory
+  priority NotificationPriority @default(NORMAL)
+
+  // Rendered, already-localized copy (Section 13/14) — never re-rendered
+  // later even if the recipient's preferredLanguage subsequently changes,
+  // same "never rewrite a historical record" convention every other
+  // module in this codebase already follows (e.g. CropLot's snapshotted
+  // origin, PaymentObligation's frozen finalPayableAmount).
+  title String
+  body  String
+
+  // Traceability back to source (Section 4).
+  relatedEntityType String?
+  relatedEntityId   String?
+  sourceModule      NotificationSourceModule
+  // The originating module's own event/entity id (e.g. a PaymentRecord id,
+  // a Dispute id + event type) — combined with recipientUserId + type
+  // below, this is what makes creation idempotent (Section 16).
+  sourceEventId     String
+
+  // Free-form, non-sensitive template variables/context (Section 42 — never
+  // OTPs, tokens, credentials, or unnecessary personal data).
+  metadata Json?
+
+  readAt     DateTime?
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries NotificationDelivery[]
+
+  // Section 16 — mandatory idempotency: the same source event must never
+  // create duplicate notifications across job/webhook retries. Channel is
+  // deliberately excluded here (channel fan-out lives on
+  // NotificationDelivery) — one Notification per (source event, recipient,
+  // type), many deliveries underneath it.
+  @@unique([sourceModule, sourceEventId, recipientUserId, type], name: "notification_idempotency_key")
+  @@index([recipientUserId, readAt])
+  @@index([recipientUserId, createdAt])
+  @@index([recipientUserId, category])
+  @@index([recipientUserId, priority])
+  @@index([type])
+  @@index([sourceModule, sourceEventId])
+  @@index([relatedEntityType, relatedEntityId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id String @id @default(uuid())
+
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  channel NotificationChannel
+  status  NotificationDeliveryStatus @default(PENDING)
+
+  // Which concrete provider actually handled this attempt (e.g. "meta",
+  // "emailjs", "mock", "in-app") — operational visibility only, never
+  // branched on outside the delivery layer.
+  provider          String?
+  providerMessageId String?
+
+  attempts     Int       @default(0)
+  lastAttemptAt DateTime?
+  deliveredAt  DateTime?
+  failedAt     DateTime?
+  // Sanitized failure reason only (Section 42/53) — never a raw provider
+  // payload, never a secret/token.
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One delivery attempt-set per (notification, channel) — a retry updates
+  // this same row's attempts/status rather than creating a second row for
+  // the same channel (Section 16/51: concurrent workers must only ever
+  // produce one logical delivery per channel).
+  @@unique([notificationId, channel])
+  @@index([status, channel])
+  @@index([status, lastAttemptAt])
+  @@map("notification_deliveries")
+}
+
+// Section 10/11 — per-user notification preferences with sensible defaults
+// (a user who has never visited the preferences screen still gets one row
+// materialized lazily with these column defaults — see
+// notification-preference.repository.ts). IN_APP has no toggle column: it
+// is always on (Section 10: "do not allow users to disable mandatory
+// security notifications" — in-app is the one channel that can never be
+// switched off, since it is also how the unread bell/badge works).
+model NotificationPreference {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  whatsappEnabled Boolean @default(true)
+  emailEnabled    Boolean @default(true)
+  smsEnabled      Boolean @default(false)
+
+  // "22:00"-"07:00"-style local quiet hours, in the user's own clock, as
+  // 0-23 hour-of-day integers. Never applied to CRITICAL priority
+  // (Section 11/15: critical/security overrides quiet hours).
+  quietHoursStartHour Int?
+  quietHoursEndHour   Int?
+
+  // Section 10 — per-category channel overrides, e.g.
+  // {"MARKET": {"EMAIL": false}, "PAYMENT": {"WHATSAPP": true}}. Validated
+  // against NotificationCategory/NotificationChannel by
+  // notification-preference.service.ts before being persisted — never
+  // trusted as arbitrary client JSON past that point.
+  categoryOverrides Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+// Section 44 — admin-authored system announcements. A thin authoring
+// record only: publishing one fans out into ordinary Notification rows
+// (one per targeted recipient) through the same pipeline as every other
+// event, never a parallel send path.
+model NotificationAnnouncement {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  title String
+  body  String
+
+  priority NotificationPriority @default(NORMAL)
+  // Null = every account status/role (Section 44 — audience targeting).
+  // Kept intentionally simple (role-based only, no per-user list) — Module
+  // 22 is not a marketing platform (Section 44/56).
+  audienceRole UserRole?
+
+  createdByUserId String
+
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([publishedAt])
+  @@index([scheduledFor])
+  @@map("notification_announcements")
 }
