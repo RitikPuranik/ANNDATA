@@ -77,6 +77,7 @@ import { PriceForecastGenerationService } from "./modules/price-forecasting/pric
 import { PriceForecastingService } from "./modules/price-forecasting/price-forecasting.service";
 import { createPriceForecastingRouter } from "./modules/price-forecasting/price-forecasting.routes";
 import { BuyerMatchingService } from "./modules/buyer-matching/buyer-matching.service";
+import { BuyerMatchingEconomicsService } from "./modules/buyer-matching/buyer-matching-economics.service";
 import { createBuyerMatchingRouter } from "./modules/buyer-matching/buyer-matching.routes";
 import { PrismaWarehouseRepository } from "./modules/warehouse-intelligence/warehouse.repository";
 import { PrismaWarehouseStorageRepository } from "./modules/warehouse-intelligence/warehouse-storage.repository";
@@ -354,13 +355,14 @@ export function createApp(deps: AppDependencies): Express {
     farmerProfileResolver,
     deps.auditService,
   );
-  const buyerMatchingService = new BuyerMatchingService(
-    deps.prisma,
-    deps.cropLotRepository,
-    lotAuthorization,
-    farmerProfileResolver,
-    deps.auditService,
-  );
+  // Module 12 Enhancement: BuyerMatchingService's economics collaborator
+  // (Modules 6/7/8/14/16) needs every one of those modules to exist
+  // first, so BuyerMatchingService itself is now constructed further
+  // down — see the `buyerMatchingService` assignment and
+  // `app.use("/api", createBuyerMatchingRouter(...))` call right after
+  // Module 16 is wired up below. (The WhatsApp module, constructed near
+  // the end of this function, reads that same later `const` — textually
+  // after it — so no forward declaration is needed here.)
 
   // Module 7 — deterministic price forecasting. Reuses the Module 6
   // market repository and the same Prisma client; the preparation layer
@@ -498,8 +500,7 @@ export function createApp(deps: AppDependencies): Express {
     "/api/price-forecasting",
     createPriceForecastingRouter(priceForecastingService, deps.authRepository, deps.auditService),
   );
-  app.use("/api", createBuyerMatchingRouter(buyerMatchingService, deps.authRepository, deps.auditService));
-  app.use(
+    app.use(
     "/api/warehouses",
     createWarehouseIntelligenceRouter(
       warehouseAvailabilityService,
@@ -687,6 +688,33 @@ export function createApp(deps: AppDependencies): Express {
 
   app.use("/api", createLogisticsRequestRouter(logisticsRequestService, deps.authRepository, deps.auditService));
   app.use("/api", createLogisticsQuoteRouter(logisticsQuoteService, deps.authRepository, deps.auditService));
+
+  // Module 12 Enhancement — Smart Buyer Matching + Net Realization + Market
+  // Trend Decision Support. Constructed here (not next to the rest of
+  // Module 12's own wiring above) because its economics collaborator
+  // depends on Module 7 (priceForecastingService), Module 8
+  // (sellStoreOrchestrationService), Module 14
+  // (netRealizationOrchestrationService), and Module 16
+  // (routeDistanceProvider/logisticsCostEstimator) — every one of which is
+  // only available by this point in the wiring. Reuses every one of those
+  // existing instances; nothing here duplicates their logic.
+  const buyerMatchingEconomicsService = new BuyerMatchingEconomicsService(
+    netRealizationOrchestrationService,
+    marketIntelligenceService,
+    priceForecastingService,
+    sellStoreOrchestrationService,
+    logisticsCostEstimator,
+    routeDistanceProvider,
+  );
+  const buyerMatchingService = new BuyerMatchingService(
+    deps.prisma,
+    deps.cropLotRepository,
+    lotAuthorization,
+    farmerProfileResolver,
+    deps.auditService,
+    buyerMatchingEconomicsService,
+  );
+  app.use("/api", createBuyerMatchingRouter(buyerMatchingService, deps.authRepository, deps.auditService));
 
   // Module 17 — Shipment & GPS Tracking. Consumes Module 16's own
   // logisticsRequestRepository/logisticsQuoteRepository and Module 15's own

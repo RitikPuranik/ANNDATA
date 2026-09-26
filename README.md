@@ -475,6 +475,17 @@ Matching considers:
 
 The same inputs produce reproducible rankings.
 
+Matching is not price-only: for every matched buyer, `GET
+/api/matching/lot/:lotId` also returns an economic picture derived from the
+buyer's target price — gross offer, cost breakdown, expected net
+realization (via Module 14), market comparison and trend (via Module 6),
+price forecast (via Module 7), and a Sell vs Store recommendation (via
+Module 8) for the lot as a whole. Nothing here is fabricated — a missing
+target price, market snapshot, forecast, or storage/transport cost is
+reported as explicitly unavailable rather than defaulted to zero. See
+`docs/modules/module-12-farmer-buyer-matching.md` for the full response
+shape and provenance rules. The farmer remains the final decision maker.
+
 ---
 
 ## Module 13 — RFQ / Offers / Negotiation

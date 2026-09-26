@@ -10,10 +10,23 @@ import { convertQuantityToKg, type QuantityUnit } from "../fpo/unit-conversion";
 import { demandTransitions, offerTransitions, requireTransition } from "./buyer-matching.types";
 import { scoreMatch } from "./matching";
 import { getLotMatchesCache, invalidateBuyerMatchingCache, setLotMatchesCache } from "./buyer-matching-cache";
+import { BuyerMatchingEconomicsService, toPricePerQuintal } from "./buyer-matching-economics.service";
 
 const toNum=(x:unknown)=>Number(x); const domain=(m:string,c:any,s=422)=>new MarketDomainError(m,c,s);
 export class BuyerMatchingService {
-  constructor(private readonly prisma:PrismaClient,private readonly lots:CropLotRepository,private readonly lotAuth:LotAuthorizationService,private readonly farmers:FarmerProfileResolver,private readonly audit:AuditService){}
+  constructor(
+    private readonly prisma:PrismaClient,
+    private readonly lots:CropLotRepository,
+    private readonly lotAuth:LotAuthorizationService,
+    private readonly farmers:FarmerProfileResolver,
+    private readonly audit:AuditService,
+    // Module 12 Enhancement: optional so every existing 5-argument
+    // construction (app.ts's earlier wiring, and every test file that
+    // constructs BuyerMatchingService directly) keeps working unchanged.
+    // When omitted, matches() falls back to its original price-only
+    // behaviour with no economics block attached.
+    private readonly economics?: BuyerMatchingEconomicsService,
+  ){}
   private async buyer(userId:string){const p=await this.prisma.buyerProfile.findUnique({where:{userId}});if(!p)throw domain("Buyer profile not found.","BUYER_PROFILE_NOT_FOUND",404);return p;}
   private validateDemandUpdate(current:any,input:any){const next={...current,...input};if(input.requiredQuantity!==undefined&&new Prisma.Decimal(input.requiredQuantity).lessThan(current.committedQuantity))throw domain("requiredQuantity cannot be less than already committedQuantity.","REQUIRED_QUANTITY_BELOW_COMMITTED");if(next.minimumQuantity!==null&&next.minimumQuantity!==undefined&&new Prisma.Decimal(next.minimumQuantity).greaterThan(next.requiredQuantity))throw domain("minimumQuantity cannot exceed requiredQuantity.","INVALID_QUANTITY");if(next.minimumPrice!==null&&next.minimumPrice!==undefined&&next.maximumPrice!==null&&next.maximumPrice!==undefined&&new Prisma.Decimal(next.minimumPrice).greaterThan(next.maximumPrice))throw domain("minimumPrice cannot exceed maximumPrice.","INVALID_PRICE");if((next.latitude===null)!==(next.longitude===null))throw domain("latitude and longitude must be together.","INVALID_LOCATION");if(next.deliveryStartDate&&next.deliveryEndDate&&next.deliveryStartDate>next.deliveryEndDate)throw domain("deliveryStartDate must precede deliveryEndDate.","INVALID_DATE_RANGE");if(next.expiresAt&&next.expiresAt<=new Date())throw domain("Demand expiry must be in the future.","INVALID_DATE");}
   private publicOffer(offer:any){return {publicId:offer.publicId,status:offer.status,quantity:toNum(offer.quantity),quantityUnit:offer.quantityUnit,offeredPrice:toNum(offer.offeredPrice),totalValue:toNum(offer.totalValue),deliveryTerms:offer.deliveryTerms,message:offer.message,expiresAt:offer.expiresAt,createdAt:offer.createdAt,updatedAt:offer.updatedAt,buyer:offer.buyer?this.publicBuyer(offer.buyer):undefined,demand:offer.demand?{publicId:offer.demand.publicId,title:offer.demand.title,status:offer.demand.status}:undefined,lot:offer.lot?{publicId:offer.lot.publicId,crop:offer.lot.crop?{id:offer.lot.crop.id,name:offer.lot.crop.name}:undefined}:undefined};}
@@ -28,7 +41,56 @@ export class BuyerMatchingService {
   async demand(user:AuthenticatedUserContext,publicId:string){const d=await this.prisma.buyerDemand.findUnique({where:{publicId}});if(!d)throw domain("Demand not found.","DEMAND_NOT_FOUND",404);if(user.role!=="ADMIN"){const b=await this.buyer(user.id);if(d.buyerId!==b.id)throw domain("Demand not found.","DEMAND_NOT_FOUND",404);}if(d.expiresAt&&d.expiresAt<new Date()&&d.status==="ACTIVE"){const expired=await this.prisma.buyerDemand.updateMany({where:{id:d.id,status:"ACTIVE"},data:{status:"EXPIRED"}});if(expired.count)d.status="EXPIRED";}return d;}
   async updateDemand(user:AuthenticatedUserContext,publicId:string,input:any){const demand=await this.demand(user,publicId);if(demand.status!=="DRAFT"&&demand.status!=="PAUSED")throw domain("Only draft or paused demands can be edited.","INVALID_DEMAND_TRANSITION");this.validateDemandUpdate(demand,input);const { cropId, requiredQuantity, minimumQuantity, quantityUnit, targetPrice, minimumPrice, maximumPrice, qualityRequirements, grade, title, description, state, district, latitude, longitude, deliveryLocation, deliveryStartDate, deliveryEndDate, expiresAt }=input; if(cropId){const crop=await this.prisma.crop.findUnique({where:{id:cropId}});if(!crop)throw domain("Crop not found.","CROP_NOT_FOUND",404);}const updated=await this.prisma.buyerDemand.update({where:{id:demand.id},data:{cropId,requiredQuantity,minimumQuantity,quantityUnit,targetPrice,minimumPrice,maximumPrice,qualityRequirements,grade,title,description,state,district,latitude,longitude,deliveryLocation,deliveryStartDate,deliveryEndDate,expiresAt}});await invalidateBuyerMatchingCache();return updated;}
   async transitionDemand(user:AuthenticatedUserContext,publicId:string,to:"ACTIVE"|"PAUSED"|"CANCELLED"){const d=await this.demand(user,publicId);requireTransition(demandTransitions,d.status,to,"INVALID_DEMAND_TRANSITION");const updated=await this.prisma.buyerDemand.update({where:{id:d.id},data:{status:to}});const action={ACTIVE:"BUYER_DEMAND_ACTIVATED",PAUSED:"BUYER_DEMAND_PAUSED",CANCELLED:"BUYER_DEMAND_CANCELLED"} as const;await this.audit.record({actorUserId:user.id,action:action[to],entityType:"BuyerDemand",entityId:d.id,metadata:{}});await invalidateBuyerMatchingCache();if(to==="ACTIVE")trackEvent("buyer_demand_activated",user.id,{});if(to==="PAUSED")trackEvent("buyer_demand_paused",user.id,{});return updated;}
-  async matches(user:AuthenticatedUserContext,lotPublicId:string){const lot=await this.lots.findByPublicId(lotPublicId);if(!lot)throw domain("Lot not found.","LOT_NOT_FOUND",404);const farmer=user.role==="FARMER"?(await this.farmers.ensure(user.id)).id:null;if(!await this.lotAuth.canModifyLot(user,lot,farmer))throw domain("Lot not found.","LOT_NOT_FOUND",404);if(lot.status!=="AVAILABLE"&&lot.status!=="PARTIALLY_COMMITTED")throw domain("Lot is not available.","LOT_NOT_AVAILABLE");const cached=await getLotMatchesCache<unknown>(lotPublicId);if(cached)return cached;const [quality,demands]=await Promise.all([this.prisma.qualityAssessment.findFirst({where:{lotId:lot.id,status:{in:["AI_COMPLETED","VERIFIED"]}},orderBy:{createdAt:"desc"},select:{overallGrade:true}}),this.prisma.buyerDemand.findMany({where:{cropId:lot.cropId,status:"ACTIVE",OR:[{expiresAt:null},{expiresAt:{gte:new Date()}}],buyer:{verificationStatus:"VERIFIED"}},take:100,include:{buyer:true}})]);const lotLatitude=lot.farm?.latitude??lot.fpo?.latitude,lotLongitude=lot.farm?.longitude??lot.fpo?.longitude;const result={matches:demands.map(d=>{const x=scoreMatch({quantityKg:toNum(lot.availableQuantityKg),minimumQuantityKg:d.minimumQuantity?convertQuantityToKg(toNum(d.minimumQuantity),d.quantityUnit):null,requiredQuantityKg:convertQuantityToKg(toNum(d.requiredQuantity),d.quantityUnit),lotGrade:quality?.overallGrade,grade:d.grade,lotLat:lotLatitude,lotLon:lotLongitude,demandLat:d.latitude,demandLon:d.longitude,targetPrice:d.targetPrice?toNum(d.targetPrice):null,verification:d.buyer.verificationStatus});return {buyer:this.publicBuyer(d.buyer),demand:{publicId:d.publicId,title:d.title,requiredQuantity:toNum(d.requiredQuantity),quantityUnit:d.quantityUnit,state:d.state,district:d.district},...x};})};await setLotMatchesCache(lotPublicId,result);trackEvent("lot_matches_viewed",user.id,{});return result;}
+  async matches(user:AuthenticatedUserContext,lotPublicId:string){
+    const lot=await this.lots.findByPublicId(lotPublicId);
+    if(!lot)throw domain("Lot not found.","LOT_NOT_FOUND",404);
+    const farmer=user.role==="FARMER"?(await this.farmers.ensure(user.id)).id:null;
+    if(!await this.lotAuth.canModifyLot(user,lot,farmer))throw domain("Lot not found.","LOT_NOT_FOUND",404);
+    if(lot.status!=="AVAILABLE"&&lot.status!=="PARTIALLY_COMMITTED")throw domain("Lot is not available.","LOT_NOT_AVAILABLE");
+    const cached=await getLotMatchesCache<unknown>(lotPublicId);if(cached)return cached;
+    const [quality,demands]=await Promise.all([
+      this.prisma.qualityAssessment.findFirst({where:{lotId:lot.id,status:{in:["AI_COMPLETED","VERIFIED"]}},orderBy:{createdAt:"desc"},select:{overallGrade:true}}),
+      this.prisma.buyerDemand.findMany({where:{cropId:lot.cropId,status:"ACTIVE",OR:[{expiresAt:null},{expiresAt:{gte:new Date()}}],buyer:{verificationStatus:"VERIFIED"}},take:100,include:{buyer:true}}),
+    ]);
+    const lotLatitude=lot.farm?.latitude??lot.fpo?.latitude,lotLongitude=lot.farm?.longitude??lot.fpo?.longitude;
+
+    // Module 12 Enhancement — lot-level decision context (market snapshot,
+    // trend, forecast, Module 8 sell/store) is resolved ONCE per request
+    // and shared across every buyer below, never once per buyer (build
+    // spec section 28). Only runs when an economics collaborator was
+    // supplied (backward-compatible construction — see constructor).
+    const lotEconContext = this.economics ? {
+      lotPublicId: lot.publicId, cropId: lot.cropId,
+      originState: lot.originState, originDistrict: lot.originDistrict,
+      originLat: lotLatitude ?? null, originLon: lotLongitude ?? null,
+    } : null;
+    const lotDecision = lotEconContext ? await this.economics!.lotContext(lotEconContext, { id: user.id, role: user.role }) : null;
+
+    const matches = await Promise.all(demands.map(async (d) => {
+      const x=scoreMatch({quantityKg:toNum(lot.availableQuantityKg),minimumQuantityKg:d.minimumQuantity?convertQuantityToKg(toNum(d.minimumQuantity),d.quantityUnit):null,requiredQuantityKg:convertQuantityToKg(toNum(d.requiredQuantity),d.quantityUnit),lotGrade:quality?.overallGrade,grade:d.grade,lotLat:lotLatitude,lotLon:lotLongitude,demandLat:d.latitude,demandLon:d.longitude,targetPrice:d.targetPrice?toNum(d.targetPrice):null,verification:d.buyer.verificationStatus});
+      const base = {buyer:this.publicBuyer(d.buyer),demand:{publicId:d.publicId,title:d.title,requiredQuantity:toNum(d.requiredQuantity),quantityUnit:d.quantityUnit,state:d.state,district:d.district},...x};
+      if (!this.economics || !lotEconContext) return base;
+
+      const targetPrice = d.targetPrice ? toNum(d.targetPrice) : null;
+      const economics = await this.economics.buyerEconomics(
+        lotEconContext,
+        { demandTargetPrice: targetPrice, demandQuantityUnit: d.quantityUnit, demandRequiredQuantityKg: convertQuantityToKg(toNum(d.requiredQuantity), d.quantityUnit), buyerLat: d.latitude, buyerLon: d.longitude },
+        { id: user.id, role: user.role },
+      );
+      const marketComparison = lotDecision && targetPrice !== null
+        ? await this.economics.offerVsMarket(lotEconContext, lotDecision.market, toPricePerQuintal(targetPrice, d.quantityUnit))
+        : lotDecision?.market ?? null;
+
+      return { ...base, economics, marketComparison };
+    }));
+
+    const result: any = { matches };
+    if (lotDecision) result.lotContext = { market: lotDecision.market, forecast: lotDecision.forecast, sellVsStore: lotDecision.sellVsStore, disclaimer: lotDecision.disclaimer };
+
+    await setLotMatchesCache(lotPublicId,result);
+    trackEvent("lot_matches_viewed",user.id,{});
+    return result;
+  }
   private async offerForUser(user:AuthenticatedUserContext,publicId:string){const o=await this.prisma.tradeOffer.findUnique({where:{publicId},include:{buyer:true,demand:true,lot:{include:{crop:true,farm:true,fpo:true}},revisions:{orderBy:{revisionNumber:"desc"}}}});if(!o)throw domain("Offer not found.","OFFER_NOT_FOUND",404);const ownsBuyer=user.role==="BUYER"&&o.buyer.userId===user.id;const farmer=user.role==="FARMER"?(await this.farmers.ensure(user.id)).id:null;const ownsLot=await this.lotAuth.canModifyLot(user,o.lot,farmer);if(user.role!=="ADMIN"&&!ownsBuyer&&!ownsLot)throw domain("Offer is not available.","OFFER_NOT_PARTICIPANT",403);if(o.expiresAt&&o.expiresAt<new Date()&&["SENT","COUNTERED"].includes(o.status)){
     // Conditional, not a blind update: if a concurrent accept() already moved
     // this offer out of SENT/COUNTERED, this matches zero rows instead of

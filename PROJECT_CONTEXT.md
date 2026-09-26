@@ -220,7 +220,7 @@ Never present simulated logistics availability, simulated GPS or simulated payme
 ## Future Module Dependency Rules
 - Market Intelligence consumes existing `MandiPrice`, `Crop`, `Mandi` and farmer location/crop context.
 - Sell-vs-Store consumes market history/forecast + storage/logistics economics + `FarmerProfile` liquidity/storage preferences.
-- Buyer Matching consumes actual lot/quality/demand data and FPO availability.
+- Buyer Matching consumes actual lot/quality/demand data and FPO availability, and (Module 12 Enhancement) also orchestrates Market Intelligence, Price Forecasting, Sell-vs-Store, Net Realization, and Logistics cost estimation to give the farmer an economic comparison per buyer — it does not recompute any of their calculations itself.
 - Warehouse consumes farm location + crop/quantity + storage preference.
 - Logistics consumes pickup/destination + quantity + shipment requirements.
 - Future modules must reference existing entities instead of cloning them.
