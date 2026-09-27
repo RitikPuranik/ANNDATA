@@ -46,6 +46,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
     { href: "/payments", label: "Payments", icon: Wallet },
     { href: "/net-realization", label: "My Earnings", icon: ReceiptText },
+    { href: "/disputes", label: "Disputes", icon: Scale },
     { href: "/fpo-membership", label: "My FPO", icon: Building2 },
   ],
   BUYER: [
@@ -54,6 +55,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/trade-offers", label: "Offers", icon: Handshake },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
     { href: "/payments", label: "Payments", icon: Wallet },
+    { href: "/disputes", label: "Disputes", icon: Scale },
   ],
   FPO_ADMIN: [
     { href: "/fpo", label: "Dashboard", icon: LayoutDashboard },
@@ -63,6 +65,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/logistics", label: "Transport", icon: Truck },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
     { href: "/payments", label: "Payments", icon: Wallet },
+    { href: "/disputes", label: "Disputes", icon: Scale },
   ],
   ADMIN: [
     { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -74,6 +77,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/logistics", label: "Transport", icon: Truck },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
     { href: "/payments", label: "Payments", icon: Wallet },
+    { href: "/disputes", label: "Disputes", icon: Scale },
   ],
   GOVERNMENT_VIEWER: [
     { href: "/government", label: "FPO Insights", icon: Landmark },
@@ -83,6 +87,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { href: "/logistics", label: "Available Loads", icon: Truck },
     { href: "/shipments", label: "My Deliveries", icon: PackageCheck },
     { href: "/trade-offers", label: "Offers", icon: Handshake },
+    { href: "/disputes", label: "Disputes", icon: Scale },
   ],
   WAREHOUSE_OPERATOR: [{ href: "/warehouse", label: "Storage Operations", icon: Warehouse }],
 };
