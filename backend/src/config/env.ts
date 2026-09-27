@@ -150,7 +150,10 @@ const envObjectSchema = z.object({
   // only" hint (unchanged default behaviour). "gemini" reuses the same
   // GEMINI_API_KEY/GEMINI_MODEL/GEMINI_API_BASE_URL as WHATSAPP_AI_PROVIDER
   // above — no separate STT credential is required.
-  WHATSAPP_STT_PROVIDER: z.enum(["none", "gemini"]).default("none"),
+  WHATSAPP_STT_PROVIDER: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().toLowerCase() : v),
+    z.enum(["none", "gemini"]).default("none"),
+  ),
   // DEV/DEMO ONLY. When true (and NODE_ENV !== "production") a WhatsApp number
   // that equals a FARMER's registered mobile is auto-linked without the
   // website-issued code. Ignored in production, because User.mobile is not

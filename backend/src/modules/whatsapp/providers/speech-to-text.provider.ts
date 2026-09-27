@@ -61,6 +61,11 @@ export class GeminiSpeechToTextProvider implements SpeechToTextProvider {
       `English, Hindi, or a mix (Hinglish). Likely languages: ${languageHints.join(", ") || "en, hi"}. ` +
       `Reply with ONLY the transcript text, in the original language/script the speaker used — no translation, ` +
       `no commentary, no quotation marks. If the audio has no clear speech, reply with an empty string.`;
+    // WhatsApp sends e.g. "audio/ogg; codecs=opus" — Gemini's inlineData
+    // wants a bare MIME type ("audio/ogg"), so the ";codecs=..." part is
+    // stripped. Anything Gemini doesn't recognise falls back to audio/ogg
+    // (what WhatsApp voice notes actually are) rather than sending garbage.
+    const cleanMimeType = mimeType.split(";")[0].trim() || "audio/ogg";
     const res = await this.fetchImpl(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.geminiApiKey },
@@ -68,14 +73,20 @@ export class GeminiSpeechToTextProvider implements SpeechToTextProvider {
         contents: [
           {
             role: "user",
-            parts: [{ text: prompt }, { inlineData: { mimeType, data: audio.toString("base64") } }],
+            parts: [{ text: prompt }, { inlineData: { mimeType: cleanMimeType, data: audio.toString("base64") } }],
           },
         ],
         generationConfig: { temperature: 0, maxOutputTokens: 300 },
       }),
       signal: AbortSignal.timeout(this.config.aiTimeoutMs),
     });
-    if (!res.ok) throw new Error(`STT provider HTTP ${res.status}`);
+    if (!res.ok) {
+      // Truncated response body surfaces in the "[WhatsApp] voice
+      // transcription failed" log line so a bad API key / unsupported
+      // model / quota error is diagnosable without guesswork.
+      const detail = await res.text().catch(() => "");
+      throw new Error(`STT provider HTTP ${res.status}: ${detail.slice(0, 300)}`);
+    }
     const body = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
     const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? "";
     return { text };

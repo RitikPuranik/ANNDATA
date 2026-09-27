@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type { Router } from "express";
+import { logger } from "../../config/logger";
 import type { AuditService } from "../audit/audit.service";
 import type { AuthRepository } from "../auth/auth.repository";
 import type { BuyerMatchingService } from "../buyer-matching/buyer-matching.service";
@@ -104,6 +105,12 @@ export function createWhatsAppModule(deps: WhatsAppModuleDeps): WhatsAppModule {
   const stt =
     deps.speechToText ??
     (config.enabled && config.sttProvider === "gemini" ? new GeminiSpeechToTextProvider(config) : new UnavailableSpeechToTextProvider());
+  // Diagnostic only: shows up once at boot so "is voice on?" never requires
+  // sending a test voice note and digging through per-message logs.
+  logger.info(
+    { event: "stt_provider_configured", sttProviderEnv: config.sttProvider, sttAvailable: stt.available, whatsappEnabled: config.enabled },
+    "[WhatsApp] stt_provider_configured",
+  );
 
   const catalog = new WhatsAppCatalogService(deps.referenceDataService, deps.prisma, deps.farmsRepository, deps.farmerCropRepository, deps.farmerProfileResolver);
   const market = new WhatsAppMarketService(new MarketIntelligenceRepository(deps.prisma), catalog, urls);
