@@ -18,7 +18,7 @@ import { createWhatsAppAccountRouter, createWhatsAppWebhookRouter } from "./what
 import { GeminiNluProvider, UnavailableNluProvider, type WhatsAppNluProvider } from "./nlu/whatsapp-nlu.provider";
 import { WhatsAppIntentService } from "./nlu/whatsapp-intent.service";
 import { MetaWhatsAppProvider } from "./providers/meta-whatsapp.provider";
-import { UnavailableSpeechToTextProvider, type SpeechToTextProvider } from "./providers/speech-to-text.provider";
+import { GeminiSpeechToTextProvider, UnavailableSpeechToTextProvider, type SpeechToTextProvider } from "./providers/speech-to-text.provider";
 import { WhatsAppProviderError, type WhatsAppProvider } from "./providers/whatsapp-provider.interface";
 import { WhatsAppBuyerAssistantService } from "./whatsapp-buyer-assistant.service";
 import { WhatsAppCatalogService } from "./whatsapp-catalog.service";
@@ -79,6 +79,12 @@ export interface WhatsAppModule {
   farmerService: WhatsAppFarmerService;
   router: WhatsAppCommandRouter;
   config: WhatsAppConfig;
+  // Exposed additively (Module 22 — Notifications & Alerts) so
+  // WhatsAppNotificationProvider can reuse this exact instance instead of
+  // constructing a second WhatsApp client (Section 39: "do not create a
+  // second WhatsApp API client"). Never used to duplicate any of the
+  // conversational/NLU behavior above it.
+  provider: WhatsAppProvider;
 }
 
 /**
@@ -95,7 +101,9 @@ export function createWhatsAppModule(deps: WhatsAppModuleDeps): WhatsAppModule {
 
   const provider = deps.provider ?? (config.enabled ? new MetaWhatsAppProvider(config) : new DisabledWhatsAppProvider());
   const nlu = deps.nluProvider ?? (config.enabled && config.aiProvider === "gemini" ? new GeminiNluProvider(config) : new UnavailableNluProvider());
-  const stt = deps.speechToText ?? new UnavailableSpeechToTextProvider();
+  const stt =
+    deps.speechToText ??
+    (config.enabled && config.sttProvider === "gemini" ? new GeminiSpeechToTextProvider(config) : new UnavailableSpeechToTextProvider());
 
   const catalog = new WhatsAppCatalogService(deps.referenceDataService, deps.prisma, deps.farmsRepository, deps.farmerCropRepository, deps.farmerProfileResolver);
   const market = new WhatsAppMarketService(new MarketIntelligenceRepository(deps.prisma), catalog, urls);
@@ -121,5 +129,6 @@ export function createWhatsAppModule(deps: WhatsAppModuleDeps): WhatsAppModule {
     farmerService,
     router,
     config,
+    provider,
   };
 }

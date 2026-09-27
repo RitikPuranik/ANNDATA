@@ -48,6 +48,21 @@ export interface RecordPaymentInput {
   notes?: string;
 }
 
+/** Step 28 — the narrow surface Module 20 (Digital Transaction Ledger)
+ * needs from Module 19; PaymentService depends on this interface, not on
+ * DigitalTransactionLedgerService directly, so this module never needs
+ * to know how the ledger stores or reconstructs anything — it only ever
+ * hands over the same PaymentHandoffDTO getRecordHandoff() already
+ * exposes over the API. Optional/unset in tests, same "leave unset in
+ * server.ts, inject a fake in tests" convention as qualityAiProvider. */
+export interface PaymentLedgerHook {
+  recordPaymentEvent(
+    handoff: PaymentHandoffDTO,
+    eventType: "PAYMENT_OBLIGATION_CREATED" | "PAYMENT_RECORDED" | "PARTIAL_PAYMENT" | "FINAL_PAYMENT",
+    actorUserId: string | null,
+  ): Promise<unknown>;
+}
+
 /**
  * Module 19 — Payment Status Tracking. A PAYMENT STATUS system, never a
  * payment gateway (Step 36): no bank transfer, UPI, or card execution is
@@ -67,6 +82,11 @@ export interface RecordPaymentInput {
  *   -> getRecordHandoff()            Module 20 Digital Transaction Ledger
  */
 export class PaymentService {
+  // Step 28 — set post-construction by app.ts (setLedgerHook), never
+  // required at construction time, so Module 19 has zero compile-time
+  // dependency on Module 20's own implementation.
+  private ledgerHook: PaymentLedgerHook | null = null;
+
   constructor(
     private readonly prisma: PrismaClient,
     private readonly obligations: PaymentObligationRepository,
@@ -77,6 +97,10 @@ export class PaymentService {
     private readonly farmerProfiles: FarmerProfileResolver,
     private readonly audit: AuditService,
   ) {}
+
+  setLedgerHook(hook: PaymentLedgerHook): void {
+    this.ledgerHook = hook;
+  }
 
   // ---------------------------------------------------------------------
   // Step 11/12 — obligation creation
@@ -176,6 +200,31 @@ export class PaymentService {
       metadata: { deliveryId: delivery.publicId, finalPayableAmount: finalPayableAmount.toString() },
       ...meta,
     });
+
+    // Step 28 — Module 20 integration. Best-effort: a ledger recording
+    // failure never blocks or rolls back the obligation Module 19 has
+    // already authoritatively created (same "ledger records what
+    // happened, never gates it" principle as the module's own doc).
+    if (this.ledgerHook) {
+      await this.ledgerHook.recordPaymentEvent(
+        {
+          paymentObligationId: obligation.id,
+          paymentRecordId: obligation.id,
+          deliveryId: delivery.publicId,
+          buyerId: obligation.buyerId,
+          sellerFarmerId: obligation.sellerFarmerId,
+          sellerFpoId: obligation.sellerFpoId,
+          payableAmount: finalPayableAmount,
+          paymentAmount: 0,
+          currency: obligation.currency,
+          paymentTimestamp: obligation.createdAt.toISOString(),
+          paymentStatus: obligation.status,
+          externalReference: null,
+        },
+        "PAYMENT_OBLIGATION_CREATED",
+        user.id,
+      );
+    }
 
     return this.buildDTO(obligation);
   }
@@ -279,6 +328,33 @@ export class PaymentService {
         await this.audit.record({ actorUserId: user.id, action: "PAYMENT_COMPLETED", entityType: "PaymentObligation", entityId: obligation.id, ...meta });
       } else if (newStatus === "OVERPAID") {
         await this.audit.record({ actorUserId: user.id, action: "PAYMENT_OVERPAID", entityType: "PaymentObligation", entityId: obligation.id, ...meta });
+      }
+
+      // Step 28 — Module 20 integration. PARTIAL_PAYMENT when the
+      // obligation still has an amount due after this payment, otherwise
+      // FINAL_PAYMENT (Module 19 remains the sole authority on which of
+      // the two this is — resolved from its own recalculated status,
+      // never re-derived independently here).
+      if (this.ledgerHook) {
+        const ledgerEventType = newStatus === "PARTIALLY_PAID" ? "PARTIAL_PAYMENT" : "FINAL_PAYMENT";
+        await this.ledgerHook.recordPaymentEvent(
+          {
+            paymentObligationId: obligation.id,
+            paymentRecordId: result.record.id,
+            deliveryId: (await this.deliveries.findById(obligation.deliveryId))?.publicId ?? obligation.deliveryId,
+            buyerId: result.obligation.buyerId,
+            sellerFarmerId: result.obligation.sellerFarmerId,
+            sellerFpoId: result.obligation.sellerFpoId,
+            payableAmount: decimalToNumber(result.obligation.finalPayableAmount),
+            paymentAmount: decimalToNumber(result.record.amount),
+            currency: result.obligation.currency,
+            paymentTimestamp: result.record.paidAt.toISOString(),
+            paymentStatus: result.obligation.status,
+            externalReference: result.record.externalReference,
+          },
+          ledgerEventType,
+          user.id,
+        );
       }
     }
 

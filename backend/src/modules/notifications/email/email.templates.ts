@@ -141,52 +141,52 @@ function escapeHtml(value: string): string {
 }
 
 export function welcomeEmailTemplate(fullName: string): RenderedEmail {
-  const subject = "Welcome to Anndata 🌾";
+  const subject = `Welcome to Anndata, ${fullName} — let's get your first lot listed 🌾`;
   const html = shell(
     `Welcome to Anndata, ${fullName} — your account is ready.`,
-    `${heading(`Welcome, ${fullName} 👋`)}
+    `${heading(`Welcome aboard, ${fullName} 👋`)}
      ${paragraph(
-       "Your Anndata account has been created successfully. You can now list your produce, check live mandi prices, and track orders — all from your dashboard.",
+       "Your Anndata account is live. In just a few minutes you can list your produce, check today's mandi prices, and connect with verified buyers — all from one dashboard.",
      )}
-     ${paragraph("Here's what you can do next:")}
-     <ul style="margin:0 0 20px 0; padding-left:20px; color:${TEXT_COLOR};">
-       <li style="margin-bottom:6px;">Complete your farmer profile</li>
-       <li style="margin-bottom:6px;">Add your farm and crop details</li>
-       <li style="margin-bottom:6px;">Check today's mandi prices near you</li>
-     </ul>
-     ${paragraph("We're glad to have you with us.")}`,
+     ${paragraph("Three quick steps to get started:")}
+     <ol style="margin:0 0 20px 0; padding-left:20px; color:${TEXT_COLOR};">
+       <li style="margin-bottom:8px;"><strong>Complete your farmer profile</strong> — takes under 2 minutes</li>
+       <li style="margin-bottom:8px;"><strong>Add your farm and crop details</strong> so buyers can find you</li>
+       <li style="margin-bottom:8px;"><strong>Check today's mandi prices</strong> near you before you list</li>
+     </ol>
+     ${paragraph("We're glad to have you with us — here's to a good harvest.")}`,
   );
-  const text = `Welcome, ${fullName}!\n\nYour Anndata account has been created. You can now list your produce, check live mandi prices, and track orders from your dashboard.\n\n- Complete your farmer profile\n- Add your farm and crop details\n- Check today's mandi prices near you`;
+  const text = `Welcome aboard, ${fullName}!\n\nYour Anndata account is live. In a few minutes you can list your produce, check today's mandi prices, and connect with verified buyers.\n\nGet started:\n1. Complete your farmer profile (under 2 minutes)\n2. Add your farm and crop details so buyers can find you\n3. Check today's mandi prices near you before you list\n\nWe're glad to have you with us — here's to a good harvest.`;
   return { subject, html, text };
 }
 
 export function passwordResetEmailTemplate(fullName: string, resetUrl: string): RenderedEmail {
-  const subject = "Reset your Anndata password";
+  const subject = "Reset your Anndata password (link expires in 30 minutes)";
   const html = shell(
     "Use this link to reset your Anndata password. It expires in 30 minutes.",
     `${heading("Reset your password")}
      ${paragraph(`Hi ${fullName},`)}
      ${paragraph(
-       "We received a request to reset your Anndata account password. Click the button below to choose a new one.",
+       "We received a request to reset the password on your Anndata account. Click the button below to choose a new one — it only takes a moment.",
      )}
-     ${button("Reset password", resetUrl)}
-     ${infoBox("⏱ This link expires in <strong>30 minutes</strong> and can only be used once.")}
-     ${paragraph("If you didn't request this, you can safely ignore this email — your password won't change.")}`,
+     ${button("Reset my password", resetUrl)}
+     ${infoBox("⏱ For your security, this link expires in <strong>30 minutes</strong> and can only be used once.")}
+     ${paragraph("Didn't request this? No action is needed — your password stays the same, and you can safely ignore this email.")}`,
   );
-  const text = `Hi ${fullName},\n\nWe received a request to reset your Anndata password. This link expires in 30 minutes and can only be used once.\n\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.`;
+  const text = `Hi ${fullName},\n\nWe received a request to reset the password on your Anndata account. Use the link below to choose a new one — it only takes a moment.\n\n${resetUrl}\n\nFor your security, this link expires in 30 minutes and can only be used once.\n\nDidn't request this? No action is needed — your password stays the same.`;
   return { subject, html, text };
 }
 
 export function passwordResetConfirmationEmailTemplate(fullName: string): RenderedEmail {
-  const subject = "Your Anndata password was changed";
+  const subject = "Your Anndata password was successfully changed";
   const html = shell(
     "Your Anndata password was just changed.",
     `${heading("Password changed ✅")}
      ${paragraph(`Hi ${fullName},`)}
-     ${paragraph("Your Anndata password was just changed successfully. As a security measure, all other devices have been signed out.")}
-     ${infoBox("🔒 If you didn't make this change, please contact support immediately.")}`,
+     ${paragraph("This confirms your Anndata password was just changed successfully. As a precaution, we've signed you out on all other devices — just log back in with your new password.")}
+     ${infoBox("🔒 <strong>Wasn't you?</strong> Please contact support right away so we can help secure your account.")}`,
   );
-  const text = `Hi ${fullName},\n\nYour Anndata password was just changed. All other devices have been logged out.\n\nIf you didn't make this change, please contact support immediately.`;
+  const text = `Hi ${fullName},\n\nThis confirms your Anndata password was just changed successfully. As a precaution, we've signed you out on all other devices — just log back in with your new password.\n\nWasn't you? Please contact support right away so we can help secure your account.`;
   return { subject, html, text };
 }
 
@@ -220,5 +220,29 @@ export function contactSupportEmailTemplate(input: {
   const text = `New support message\n\nFrom: ${input.fromEmail}\nContext: ${context}${
     input.pageUrl ? `\nPage: ${input.pageUrl}` : ""
   }\n\n${input.message}`;
+  return { subject, html, text };
+}
+
+export function passwordResetOtpEmailTemplate(code: string): RenderedEmail {
+  const subject = `${code} is your Anndata password reset code`;
+  const html = shell(
+    "Your Anndata password reset OTP. It expires in 10 minutes.",
+    `${heading("Your password reset code")}
+     ${paragraph("We received a request to reset your Anndata password. Enter the verification code below to continue.")}
+     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px 0;">
+       <tr>
+         <td style="background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px 24px; text-align:center;">
+           <span style="font-size:32px; line-height:1; font-weight:700; letter-spacing:8px; color:${BRAND_COLOR};">${escapeHtml(code)}</span>
+         </td>
+       </tr>
+     </table>
+     ${infoBox("⏱ For your security, this code expires in <strong>10 minutes</strong> and can only be used once. Never share it with anyone — Anndata staff will never ask for it.")}
+     ${paragraph("Didn't request a password reset? You can safely ignore this email — your password won't change.")}`,
+  );
+  const text = `Your Anndata password reset code is: ${code}
+
+For your security, this code expires in 10 minutes and can only be used once. Never share it with anyone — Anndata staff will never ask for it.
+
+Didn't request a password reset? You can safely ignore this email.`;
   return { subject, html, text };
 }

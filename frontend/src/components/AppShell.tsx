@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, X, ChevronDown, Bell, Search, Plus, ShoppingBag, User } from "lucide-react";
+import { LogOut, Menu, X, ChevronDown, Search, Plus, ShoppingBag, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { NAV_BY_ROLE, ROLE_LABEL, type NavItem } from "@/components/nav/navConfig";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ import { lotApi } from "@/services/lotApi";
 import { tradeOfferApi } from "@/services/tradeApi";
 import { farmerApi } from "@/services/farmerApi";
 import { FARMER_ME_QUERY_KEY } from "@/hooks/useFarmerProfile";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 function isActive(pathname: string, item: NavItem) {
   if (["/dashboard", "/buyer", "/fpo", "/admin", "/government"].includes(item.href)) return pathname === item.href;
@@ -236,7 +237,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/lots/new" className="header-list-button"><Plus className="h-4 w-4" /> Sell produce</Link>
           <Link href="/shipments" className="header-utility desktop-only" title="My activity"><ShoppingBag className="h-[17px] w-[17px]" /><span>Activity</span></Link>
           <LanguageSwitcher />
-          <button className="icon-btn notification-btn" aria-label="Notifications"><Bell /></button>
+          <NotificationBell />
           <AccountMenu onLogout={handleLogout} loggingOut={loggingOut} />
         </div>
       </header>

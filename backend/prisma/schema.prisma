@@ -248,6 +248,8 @@ model User {
 
   sessions            Session[]
   auditLogs           AuditLog[]
+  disputesRaised      Dispute[] @relation("DisputesRaised")
+  disputesAssigned    Dispute[] @relation("DisputesAssigned")
   passwordResetTokens PasswordResetToken[]
   otpChallenges       OtpChallenge[]
 
@@ -304,6 +306,11 @@ model User {
   // WhatsApp Farmer Assistant — at most one linked WhatsApp number per user
   // (see WhatsAppLink). Additive back-relation only; no Module 1 column changes.
   whatsAppLink WhatsAppLink?
+
+  // Module 22 — Notifications & Alerts. Additive back-relations only; no
+  // other Module 1 field/relation changes.
+  notifications           Notification[]
+  notificationPreference  NotificationPreference?
 
   @@index([mobile])
   @@index([email])
@@ -674,6 +681,7 @@ model FarmerProfile {
   @@index([userId])
   @@index([fpoId])
   @@map("farmer_profiles")
+  disputes Dispute[]
 }
 
 model Farm {
@@ -1001,6 +1009,7 @@ model CropLot {
   @@index([availabilityDate])
   @@index([createdAt])
   @@map("crop_lots")
+  disputes Dispute[]
 }
 
 // Append-only transition log (build spec section 37/38/69) — kept
@@ -1527,6 +1536,7 @@ model BuyerProfile {
   @@index([verificationStatus])
   @@index([state, district])
   @@map("buyer_profiles")
+  disputes Dispute[]
 }
 
 model BuyerDemand {
@@ -1613,6 +1623,7 @@ model TradeOffer {
   @@index([buyerId, status])
   @@index([buyerDemandId, status])
   @@map("trade_offers")
+  disputes Dispute[]
 }
 
 model TradeOfferRevision {
@@ -2586,6 +2597,7 @@ model TransporterProfile {
   @@index([isActive])
   @@index([providerType])
   @@map("transporter_profiles")
+  disputes Dispute[]
 }
 
 // A vehicle belongs to exactly one transporter (Part 3 — no fleet-sharing
@@ -3038,6 +3050,7 @@ model Shipment {
   @@index([lotId])
   @@index([createdAt])
   @@map("shipments")
+  disputes Dispute[]
 }
 
 // Step 9/29 — one row per GPS/location ping. Never stored on Vehicle
@@ -3231,6 +3244,7 @@ model Delivery {
   @@index([status])
   @@index([createdAt])
   @@map("deliveries")
+  disputes Dispute[]
 }
 
 // Step 3 — one row per weighing event (never a single mutable row), so a
@@ -3471,6 +3485,7 @@ model PaymentObligation {
   @@index([dueAt])
   @@index([createdAt])
   @@map("payment_obligations")
+  disputes Dispute[]
 }
 
 // Step 5 — a payment that has been externally made and is being reported/
@@ -3658,3 +3673,715 @@ model WhatsAppMessage {
   @@map("whatsapp_messages")
 }
 
+// ---------------------------------------------------------------------------
+// Module 20 — Digital Transaction Ledger
+//
+// An append-only, auditable financial history. NOT a payment gateway: this
+// module never moves money — it records financial events and the resulting
+// financial state derived from Module 13 (accepted trade), Module 14 (net
+// realization), Module 18 (delivery reconciliation) and Module 19 (payment
+// status). Once a row is written it is never updated or deleted — a
+// correction is always a new REVERSAL row referencing the original via
+// reversalOfEntryId (see digital-transaction-ledger.service.ts).
+//
+// Design decisions (see docs/modules/module-20-digital-transaction-ledger.md
+// for the full write-up):
+//  - transactionId groups every ledger entry belonging to one sale's
+//    financial flow. It is deliberately set to the Module 18 Delivery id —
+//    the one durable anchor Module 13/14/18/19 all already key off — never
+//    the ledger row's own id (Delivery already enforces one obligation per
+//    delivery; see PaymentObligation.deliveryId's own @unique).
+//  - tradeId/lotId/farmerId/buyerId/sourceEntityId are plain indexed String
+//    columns, not Prisma relations. This keeps the migration additive and
+//    isolated — Module 20 reads other modules' data through their own
+//    services/repositories (never re-querying it independently to
+//    reconstruct history) and does not require touching TradeOffer,
+//    CropLot, FarmerProfile, BuyerProfile or User with new back-relation
+//    fields.
+//  - balanceAfter is NOT persisted. A stored running balance would need
+//    every concurrent write to this table serialized under a row lock to
+//    stay correct (the same problem Module 19's own
+//    PaymentObligationRepository.lockForUpdate() exists to solve for a
+//    single obligation) — but ledger entries fan in from many independent
+//    sources (Module 14/18/19) and are never limited to one lock target.
+//    Balance is instead reconstructed deterministically at read time by
+//    summing balance-affecting entries in (transactionId, createdAt, id)
+//    order — see calculateBalance() in the service.
+//  - Idempotency is enforced by a database uniqueness constraint on
+//    (sourceModule, sourceEntityId, sourceEventId, eventType) — a payment
+//    webhook/retry/replay can therefore never create a second ledger row
+//    for the same upstream event, even under concurrent requests.
+enum LedgerEventType {
+  TRADE_VALUE_RECORDED
+  NET_REALIZATION_RECORDED
+  LOGISTICS_COST_RECORDED
+  STORAGE_COST_RECORDED
+  OTHER_DEDUCTION_RECORDED
+  DELIVERY_ADJUSTMENT
+  PAYMENT_OBLIGATION_CREATED
+  PAYMENT_RECORDED
+  PARTIAL_PAYMENT
+  FINAL_PAYMENT
+  REFUND
+  REVERSAL
+  MANUAL_ADJUSTMENT
+}
+
+// CREDIT: amount increases the farmer/seller's receivable balance for this
+// transaction (e.g. the obligation being created, a refund reversing a
+// prior payment). DEBIT: amount reduces it (e.g. a payment being applied).
+// See ledger-direction.ts for the exact per-event-type mapping.
+enum LedgerDirection {
+  CREDIT
+  DEBIT
+}
+
+enum LedgerSourceModule {
+  MODULE_13_TRADE
+  MODULE_14_NET_REALIZATION
+  MODULE_18_RECONCILIATION
+  MODULE_19_PAYMENT
+  MANUAL_ADJUSTMENT
+  REVERSAL
+}
+
+model DigitalTransactionLedger {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  // Stable group identifier for every entry in one sale's financial flow —
+  // never this row's own id. See the module-level comment above.
+  transactionId String
+
+  tradeId  String?
+  lotId    String?
+  farmerId String?
+  buyerId  String?
+
+  eventType LedgerEventType
+  direction LedgerDirection
+
+  amount   Decimal @db.Decimal(16, 2)
+  currency String  @default("INR")
+
+  sourceModule   LedgerSourceModule
+  // The id of the upstream row this entry was derived from (e.g. a
+  // PaymentRecord.id, a NetRealizationCalculation.id, a
+  // DeliveryReconciliation.id). Null only for MANUAL_ADJUSTMENT.
+  sourceEntityId String?
+  // The specific upstream event/state transition being recorded — part of
+  // the idempotency key. For a payment this is the PaymentRecord id itself
+  // (Module 19 payments are already idempotent per obligation — see
+  // PaymentRecord.idempotencyKey — so replaying the same record can only
+  // ever resolve to the same sourceEventId here).
+  sourceEventId String?
+
+  description String?
+  // Immutable financial snapshot captured at write time (Step: "Immutable
+  // Historical Snapshots") — never reconstructed later from Module 14/18/19's
+  // *current* state.
+  metadata Json?
+
+  reversalOfEntryId String?
+  reversalOfEntry   DigitalTransactionLedger?  @relation("LedgerReversal", fields: [reversalOfEntryId], references: [id], onDelete: Restrict)
+  reversals         DigitalTransactionLedger[] @relation("LedgerReversal")
+
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([sourceModule, sourceEntityId, sourceEventId, eventType], name: "ledger_idempotency_key")
+  @@index([transactionId, createdAt])
+  @@index([tradeId])
+  @@index([farmerId])
+  @@index([buyerId])
+  @@index([sourceModule, sourceEntityId])
+  @@index([createdAt])
+  @@map("digital_transaction_ledger")
+}
+
+// ---------------------------------------------------------------------------
+// Module 21 — Dispute & Grievance Management
+//
+// A dispute/grievance record for farmers, buyers, transporters and other
+// participants to raise issues against ANNDATA transactions (lot, trade
+// offer, shipment, delivery, payment obligation, ledger entry) or, where no
+// transaction applies, a general platform grievance. Not a payment system:
+// financial consequences are always carried out through Module 19
+// (PaymentObligation/PaymentRecord) and recorded through Module 20
+// (DigitalTransactionLedger) — this module only decides that an adjustment
+// is justified and links to the resulting record. See
+// docs/modules/module-21-dispute-grievance-management.md.
+// ---------------------------------------------------------------------------
+
+enum DisputeType {
+  QUALITY_DISPUTE
+  QUANTITY_DISPUTE
+  PRICE_DISPUTE
+  PAYMENT_DISPUTE
+  DELIVERY_DISPUTE
+  LOGISTICS_DISPUTE
+  DAMAGE_DISPUTE
+  REJECTION_DISPUTE
+  DELAY_DISPUTE
+  OFFER_DISPUTE
+  WEIGHT_DISPUTE
+  GRIEVANCE
+  OTHER
+}
+
+// Distinguishes a dispute tied to a concrete transaction from a general
+// platform grievance (Step 4) without duplicating the model — a single
+// `category` column driven off which reference IDs are actually present.
+enum DisputeCategory {
+  TRANSACTION
+  GRIEVANCE
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  INVESTIGATION
+  AWAITING_PARTY_RESPONSE
+  RESOLUTION_PROPOSED
+  RESOLVED
+  REJECTED
+  CLOSED
+  CANCELLED
+}
+
+enum DisputePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DisputeRaisedByRole {
+  FARMER
+  FPO_ADMIN
+  BUYER
+  TRANSPORTER
+  ADMIN
+}
+
+enum DisputeResolutionCode {
+  NO_ACTION_REQUIRED
+  CLAIM_REJECTED
+  CLAIM_ACCEPTED
+  PARTIAL_CLAIM_ACCEPTED
+  REFUND_REQUIRED
+  PAYMENT_ADJUSTMENT_REQUIRED
+  QUANTITY_ADJUSTMENT
+  QUALITY_ADJUSTMENT
+  DELIVERY_ADJUSTMENT
+  LOGISTICS_ADJUSTMENT
+  OTHER
+}
+
+enum DisputeEvidenceType {
+  IMAGE
+  DOCUMENT
+  DELIVERY_PROOF
+  QUALITY_REPORT
+  WEIGHING_RECORD
+  PAYMENT_REFERENCE
+  SHIPMENT_INFORMATION
+  OTHER
+}
+
+enum DisputeCommentVisibility {
+  PUBLIC_COMMENT
+  INTERNAL_NOTE
+}
+
+enum DisputeHistoryEventType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  COMMENT_ADDED
+  EVIDENCE_ADDED
+  EVIDENCE_REMOVED
+  INVESTIGATION_STARTED
+  RESPONSE_REQUESTED
+  RESOLUTION_PROPOSED
+  RESOLVED
+  REJECTED
+  REOPENED
+  CLOSED
+  CANCELLED
+  FINANCIAL_ADJUSTMENT_REQUESTED
+  FINANCIAL_ADJUSTMENT_COMPLETED
+}
+
+model Dispute {
+  id             String @id @default(uuid())
+  publicId       String @unique @default(uuid())
+  // Server-generated, immutable — e.g. "DSP-2026-000123" (see
+  // dispute-number.ts), same convention as CropLot.lotNumber /
+  // Delivery.deliveryNumber.
+  disputeNumber  String @unique
+
+  type     DisputeType
+  category DisputeCategory @default(TRANSACTION)
+
+  title       String
+  description String
+
+  status   DisputeStatus   @default(OPEN)
+  priority DisputePriority @default(MEDIUM)
+
+  raisedByUserId String
+  raisedByRole   DisputeRaisedByRole
+
+  // Party references — always resolved/validated server-side from the
+  // caller's own identity and the referenced transaction entity, never
+  // trusted from the client as a bare ownership claim (Step 8/22).
+  farmerId      String?
+  buyerId       String?
+  transporterId String?
+
+  // Transaction entity references (Step 5/23) — all optional; a GRIEVANCE
+  // category dispute may have none of them set. Never a hard FK onto
+  // another module's table (mirrors Delivery.tradeOfferId's own
+  // onDelete: SetNull reasoning) so a dispute's history survives even if
+  // an upstream record is later restructured.
+  lotId               String?
+  tradeOfferId         String?
+  shipmentId          String?
+  deliveryId          String?
+  paymentObligationId String?
+  ledgerEntryId       String?
+
+  assignedToUserId String?
+  assignedAt       DateTime?
+  assignedByUserId String?
+
+  resolutionCode      DisputeResolutionCode?
+  resolutionSummary   String?
+  requestedResolution String?
+  finalResolution     String?
+
+  // Step 16/17/26 — never a raw amount invented here. When a resolution
+  // requires a financial consequence, this only *references* the
+  // authoritative record Module 19/20 already created for it.
+  financialAdjustmentPaymentObligationId String?
+  financialAdjustmentLedgerEntryId       String?
+
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  cancelledAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  raisedBy      User          @relation("DisputesRaised", fields: [raisedByUserId], references: [id], onDelete: Restrict)
+  assignedTo    User?         @relation("DisputesAssigned", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  farmer        FarmerProfile? @relation(fields: [farmerId], references: [id], onDelete: SetNull)
+  buyer         BuyerProfile?  @relation(fields: [buyerId], references: [id], onDelete: SetNull)
+  transporter   TransporterProfile? @relation(fields: [transporterId], references: [id], onDelete: SetNull)
+  lot           CropLot?      @relation(fields: [lotId], references: [id], onDelete: SetNull)
+  tradeOffer    TradeOffer?   @relation(fields: [tradeOfferId], references: [id], onDelete: SetNull)
+  shipment      Shipment?     @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  delivery      Delivery?     @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  paymentObligation PaymentObligation? @relation(fields: [paymentObligationId], references: [id], onDelete: SetNull)
+
+  evidence DisputeEvidence[]
+  comments DisputeComment[]
+  history  DisputeHistoryEvent[]
+
+  @@index([status])
+  @@index([category])
+  @@index([type])
+  @@index([priority])
+  @@index([raisedByUserId])
+  @@index([farmerId])
+  @@index([buyerId])
+  @@index([transporterId])
+  @@index([lotId])
+  @@index([tradeOfferId])
+  @@index([shipmentId])
+  @@index([deliveryId])
+  @@index([paymentObligationId])
+  @@index([assignedToUserId])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("disputes")
+}
+
+// Step 10 — metadata/reference only (never binary storage in Postgres),
+// same shape as DeliveryEvidence/QualityImage.
+model DisputeEvidence {
+  id        String @id @default(uuid())
+  disputeId String
+
+  evidenceType    DisputeEvidenceType
+  storageProvider String
+  externalId      String
+  secureUrl       String
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  checksum        String?
+  description     String?
+
+  uploadedByUserId String
+  uploadedAt       DateTime @default(now())
+
+  // Step 19 — evidence is never hard-deleted; a "removed" evidence row is
+  // soft-marked so the dispute-history EVIDENCE_REMOVED event and this row
+  // both remain part of the permanent record.
+  removedAt       DateTime?
+  removedByUserId String?
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@map("dispute_evidence")
+}
+
+// Step 11/12 — append-only communication history. PUBLIC_COMMENT is visible
+// to every party on the dispute; INTERNAL_NOTE only to ADMIN/assigned staff
+// (enforced in the service/serializer layer, never left to the client).
+model DisputeComment {
+  id        String @id @default(uuid())
+  disputeId String
+
+  visibility DisputeCommentVisibility @default(PUBLIC_COMMENT)
+
+  authorUserId String
+  authorRole   DisputeRaisedByRole
+  message      String
+
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_comments")
+}
+
+// Step 19 — append-only event log, same convention as LotStatusHistory /
+// ShipmentEvent. Never mutated once written.
+model DisputeHistoryEvent {
+  id        String @id @default(uuid())
+  disputeId String
+
+  eventType DisputeHistoryEventType
+
+  actorUserId String?
+  actorRole   DisputeRaisedByRole?
+
+  previousState String?
+  newState      String?
+
+  description String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, createdAt])
+  @@index([eventType])
+  @@map("dispute_history_events")
+}
+
+// ===========================================================================
+// Module 22 — Notifications & Alerts
+//
+// A centralized notification ORCHESTRATION system: it never duplicates the
+// business logic of the modules it reports on (Module 13 offers, Module 17
+// shipments, Module 18 delivery, Module 19 payments, Module 20 ledger,
+// Module 21 disputes, Module 6 market intelligence, ...). Those modules
+// remain the sole source of truth for their own state; this module only
+// ever communicates it.
+//
+// Notification = one logical "recipient X should know about event Y" record
+// (what Module 22's own doc calls a "notification record"). Each
+// Notification fans out into one or more NotificationDelivery rows (one per
+// channel actually attempted) — the "notification delivery" tracked
+// separately per Section 5 of the build spec.
+// ===========================================================================
+
+enum NotificationChannel {
+  IN_APP
+  WHATSAPP
+  EMAIL
+  SMS
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+// Coarse grouping used for preference toggles (Section 10/11) and for the
+// API's ?category= filter (Section 32) — deliberately coarser than
+// NotificationType so a user configures "payments", not forty toggles.
+enum NotificationCategory {
+  OFFER
+  PAYMENT
+  SHIPMENT
+  QUALITY
+  DISPUTE
+  LOGISTICS
+  MARKET
+  FORECAST
+  SELL_STORE
+  LOT
+  ACCOUNT_SECURITY
+  SYSTEM
+}
+
+// Section 3 — controlled notification/event type system. Every event this
+// module is prepared to render a template for; NOT every one of these is
+// wired to fire automatically yet (see NotificationEventPublisher's own
+// comment for exactly which source modules currently call in) — the same
+// "implemented but not yet auto-wired" distinction Module 20 already makes
+// for its own event types.
+enum NotificationType {
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  OFFER_EXPIRED
+
+  PAYMENT_PENDING
+  PAYMENT_RECEIVED
+  PAYMENT_PARTIAL
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+
+  SHIPMENT_CREATED
+  TRANSPORTER_ASSIGNED
+  SHIPMENT_DISPATCHED
+  SHIPMENT_IN_TRANSIT
+  SHIPMENT_DELAYED
+  SHIPMENT_DELIVERED
+
+  QUALITY_CHECK_COMPLETED
+  QUALITY_MISMATCH
+  DELIVERY_RECONCILIATION_COMPLETED
+
+  DISPUTE_CREATED
+  DISPUTE_RESPONSE_REQUIRED
+  DISPUTE_UPDATED
+  DISPUTE_RESOLVED
+  DISPUTE_REJECTED
+  DISPUTE_REOPENED
+  DISPUTE_CLOSED
+
+  LOGISTICS_QUOTE_RECEIVED
+  LOGISTICS_QUOTE_EXPIRED
+
+  MARKET_PRICE_ALERT
+  MARKET_TREND_ALERT
+  FORECAST_ALERT
+
+  LOT_CREATED
+  LOT_UPDATED
+  LOT_STATUS_CHANGED
+
+  ACCOUNT_SECURITY_ALERT
+  PASSWORD_CHANGED
+  LOGIN_ALERT
+
+  SYSTEM_ANNOUNCEMENT
+}
+
+// Mirrors LedgerSourceModule's own naming convention. Identifies which
+// business module raised the domain event a Notification communicates —
+// required for traceability (Section 4: "the notification must be
+// traceable back to its source"), never a second source of truth.
+enum NotificationSourceModule {
+  MODULE_13_TRADE_OFFER
+  MODULE_16_LOGISTICS
+  MODULE_17_SHIPMENT
+  MODULE_18_DELIVERY
+  MODULE_19_PAYMENT
+  MODULE_20_LEDGER
+  MODULE_21_DISPUTE
+  MODULE_6_MARKET
+  MODULE_7_FORECAST
+  MODULE_8_SELL_STORE
+  MODULE_4_LOT
+  MODULE_1_SECURITY
+  ADMIN_ANNOUNCEMENT
+}
+
+// Section 6 — controlled delivery statuses. Preserves provider semantics
+// (Section 6: "do not claim DELIVERED when the provider only confirmed
+// SENT"): a WhatsApp/email accept only ever moves a delivery to SENT; only
+// an explicit provider delivery confirmation (today: none is wired — see
+// notification-delivery.service.ts) may move it to DELIVERED.
+enum NotificationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+model Notification {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  recipientUserId String
+  recipient       User   @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  type     NotificationType
+  category NotificationCategory
+  priority NotificationPriority @default(NORMAL)
+
+  // Rendered, already-localized copy (Section 13/14) — never re-rendered
+  // later even if the recipient's preferredLanguage subsequently changes,
+  // same "never rewrite a historical record" convention every other
+  // module in this codebase already follows (e.g. CropLot's snapshotted
+  // origin, PaymentObligation's frozen finalPayableAmount).
+  title String
+  body  String
+
+  // Traceability back to source (Section 4).
+  relatedEntityType String?
+  relatedEntityId   String?
+  sourceModule      NotificationSourceModule
+  // The originating module's own event/entity id (e.g. a PaymentRecord id,
+  // a Dispute id + event type) — combined with recipientUserId + type
+  // below, this is what makes creation idempotent (Section 16).
+  sourceEventId     String
+
+  // Free-form, non-sensitive template variables/context (Section 42 — never
+  // OTPs, tokens, credentials, or unnecessary personal data).
+  metadata Json?
+
+  readAt     DateTime?
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries NotificationDelivery[]
+
+  // Section 16 — mandatory idempotency: the same source event must never
+  // create duplicate notifications across job/webhook retries. Channel is
+  // deliberately excluded here (channel fan-out lives on
+  // NotificationDelivery) — one Notification per (source event, recipient,
+  // type), many deliveries underneath it.
+  @@unique([sourceModule, sourceEventId, recipientUserId, type], name: "notification_idempotency_key")
+  @@index([recipientUserId, readAt])
+  @@index([recipientUserId, createdAt])
+  @@index([recipientUserId, category])
+  @@index([recipientUserId, priority])
+  @@index([type])
+  @@index([sourceModule, sourceEventId])
+  @@index([relatedEntityType, relatedEntityId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id String @id @default(uuid())
+
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  channel NotificationChannel
+  status  NotificationDeliveryStatus @default(PENDING)
+
+  // Which concrete provider actually handled this attempt (e.g. "meta",
+  // "emailjs", "mock", "in-app") — operational visibility only, never
+  // branched on outside the delivery layer.
+  provider          String?
+  providerMessageId String?
+
+  attempts     Int       @default(0)
+  lastAttemptAt DateTime?
+  deliveredAt  DateTime?
+  failedAt     DateTime?
+  // Sanitized failure reason only (Section 42/53) — never a raw provider
+  // payload, never a secret/token.
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One delivery attempt-set per (notification, channel) — a retry updates
+  // this same row's attempts/status rather than creating a second row for
+  // the same channel (Section 16/51: concurrent workers must only ever
+  // produce one logical delivery per channel).
+  @@unique([notificationId, channel])
+  @@index([status, channel])
+  @@index([status, lastAttemptAt])
+  @@map("notification_deliveries")
+}
+
+// Section 10/11 — per-user notification preferences with sensible defaults
+// (a user who has never visited the preferences screen still gets one row
+// materialized lazily with these column defaults — see
+// notification-preference.repository.ts). IN_APP has no toggle column: it
+// is always on (Section 10: "do not allow users to disable mandatory
+// security notifications" — in-app is the one channel that can never be
+// switched off, since it is also how the unread bell/badge works).
+model NotificationPreference {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  whatsappEnabled Boolean @default(true)
+  emailEnabled    Boolean @default(true)
+  smsEnabled      Boolean @default(false)
+
+  // "22:00"-"07:00"-style local quiet hours, in the user's own clock, as
+  // 0-23 hour-of-day integers. Never applied to CRITICAL priority
+  // (Section 11/15: critical/security overrides quiet hours).
+  quietHoursStartHour Int?
+  quietHoursEndHour   Int?
+
+  // Section 10 — per-category channel overrides, e.g.
+  // {"MARKET": {"EMAIL": false}, "PAYMENT": {"WHATSAPP": true}}. Validated
+  // against NotificationCategory/NotificationChannel by
+  // notification-preference.service.ts before being persisted — never
+  // trusted as arbitrary client JSON past that point.
+  categoryOverrides Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+// Section 44 — admin-authored system announcements. A thin authoring
+// record only: publishing one fans out into ordinary Notification rows
+// (one per targeted recipient) through the same pipeline as every other
+// event, never a parallel send path.
+model NotificationAnnouncement {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  title String
+  body  String
+
+  priority NotificationPriority @default(NORMAL)
+  // Null = every account status/role (Section 44 — audience targeting).
+  // Kept intentionally simple (role-based only, no per-user list) — Module
+  // 22 is not a marketing platform (Section 44/56).
+  audienceRole UserRole?
+
+  createdByUserId String
+
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([publishedAt])
+  @@index([scheduledFor])
+  @@map("notification_announcements")
+}

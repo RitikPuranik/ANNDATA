@@ -23,8 +23,17 @@
 7. Module 7 — Buyer Management & Matching: implemented
 8. Module 8 — Sell vs Store Decision Engine: implemented (deterministic engine authoritative; optional/advisory-only AI layer — see `docs/modules/module-08-sell-vs-store.md`)
 14. Module 14 — Net Realization Calculator: implemented (fully deterministic, no AI/ML; never fabricates a missing price or cost — see `docs/modules/module-14-net-realization.md`)
+16. Module 16 — Logistics Quote & Optimization: implemented (see `docs/modules/module-16-logistics-quote-optimization.md`)
+17. Module 17 — Shipment & GPS Tracking: implemented (see `docs/modules/module-17-shipment-gps-tracking.md`)
+18. Module 18 — Delivery & Quality Reconciliation: implemented (see `docs/modules/module-18-delivery-quality-reconciliation.md`)
+19. Module 19 — Payment Status Tracking: implemented (not a payment gateway — status tracking only)
+20. Module 20 — Digital Transaction Ledger: implemented (append-only, auditable financial history; not a payment gateway — see `docs/modules/module-20-digital-transaction-ledger.md`. `TRADE_VALUE_RECORDED`/`LOGISTICS_COST_RECORDED`/`STORAGE_COST_RECORDED`/`OTHER_DEDUCTION_RECORDED`/`DELIVERY_ADJUSTMENT`/`REFUND` are implemented but not yet auto-wired from Module 13/14/18, since no existing business rule produces those figures independently yet — see the doc's own "Not yet wired automatically" note)
 
-Next planned business modules include Logistics, Shipment/Tracking, Delivery, Payment Status, Ledger, Grievance, Notifications, multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
+21. Module 21 — Dispute & Grievance Management: implemented (dispute/grievance lifecycle with state machine, evidence, comments/internal notes, assignment, resolution; never a payment system — financial consequences are only ever references into Module 19/20 — see `docs/modules/module-21-dispute-grievance-management.md`)
+
+22. Module 22 — Notifications & Alerts: implemented (centralized notification orchestration — in-app/WhatsApp/email/SMS-ready delivery, per-user preferences with quiet hours and mandatory security overrides, en/hi/mr localized templates, idempotent creation, cron-driven retry for transient provider failures, ADMIN system announcements; never a source of truth for the events it communicates — see `docs/modules/module-22-notifications-alerts.md`. `DisputeService` (Module 21) is wired end-to-end as the reference integration; Module 13/16/17/18/19/20/6/7/8/4/1 event sources are not yet auto-wired — see the doc's own "Event integration" section)
+
+Next planned business modules include multilingual/voice/offline, Risk, Analytics, Admin/Government, integrations, and further audit/security/monitoring and AI platform capabilities.
 
 ## Backend — Actual Current Stack
 - Express.js 4.x
@@ -62,6 +71,16 @@ Next planned business modules include Logistics, Shipment/Tracking, Delivery, Pa
 - `modules/sell-vs-store/` — Module 8 deterministic Sell vs Store decision engine (input resolution -> scoring -> persistence), plus an optional, advisory-only AI layer (`ai/`) that can never override the deterministic result
 - `app.ts` — dependency-injected Express app factory
 - `server.ts` — composition root; only place that constructs the real PrismaClient
+- `modules/payments/` — Module 19 payment obligation/record tracking (status only, not a gateway)
+- `modules/ledger/` — Module 20 append-only Digital Transaction Ledger (see `docs/modules/module-20-digital-transaction-ledger.md`)
+- `modules/disputes/` — Module 21 Dispute & Grievance Management (state machine, evidence, comments/internal notes, assignment, resolution; references Module 19/20 for any financial consequence, never invents one — see `docs/modules/module-21-dispute-grievance-management.md`)
+- `modules/notifications/` — Module 22 Notifications & Alerts (centralized orchestration: recipient/preference resolution, en/hi/mr templates, in-app/WhatsApp/email/SMS-ready providers, idempotent delivery + cron retry, ADMIN announcements — see `docs/modules/module-22-notifications-alerts.md`)
+
+Modules 15–19 (Transporter/Vehicle Network, Logistics, Shipment/GPS,
+Delivery/Quality Reconciliation, Payment Status) each have their own
+directory under `modules/` following the same convention as above; see
+their individual docs under `docs/modules/` for the full list — this
+section was not kept in sync with every module added after Module 8.
 
 ## Important Backend Architecture Rules
 - Reuse the existing Prisma client. Do not instantiate another one.
@@ -204,7 +223,7 @@ Never present simulated logistics availability, simulated GPS or simulated payme
 ## Future Module Dependency Rules
 - Market Intelligence consumes existing `MandiPrice`, `Crop`, `Mandi` and farmer location/crop context.
 - Sell-vs-Store consumes market history/forecast + storage/logistics economics + `FarmerProfile` liquidity/storage preferences.
-- Buyer Matching consumes actual lot/quality/demand data and FPO availability.
+- Buyer Matching consumes actual lot/quality/demand data and FPO availability, and (Module 12 Enhancement) also orchestrates Market Intelligence, Price Forecasting, Sell-vs-Store, Net Realization, and Logistics cost estimation to give the farmer an economic comparison per buyer — it does not recompute any of their calculations itself.
 - Warehouse consumes farm location + crop/quantity + storage preference.
 - Logistics consumes pickup/destination + quantity + shipment requirements.
 - Future modules must reference existing entities instead of cloning them.

@@ -72,6 +72,7 @@ export interface AuthRepository {
   createPasswordResetToken(data: CreatePasswordResetTokenData): Promise<void>;
   findValidPasswordResetTokenByHash(tokenHash: string): Promise<{ id: string; userId: string } | null>;
   consumePasswordResetToken(tokenId: string): Promise<void>;
+  findOtpChallengeById(id: string): Promise<{ id: string; userId: string | null; purpose: string } | null>;
 }
 
 export class PrismaAuthRepository implements AuthRepository {
@@ -215,6 +216,13 @@ export class PrismaAuthRepository implements AuthRepository {
     await this.prisma.passwordResetToken.update({
       where: { id: tokenId },
       data: { usedAt: new Date() },
+    });
+  }
+
+  findOtpChallengeById(id: string) {
+    return this.prisma.otpChallenge.findUnique({
+      where: { id },
+      select: { id: true, userId: true, purpose: true },
     });
   }
 }

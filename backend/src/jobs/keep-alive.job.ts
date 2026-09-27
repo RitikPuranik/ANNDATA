@@ -20,7 +20,7 @@ export function registerKeepAliveJob(): ScheduledTask | null {
     return null;
   }
 
-  const url = env.BACKEND_URL.replace(/\/$/, "") + "/";
+  const url = env.BACKEND_URL.replace(/\/$/, "") + "/health";
 
   const task = cron.schedule("*/5 * * * *", async () => {
     const startedAt = Date.now();

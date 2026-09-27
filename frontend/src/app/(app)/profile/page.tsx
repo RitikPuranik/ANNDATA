@@ -17,6 +17,7 @@ import { authApi } from "@/services/authApi";
 import { ApiRequestError } from "@/types/api";
 import { applyServerFieldErrors } from "@/lib/formErrors";
 import { FarmerProfileSection } from "@/components/farmer-profile/FarmerProfileSection";
+import { WhatsAppLinkCard } from "@/components/farmer-profile/WhatsAppLinkCard";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "validation.required"),
@@ -132,6 +133,7 @@ function ProfileContent() {
       {user.role === "FARMER" ? (
         <>
           <FarmerProfileSection />
+          <WhatsAppLinkCard />
           <h2 className="mb-4 mt-10 section-title">Account & security</h2>
           <ChangePasswordForm />
           <SessionsCard />

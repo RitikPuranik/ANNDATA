@@ -177,6 +177,10 @@ export type AuditAction =
   | "PAYMENT_DISPUTED"
   | "PAYMENT_CANCELLED"
   | "PAYMENT_RECORD_REVERSED"
+  // Module 20 — Digital Transaction Ledger
+  | "LEDGER_ENTRY_CREATED"
+  | "LEDGER_REVERSAL_CREATED"
+  | "LEDGER_MANUAL_ADJUSTMENT_CREATED"
   | "WHATSAPP_LINK_CODE_ISSUED"
   | "WHATSAPP_ACCOUNT_LINKED"
   | "WHATSAPP_ACCOUNT_UNLINKED"
@@ -185,7 +189,29 @@ export type AuditAction =
   | "WHATSAPP_OFFER_VIEWED"
   | "WHATSAPP_OFFER_ACTION"
   | "WHATSAPP_PAYMENT_VIEWED"
-  | "WHATSAPP_SHIPMENT_VIEWED";
+  | "WHATSAPP_SHIPMENT_VIEWED"
+  // Module 21 — Dispute & Grievance Management
+  | "DISPUTE_CREATED"
+  | "DISPUTE_STATUS_CHANGED"
+  | "DISPUTE_ASSIGNED"
+  | "DISPUTE_UNASSIGNED"
+  | "DISPUTE_COMMENT_ADDED"
+  | "DISPUTE_INTERNAL_NOTE_ADDED"
+  | "DISPUTE_EVIDENCE_ADDED"
+  | "DISPUTE_EVIDENCE_REMOVED"
+  | "DISPUTE_RESOLUTION_PROPOSED"
+  | "DISPUTE_RESOLVED"
+  | "DISPUTE_REJECTED"
+  | "DISPUTE_REOPENED"
+  | "DISPUTE_CLOSED"
+  | "DISPUTE_CANCELLED"
+  | "DISPUTE_FINANCIAL_ADJUSTMENT_REQUESTED"
+  // Module 22 — Notifications & Alerts. Only management-plane actions are
+  // audited (Section 43: "do not audit every read operation") — ordinary
+  // notification creation/delivery/read/archive is not audited here; its
+  // own history lives on the Notification/NotificationDelivery rows.
+  | "NOTIFICATION_PREFERENCE_UPDATED"
+  | "NOTIFICATION_ANNOUNCEMENT_CREATED";
 
 export interface AuditEvent {
   actorUserId?: string | null;

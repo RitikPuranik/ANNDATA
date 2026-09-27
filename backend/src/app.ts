@@ -9,6 +9,8 @@ import { swaggerSpec } from "./config/swagger";
 import { AuthRepository } from "./modules/auth/auth.repository";
 import { AuditService } from "./modules/audit/audit.service";
 import { AuthService } from "./modules/auth/auth.service";
+import { createEmailService } from "./modules/notifications/email";
+import { createOtpProviders } from "./modules/auth/otp";
 import { createAuthRouter } from "./modules/auth/auth.routes";
 import { createUsersRouter } from "./modules/users/users.routes";
 import { ReferenceDataRepository } from "./modules/reference-data/reference-data.repository";
@@ -20,6 +22,7 @@ import { FarmersService } from "./modules/farmers/farmers.service";
 import { createFarmersRouter } from "./modules/farmers/farmers.routes";
 import { FarmsRepository } from "./modules/farms/farms.repository";
 import { createWhatsAppModule } from "./modules/whatsapp";
+import { createNotificationModule } from "./modules/notifications/notification.module";
 import { FarmsService } from "./modules/farms/farms.service";
 import { createFarmsRouter } from "./modules/farms/farms.routes";
 import { FarmerCropRepository } from "./modules/crops/farmer-crop.repository";
@@ -75,6 +78,7 @@ import { PriceForecastGenerationService } from "./modules/price-forecasting/pric
 import { PriceForecastingService } from "./modules/price-forecasting/price-forecasting.service";
 import { createPriceForecastingRouter } from "./modules/price-forecasting/price-forecasting.routes";
 import { BuyerMatchingService } from "./modules/buyer-matching/buyer-matching.service";
+import { BuyerMatchingEconomicsService } from "./modules/buyer-matching/buyer-matching-economics.service";
 import { createBuyerMatchingRouter } from "./modules/buyer-matching/buyer-matching.routes";
 import { PrismaWarehouseRepository } from "./modules/warehouse-intelligence/warehouse.repository";
 import { PrismaWarehouseStorageRepository } from "./modules/warehouse-intelligence/warehouse-storage.repository";
@@ -148,6 +152,14 @@ import { PrismaPaymentRecordRepository } from "./modules/payments/payment-record
 import { PaymentAuthorizationService } from "./modules/payments/payment.authorization";
 import { PaymentService } from "./modules/payments/payment.service";
 import { createPaymentRouter } from "./modules/payments/payment.routes";
+import { PrismaDigitalTransactionLedgerRepository } from "./modules/ledger/digital-transaction-ledger.repository";
+import { LedgerAuthorizationService } from "./modules/ledger/digital-transaction-ledger.authorization";
+import { DigitalTransactionLedgerService } from "./modules/ledger/digital-transaction-ledger.service";
+import { PrismaDisputeRepository } from "./modules/disputes/dispute.repository";
+import { DisputeAuthorizationService } from "./modules/disputes/dispute.authorization";
+import { DisputeService } from "./modules/disputes/dispute.service";
+import { createDisputeRouter } from "./modules/disputes/dispute.routes";
+import { createDigitalTransactionLedgerRouter } from "./modules/ledger/digital-transaction-ledger.routes";
 
 export interface AppDependencies {
   authRepository: AuthRepository;
@@ -212,6 +224,12 @@ export function createApp(deps: AppDependencies): Express {
   app.use((req, res, next) => (isWhatsAppWebhook(req.path) ? next() : urlencodedParser(req, res, next)));
   app.use(cookieParser());
 
+  // Lightweight public health endpoint used by Render keep-alive checks.
+  // It intentionally does not require authentication or database access.
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
+
   // WhatsApp routes are mounted HERE, before any feature router. Several
   // modules mount a blanket `router.use(authenticate)` at "/api", which would
   // otherwise answer 401 for the (unauthenticated, signature-verified) Meta
@@ -219,7 +237,9 @@ export function createApp(deps: AppDependencies): Express {
   const whatsappRoutes = express.Router();
   app.use(whatsappRoutes);
 
-  const authService = new AuthService(deps.authRepository, deps.auditService);
+  const emailService = createEmailService();
+  const otpProviders = createOtpProviders(deps.prisma, emailService);
+  const authService = new AuthService(deps.authRepository, deps.auditService, emailService, otpProviders);
 
   const referenceDataService = new ReferenceDataService(deps.referenceDataRepository);
   const farmerProfileResolver = new FarmerProfileResolver(deps.farmerProfileRepository);
@@ -336,13 +356,14 @@ export function createApp(deps: AppDependencies): Express {
     farmerProfileResolver,
     deps.auditService,
   );
-  const buyerMatchingService = new BuyerMatchingService(
-    deps.prisma,
-    deps.cropLotRepository,
-    lotAuthorization,
-    farmerProfileResolver,
-    deps.auditService,
-  );
+  // Module 12 Enhancement: BuyerMatchingService's economics collaborator
+  // (Modules 6/7/8/14/16) needs every one of those modules to exist
+  // first, so BuyerMatchingService itself is now constructed further
+  // down — see the `buyerMatchingService` assignment and
+  // `app.use("/api", createBuyerMatchingRouter(...))` call right after
+  // Module 16 is wired up below. (The WhatsApp module, constructed near
+  // the end of this function, reads that same later `const` — textually
+  // after it — so no forward declaration is needed here.)
 
   // Module 7 — deterministic price forecasting. Reuses the Module 6
   // market repository and the same Prisma client; the preparation layer
@@ -480,8 +501,7 @@ export function createApp(deps: AppDependencies): Express {
     "/api/price-forecasting",
     createPriceForecastingRouter(priceForecastingService, deps.authRepository, deps.auditService),
   );
-  app.use("/api", createBuyerMatchingRouter(buyerMatchingService, deps.authRepository, deps.auditService));
-  app.use(
+    app.use(
     "/api/warehouses",
     createWarehouseIntelligenceRouter(
       warehouseAvailabilityService,
@@ -670,6 +690,33 @@ export function createApp(deps: AppDependencies): Express {
   app.use("/api", createLogisticsRequestRouter(logisticsRequestService, deps.authRepository, deps.auditService));
   app.use("/api", createLogisticsQuoteRouter(logisticsQuoteService, deps.authRepository, deps.auditService));
 
+  // Module 12 Enhancement — Smart Buyer Matching + Net Realization + Market
+  // Trend Decision Support. Constructed here (not next to the rest of
+  // Module 12's own wiring above) because its economics collaborator
+  // depends on Module 7 (priceForecastingService), Module 8
+  // (sellStoreOrchestrationService), Module 14
+  // (netRealizationOrchestrationService), and Module 16
+  // (routeDistanceProvider/logisticsCostEstimator) — every one of which is
+  // only available by this point in the wiring. Reuses every one of those
+  // existing instances; nothing here duplicates their logic.
+  const buyerMatchingEconomicsService = new BuyerMatchingEconomicsService(
+    netRealizationOrchestrationService,
+    marketIntelligenceService,
+    priceForecastingService,
+    sellStoreOrchestrationService,
+    logisticsCostEstimator,
+    routeDistanceProvider,
+  );
+  const buyerMatchingService = new BuyerMatchingService(
+    deps.prisma,
+    deps.cropLotRepository,
+    lotAuthorization,
+    farmerProfileResolver,
+    deps.auditService,
+    buyerMatchingEconomicsService,
+  );
+  app.use("/api", createBuyerMatchingRouter(buyerMatchingService, deps.authRepository, deps.auditService));
+
   // Module 17 — Shipment & GPS Tracking. Consumes Module 16's own
   // logisticsRequestRepository/logisticsQuoteRepository and Module 15's own
   // transporterRepository/vehicleRepository/transporterAuthorizationService
@@ -761,6 +808,34 @@ export function createApp(deps: AppDependencies): Express {
 
   app.use("/api", createPaymentRouter(paymentService, deps.authRepository, deps.auditService));
 
+  // Module 20 — Digital Transaction Ledger. Consumes Module 19's own
+  // PaymentService.getRecordHandoff() (Step 28 — "the entire Module 20
+  // handoff contract"); PaymentService itself never implements ledger
+  // functionality. Wired as a post-write hook via
+  // paymentService.setLedgerHook() below so a payment obligation being
+  // created/a payment being recorded automatically produces the
+  // corresponding append-only ledger entries — Module 19 remains the
+  // only place payment status is decided; Module 20 only ever records
+  // what already happened there.
+  const ledgerRepository = new PrismaDigitalTransactionLedgerRepository(deps.prisma);
+  const ledgerAuthorization = new LedgerAuthorizationService(fpoAuthorization);
+  const ledgerService = new DigitalTransactionLedgerService(deps.prisma, ledgerRepository, ledgerAuthorization, deps.auditService);
+
+  paymentService.setLedgerHook(ledgerService);
+
+  app.use("/api", createDigitalTransactionLedgerRouter(ledgerService, deps.authRepository, deps.auditService));
+
+  // Module 21 — Dispute & Grievance Management. References Module 4/13/17/
+  // 18/19 entities by id but never duplicates their data; a resolution's
+  // financial consequence is only ever a reference to an already-existing
+  // Module 19 PaymentObligation / Module 20 DigitalTransactionLedger row
+  // (created through those services' own endpoints, not this module).
+  const disputeRepository = new PrismaDisputeRepository(deps.prisma);
+  const disputeAuthorization = new DisputeAuthorizationService();
+  const disputeService = new DisputeService(deps.prisma, disputeRepository, disputeAuthorization, deps.auditService);
+
+  app.use("/api", createDisputeRouter(disputeService, deps.authRepository, deps.auditService));
+
   // WhatsApp Farmer Assistant — a thin channel on top of the services above.
   // Disabled by default (WHATSAPP_ENABLED=false): the webhook answers 503 and
   // no WhatsApp/AI network call can happen.
@@ -781,6 +856,26 @@ export function createApp(deps: AppDependencies): Express {
   whatsappRoutes.use(whatsapp.webhookRouter);
   whatsappRoutes.use(whatsapp.accountRouter);
   app.locals.whatsapp = whatsapp;
+
+  // Module 22 — Notifications & Alerts. Constructed last so it can reuse
+  // the exact emailService/whatsapp.provider instances already built
+  // above (Section 38/39: never a second email or WhatsApp client) and so
+  // it can attach itself, via setNotificationHook(), as a post-write hook
+  // on every business service that already exists by this point — the
+  // same "wire the hook after the fact" convention paymentService.
+  // setLedgerHook() uses for Module 20.
+  const notifications = createNotificationModule({
+    prisma: deps.prisma,
+    auditService: deps.auditService,
+    authRepository: deps.authRepository,
+    emailService,
+    whatsAppProvider: whatsapp.provider,
+  });
+
+  disputeService.setNotificationHook(notifications.publisher);
+
+  app.use("/api", notifications.router);
+  app.locals.notifications = notifications;
 
   app.use(notFoundHandler);
   app.use(errorHandler);

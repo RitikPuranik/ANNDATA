@@ -24,8 +24,8 @@ export function testConfig(over: Partial<WhatsAppConfig> = {}): WhatsAppConfig {
     webhookVerifyToken: VERIFY_TOKEN, appSecret: APP_SECRET, timeoutMs: 1000, maxRetries: 0,
     conversationTtlMinutes: 30, maxMessageAgeSeconds: 21_600, rateLimitPerMinute: 100,
     aiRateLimitPerHour: 30, matchingRateLimitPerHour: 50, aiProvider: "none", geminiApiKey: "",
-    geminiModel: "m", geminiBaseUrl: "https://g.example", aiTimeoutMs: 1000, devAutoLinkByMobile: false,
-    frontendUrl: "https://app.anndata.test", ...over,
+    geminiModel: "m", geminiBaseUrl: "https://g.example", aiTimeoutMs: 1000, sttProvider: "none",
+    devAutoLinkByMobile: false, frontendUrl: "https://app.anndata.test", ...over,
   };
 }
 

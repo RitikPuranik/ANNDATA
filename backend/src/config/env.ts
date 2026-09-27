@@ -33,6 +33,14 @@ const envObjectSchema = z.object({
   // when it's unset.
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
 
+  // Password recovery SMS OTP via Twilio Verify.
+  TWILIO_ENABLED: strictBoolean,
+  TWILIO_ACCOUNT_SID: z.string().optional().default(""),
+  TWILIO_AUTH_TOKEN: z.string().optional().default(""),
+  TWILIO_VERIFY_SERVICE_SID: z.string().optional().default(""),
+  TWILIO_VERIFY_BASE_URL: z.string().url().default("https://verify.twilio.com/v2"),
+  TWILIO_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+
   REDIS_URL: z.string().optional(),
 
   POSTHOG_API_KEY: z.string().optional().default(""),
@@ -138,6 +146,11 @@ const envObjectSchema = z.object({
   GEMINI_MODEL: z.string().default("gemini-2.0-flash"),
   GEMINI_API_BASE_URL: z.string().url().default("https://generativelanguage.googleapis.com"),
   WHATSAPP_AI_TIMEOUT_MS: z.coerce.number().int().positive().default(6_000),
+  // Optional voice-note transcription. "none" = voice notes get the "text
+  // only" hint (unchanged default behaviour). "gemini" reuses the same
+  // GEMINI_API_KEY/GEMINI_MODEL/GEMINI_API_BASE_URL as WHATSAPP_AI_PROVIDER
+  // above — no separate STT credential is required.
+  WHATSAPP_STT_PROVIDER: z.enum(["none", "gemini"]).default("none"),
   // DEV/DEMO ONLY. When true (and NODE_ENV !== "production") a WhatsApp number
   // that equals a FARMER's registered mobile is auto-linked without the
   // website-issued code. Ignored in production, because User.mobile is not
@@ -171,6 +184,18 @@ const envObjectSchema = z.object({
 });
 
 const envSchema = envObjectSchema.superRefine((value, ctx) => {
+  if (value.TWILIO_ENABLED) {
+    const required = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID"] as const;
+    for (const key of required) {
+      if (!value[key]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when TWILIO_ENABLED=true`,
+        });
+      }
+    }
+  }
   if (value.WHATSAPP_ENABLED) {
     const required = [
       "WHATSAPP_ACCESS_TOKEN",
@@ -193,6 +218,13 @@ const envSchema = envObjectSchema.superRefine((value, ctx) => {
       code: z.ZodIssueCode.custom,
       path: ["GEMINI_API_KEY"],
       message: "GEMINI_API_KEY is required when WHATSAPP_AI_PROVIDER=gemini",
+    });
+  }
+  if (value.WHATSAPP_ENABLED && value.WHATSAPP_STT_PROVIDER === "gemini" && !value.GEMINI_API_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["GEMINI_API_KEY"],
+      message: "GEMINI_API_KEY is required when WHATSAPP_STT_PROVIDER=gemini",
     });
   }
   if (value.EMAIL_ENABLED && value.EMAIL_PROVIDER === "emailjs") {

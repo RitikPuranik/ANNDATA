@@ -22,6 +22,7 @@ export interface WhatsAppConfig {
   geminiModel: string;
   geminiBaseUrl: string;
   aiTimeoutMs: number;
+  sttProvider: "none" | "gemini";
   devAutoLinkByMobile: boolean;
   frontendUrl: string;
 }
@@ -49,6 +50,7 @@ export function loadWhatsAppConfig(): WhatsAppConfig {
     geminiModel: env.GEMINI_MODEL,
     geminiBaseUrl: env.GEMINI_API_BASE_URL,
     aiTimeoutMs: env.WHATSAPP_AI_TIMEOUT_MS,
+    sttProvider: env.WHATSAPP_STT_PROVIDER,
     // Never honoured in production (see env.ts).
     devAutoLinkByMobile: env.WHATSAPP_DEV_AUTO_LINK_BY_MOBILE && !isProduction,
     frontendUrl: env.FRONTEND_URL,

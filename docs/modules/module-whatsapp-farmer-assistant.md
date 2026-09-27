@@ -191,9 +191,27 @@ To test against real WhatsApp locally, expose the port with a tunnel (e.g. ngrok
 * Rotate `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_APP_SECRET` like any secret; they are never logged and provider errors are sanitised.
 * Retention: inbound message text (≤1000 chars) is stored for support. Add a purge job to your data-retention policy.
 
+## Voice notes
+
+Set `WHATSAPP_STT_PROVIDER=gemini` to turn on transcription (reuses the same
+`GEMINI_API_KEY`/`GEMINI_MODEL`/`GEMINI_API_BASE_URL` as `WHATSAPP_AI_PROVIDER`
+— no separate credential needed). A farmer or guest can then send a WhatsApp
+voice note instead of typing: `whatsapp-webhook.service.ts` downloads the
+audio, sends it to `GeminiSpeechToTextProvider.transcribe()` with `hi-IN`/
+`en-IN` as language hints, and — only if a non-empty transcript comes back —
+swaps the message's type from `audio` to `text` before it reaches the command
+parser. From that point on it is indistinguishable from a typed message: same
+parser, same optional NLU pass, same guest/linked-farmer authorization
+boundary, same rate limits. If transcription fails or returns nothing, the
+farmer gets the existing "text only" hint instead — voice is additive, never a
+new way to bypass anything the text channel already enforces.
+
+Left as `WHATSAPP_STT_PROVIDER=none` (the default), behaviour is unchanged
+from before.
+
 ## Known limitations
 
-* **Voice notes**: the STT provider interface and download path exist, but no STT implementation is configured (Anndata has none). Voice notes currently get the "text only" hint.
+* **Voice notes** only transcribe when `WHATSAPP_STT_PROVIDER=gemini` is configured; the default is off.
 * **The guest → registered loop is not closed in the UI.** The sign-up card tells a guest to register and then link the number from Profile, but the frontend has no "Link WhatsApp" screen yet (next item).
 * **No "Link WhatsApp" screen** in the frontend yet — the API is ready (`POST /api/whatsapp/link/code`); a button on the profile page needs to call it.
 * Location matching uses Anndata's mandi districts/states and the farmer's own farms; **pincodes are not resolved** (no pincode dataset) — the farmer is asked for a district.

@@ -4,6 +4,7 @@ import { logger } from "./config/logger";
 import { initSentry } from "./config/sentry";
 import { prisma } from "./config/prisma";
 import { registerWhatsAppRecoveryJob } from "./jobs/whatsapp-recovery.job";
+import { registerNotificationRetryJob } from "./jobs/notification-retry.job";
 import { registerKeepAliveJob } from "./jobs/keep-alive.job";
 import { PrismaAuthRepository } from "./modules/auth/auth.repository";
 import { PrismaAuditService } from "./modules/audit/audit.service";
@@ -62,6 +63,13 @@ async function main() {
   // ScheduledTask (or null) so shutdown() can stop it cleanly.
   const whatsappRecoveryTask: ScheduledTask | null = registerWhatsAppRecoveryJob(app.locals.whatsapp);
   const keepAliveTask: ScheduledTask | null = registerKeepAliveJob();
+  const notificationRetryTask: ScheduledTask | null = app.locals.notifications
+    ? registerNotificationRetryJob(
+        app.locals.notifications.repository,
+        app.locals.notifications.deliveryService,
+        app.locals.notifications.announcementService,
+      )
+    : null;
 
   const server = app.listen(env.PORT, () => {
     logger.info(`Anndata auth service listening on ${env.BACKEND_URL} (port ${env.PORT})`);
@@ -72,6 +80,7 @@ async function main() {
     logger.info(`${signal} received — shutting down gracefully`);
     whatsappRecoveryTask?.stop();
     keepAliveTask?.stop();
+    notificationRetryTask?.stop();
     server.close(async () => {
       await prisma.$disconnect();
       process.exit(0);
