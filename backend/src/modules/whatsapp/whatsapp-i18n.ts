@@ -209,9 +209,9 @@ const M = {
     hinglish: "ℹ️ Ye open demand wale buyers hain. Offer accept hone tak kharidari ki guarantee nahi hai.",
   },
   noBuyers: {
-    en: "😔 No matching buyers right now for your {crop}.\n\nNew buyers post demand often — try again soon.",
-    hi: "😔 अभी आपके {crop} के लिए कोई मेल खाता खरीदार नहीं है।\n\nनई मांग आती रहती है — थोड़ी देर बाद फिर कोशिश करें।",
-    hinglish: "😔 Abhi aapke {crop} ke liye koi matching buyer nahi hai.\n\nNayi demand aati rehti hai — thodi der baad phir try karein.",
+    en: "😔 No matching buyers for {crop} right now — but your lot is live and visible.\n\nNew buyers post demand every day, so check back soon, or type \"my lot\" to see it.",
+    hi: "😔 अभी {crop} के लिए कोई मेल खाता खरीदार नहीं है — पर आपका लॉट लिस्ट में है और दिख रहा है।\n\nरोज़ नई मांग आती है, थोड़ी देर बाद फिर देखें, या अपना लॉट देखने के लिए \"my lot\" लिखें।",
+    hinglish: "😔 Abhi {crop} ke liye koi matching buyer nahi hai — par aapka lot list mein hai aur dikh raha hai.\n\nRoz nayi demand aati hai, thodi der baad phir dekhein, ya apna lot dekhne ke liye \"my lot\" likhein.",
   },
   noMoreBuyers: {
     en: "That's all the buyers I have for now.",
@@ -244,9 +244,9 @@ const M = {
     hinglish: "Apna offer confirm karein:\n\n🏢 {buyer}\n🌾 {crop}\n📦 {qty}\n💰 {price} {per}\n🧾 Total: {total}\n\nYe offer bhejein?",
   },
   offerSent: {
-    en: "✅ Offer sent to {buyer}. This is an *offer request* — the buyer has not accepted yet. I'll show its status under \"offers\".",
-    hi: "✅ {buyer} को ऑफर भेज दिया गया। यह सिर्फ *ऑफर* है — खरीदार ने अभी स्वीकार नहीं किया। स्थिति \"offers\" में देखें।",
-    hinglish: "✅ {buyer} ko offer bhej diya. Ye sirf *offer* hai — buyer ne abhi accept nahi kiya. Status \"offers\" mein dekhein.",
+    en: "✅ Offer sent to {buyer}!\n\nThis is a *request* — the buyer hasn't accepted it yet. I'll let you know the moment they respond. You can also check anytime by typing \"offers\".",
+    hi: "✅ {buyer} को ऑफर भेज दिया गया!\n\nयह अभी सिर्फ *अनुरोध* है — खरीदार ने अभी स्वीकार नहीं किया। जवाब मिलते ही मैं आपको बताऊँगा। कभी भी स्थिति देखने के लिए \"offers\" लिखें।",
+    hinglish: "✅ {buyer} ko offer bhej diya!\n\nYe abhi sirf *request* hai — buyer ne abhi accept nahi kiya. Jawab milte hi main aapko bataunga. Kabhi bhi status dekhne ke liye \"offers\" likhein.",
   },
   buyerDetails: {
     en: "🏢 {buyer}\n📍 {place}\n📦 Demand: {qty}\n✅ Verified buyer\n\nThis is the buyer's open demand — not an offer or a guarantee to buy.",
@@ -334,9 +334,9 @@ const M = {
     hinglish: "⚠️ Ye bhav fresh nahi hain (last update {date}). Baad mein phir dekhein.",
   },
   mandiUnavailable: {
-    en: "⚠️ I couldn't get fresh mandi prices right now.\n\nPlease try again later.",
-    hi: "⚠️ अभी ताज़ा मंडी भाव नहीं मिल पाए।\n\nकृपया बाद में फिर कोशिश करें।",
-    hinglish: "⚠️ Abhi fresh mandi bhav nahi mil paaye.\n\nKripya baad mein phir try karein.",
+    en: "⚠️ I couldn't fetch fresh mandi prices just now — the price source may be updating.\n\nPlease try again in a little while.",
+    hi: "⚠️ अभी ताज़ा मंडी भाव नहीं मिल पाए — शायद डेटा अपडेट हो रहा है।\n\nकृपया थोड़ी देर बाद फिर कोशिश करें।",
+    hinglish: "⚠️ Abhi fresh mandi bhav nahi mil paaye — shayad data update ho raha hai.\n\nThodi der baad phir try karein.",
   },
   mandiTimestamp: {
     en: "Data timestamp:\n{date}",
@@ -389,9 +389,9 @@ const M = {
     hinglish: "Peeche jaane ke liye kuch nahi hai. \"help\" likhein.",
   },
   genericError: {
-    en: "⚠️ I couldn't complete that right now.\n\nPlease try again in a moment.",
-    hi: "⚠️ अभी यह पूरा नहीं हो पाया।\n\nकृपया थोड़ी देर में फिर कोशिश करें।",
-    hinglish: "⚠️ Abhi ye complete nahi ho paya.\n\nKripya thodi der mein phir try karein.",
+    en: "⚠️ Sorry, something went wrong on my end and I couldn't complete that.\n\nPlease try again in a moment — nothing you did was wrong.",
+    hi: "⚠️ माफ़ कीजिए, मेरी तरफ़ से कुछ गड़बड़ हुई और यह पूरा नहीं हो पाया।\n\nकृपया थोड़ी देर में फिर कोशिश करें — आपने कुछ गलत नहीं किया।",
+    hinglish: "⚠️ Sorry, meri taraf se kuch gadbad hui aur ye complete nahi ho paya.\n\nThodi der mein phir try karein — aapne kuch galat nahi kiya.",
   },
   unsupportedMedia: {
     en: "I can currently process text messages.\n\nTry:\nbuyer\nbhav\nmy lot\noffers\npayment\nshipment\nhelp",
@@ -399,9 +399,9 @@ const M = {
     hinglish: "Main abhi sirf text messages samajh sakta hoon.\n\nTry karein:\nbuyer\nbhav\nmy lot\noffers\npayment\nshipment\nhelp",
   },
   slowDown: {
-    en: "⏳ You're sending messages too fast. Please wait a minute and try again.",
-    hi: "⏳ आप बहुत तेज़ संदेश भेज रहे हैं। कृपया एक मिनट रुककर फिर कोशिश करें।",
-    hinglish: "⏳ Aap bahut tez messages bhej rahe hain. Ek minute ruk kar phir try karein.",
+    en: "⏳ Just a moment — you're sending messages faster than I can keep up.\n\nPlease wait a minute and try again.",
+    hi: "⏳ एक पल रुकिए — आप जितनी तेज़ी से संदेश भेज रहे हैं, मैं उतनी तेज़ी से जवाब नहीं दे पा रहा।\n\nकृपया एक मिनट रुककर फिर कोशिश करें।",
+    hinglish: "⏳ Ek pal rukiye — aap jitni tezi se messages bhej rahe hain, main utni tezi se jawab nahi de pa raha.\n\nEk minute ruk kar phir try karein.",
   },
   limitReached: {
     en: "⏳ You've reached the limit for this request for now. Please try again a little later.",

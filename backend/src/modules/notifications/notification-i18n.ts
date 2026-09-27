@@ -58,17 +58,17 @@ const TEMPLATES: Record<NotificationType, Template> = {
   OFFER_RECEIVED: {
     title: { en: "New offer received", hi: "नया ऑफर मिला", mr: "नवीन ऑफर मिळाली" },
     body: {
-      en: "{buyerName} offered {price} for your {cropName} lot.",
-      hi: "{buyerName} ने आपके {cropName} लॉट के लिए {price} का ऑफर दिया है।",
-      mr: "{buyerName} यांनी तुमच्या {cropName} लॉटसाठी {price} ची ऑफर दिली आहे.",
+      en: "Good news — {buyerName} offered {price} for your {cropName} lot. Open the offer to accept, reject, or counter.",
+      hi: "अच्छी खबर — {buyerName} ने आपके {cropName} लॉट के लिए {price} का ऑफर दिया है। स्वीकार, अस्वीकार या काउंटर करने के लिए ऑफर खोलें।",
+      mr: "आनंदाची बातमी — {buyerName} यांनी तुमच्या {cropName} लॉटसाठी {price} ची ऑफर दिली आहे. स्वीकारण्यासाठी, नाकारण्यासाठी किंवा काउंटर करण्यासाठी ऑफर उघडा.",
     },
   },
   OFFER_ACCEPTED: {
-    title: { en: "Offer accepted", hi: "ऑफर स्वीकार हुआ", mr: "ऑफर स्वीकारली" },
+    title: { en: "Offer accepted 🎉", hi: "ऑफर स्वीकार हुआ 🎉", mr: "ऑफर स्वीकारली 🎉" },
     body: {
-      en: "Your offer for {cropName} was accepted at {price}.",
-      hi: "आपका {cropName} का ऑफर {price} पर स्वीकार कर लिया गया है।",
-      mr: "तुमची {cropName} ची ऑफर {price} वर स्वीकारली गेली आहे.",
+      en: "Your offer for {cropName} was accepted at {price}. Next: arrange transport for the sale.",
+      hi: "आपका {cropName} का ऑफर {price} पर स्वीकार कर लिया गया है। अगला कदम: बिक्री के लिए परिवहन तय करें।",
+      mr: "तुमची {cropName} ची ऑफर {price} वर स्वीकारली गेली आहे. पुढील पायरी: विक्रीसाठी वाहतूक व्यवस्था करा.",
     },
   },
   OFFER_REJECTED: {
@@ -97,11 +97,11 @@ const TEMPLATES: Record<NotificationType, Template> = {
     },
   },
   PAYMENT_RECEIVED: {
-    title: { en: "Payment received", hi: "भुगतान प्राप्त हुआ", mr: "पेमेंट मिळाले" },
+    title: { en: "Payment received ✅", hi: "भुगतान प्राप्त हुआ ✅", mr: "पेमेंट मिळाले ✅" },
     body: {
-      en: "Payment of {amount} has been marked as received.",
-      hi: "{amount} का भुगतान प्राप्त हुआ दर्ज किया गया है।",
-      mr: "{amount} चे पेमेंट मिळाले असे नोंदवले गेले आहे.",
+      en: "Payment of {amount} has been marked as received. Thank you — this sale is now complete.",
+      hi: "{amount} का भुगतान प्राप्त हुआ दर्ज किया गया है। धन्यवाद — यह बिक्री अब पूरी हो गई है।",
+      mr: "{amount} चे पेमेंट मिळाले असे नोंदवले गेले आहे. धन्यवाद — ही विक्री आता पूर्ण झाली आहे.",
     },
   },
   PAYMENT_PARTIAL: {
@@ -170,11 +170,11 @@ const TEMPLATES: Record<NotificationType, Template> = {
     },
   },
   SHIPMENT_DELIVERED: {
-    title: { en: "Shipment delivered", hi: "शिपमेंट डिलीवर हुई", mr: "शिपमेंट डिलिव्हर झाली" },
+    title: { en: "Shipment delivered ✅", hi: "शिपमेंट डिलीवर हुई ✅", mr: "शिपमेंट डिलिव्हर झाली ✅" },
     body: {
-      en: "Your {cropName} shipment has been delivered.",
-      hi: "आपकी {cropName} शिपमेंट डिलीवर हो गई है।",
-      mr: "तुमची {cropName} शिपमेंट डिलिव्हर झाली आहे.",
+      en: "Your {cropName} shipment has been delivered. We'll notify you once the quality check and payment are confirmed.",
+      hi: "आपकी {cropName} शिपमेंट डिलीवर हो गई है। क्वालिटी जांच और भुगतान की पुष्टि होते ही हम आपको सूचित करेंगे।",
+      mr: "तुमची {cropName} शिपमेंट डिलिव्हर झाली आहे. गुणवत्ता तपासणी आणि पेमेंटची पुष्टी होताच आम्ही तुम्हाला कळवू.",
     },
   },
 
