@@ -422,6 +422,8 @@ export class WarehouseSyncService {
           pincode: record.location.pincode,
           latitude: record.location.latitude,
           longitude: record.location.longitude,
+          status: record.status ?? "ACTIVE",
+          isActive: record.status ? record.status === "ACTIVE" : true,
         },
       });
 

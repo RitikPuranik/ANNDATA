@@ -7,7 +7,7 @@ import { LotAuthorizationService } from "../lots/lot.authorization";
 import { FarmerProfileResolver } from "../farmers/farmer-profile.resolver";
 import { average, confidence, freshness, haversineKm, median, percentChange, round, trend, volatility } from "./analytics";
 import { MarketIntelligenceRepository } from "./market-intelligence.repository";
-import { MARKET_CONFIG, MarketCandidate } from "./market-intelligence.types";
+import { MARKET_CONFIG, MarketCandidate, MarketSnapshot } from "./market-intelligence.types";
 import { getMarketCache, setMarketCache } from "./market-cache";
 
 const startOfDay = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -27,8 +27,8 @@ export class MarketIntelligenceService {
     const arrivals=history.map(x=>x.arrivalQuantity).filter((x):x is number=>x!==null);
     return { latest: latest?.modalPrice ?? null, average: average(values) === null ? null : round(average(values)!), median: median(values) === null ? null : round(median(values)!), minimum: values.length ? Math.min(...values) : null, maximum: values.length ? Math.max(...values) : null, range: values.length ? Math.max(...values)-Math.min(...values) : null, changes: { "1D": percentChange(latest?.modalPrice ?? null,historicAt(1)), "7D": percentChange(latest?.modalPrice ?? null,historicAt(7)), "30D": percentChange(latest?.modalPrice ?? null,historicAt(30)) }, change7d: ch7, trend: trend(ch7), volatility: vol, anomaly: latest && average(values) ? Math.abs((latest.modalPrice-average(values)!)/average(values)!) >= .25 : false, arrivals: arrivals.length ? { latest: latest?.arrivalQuantity ?? null, average: round(average(arrivals)!), available:true } : { latest:null,average:null,available:false }, freshness: latest ? freshness(latest.date) : null, recordsUsed: history.length };
   }
-  async snapshot(cropId: string, filters: { mandiId?: string; state?: string; district?: string }) {
-    const cached = await getMarketCache<unknown>("snapshot", [cropId, filters]); if (cached) return cached;
+  async snapshot(cropId: string, filters: { mandiId?: string; state?: string; district?: string }): Promise<MarketSnapshot> {
+    const cached = await getMarketCache<MarketSnapshot>("snapshot", [cropId, filters]); if (cached) return cached;
     const crop = await this.crop(cropId); const requestedMandi = filters.mandiId ? await this.repo.mandi(filters.mandiId) : null; if (filters.mandiId && !requestedMandi) throw new MarketDomainError("Mandi not found.", "MANDI_NOT_FOUND", 404); const markets = filters.mandiId ? await this.repo.latestMarkets(cropId, {}) : await this.repo.latestMarkets(cropId, filters);
     const selected = requestedMandi ? markets.filter(m => m.mandi.id === requestedMandi.id) : markets;
     if (!selected.length) throw new MarketDomainError("Price data is unavailable.", "INSUFFICIENT_MARKET_DATA");

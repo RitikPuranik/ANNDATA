@@ -1,4 +1,4 @@
-import { NetRealizationCostCategory } from "@prisma/client";
+import { NetRealizationCostCategory } from "./net-realization.types";
 
 /**
  * Part N — a single centralized disclaimer, never scattered as ad-hoc

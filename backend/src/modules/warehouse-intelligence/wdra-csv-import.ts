@@ -73,7 +73,7 @@ async function main() {
     linked: wdraSummary?.linked ?? 0,
     duplicatesFlagged: wdraSummary?.duplicatesFlagged ?? 0,
     invalidSkipped: wdraSummary?.skipped ?? 0,
-    warnings: wdraSummary?.warnings ?? 0,
+    unchanged: wdraSummary?.unchanged ?? 0,
     failed: wdraSummary?.failed ?? 0,
     statusCounts,
     providerStatus: wdraSummary?.status,

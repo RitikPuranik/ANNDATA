@@ -1,0 +1,3 @@
+import { LowConnectivityAuthorizationService } from "../../src/modules/low-connectivity/low-connectivity.authorization";
+
+describe("LowConnectivityAuthorizationService",()=>{const auth=new LowConnectivityAuthorizationService();const session:any={userId:"u1"};test("owner and admin can access",()=>{expect(auth.canAccessSession({id:"u1",publicId:"p",role:"FARMER"} as any,session)).toBe(true);expect(auth.canAccessSession({id:"u2",publicId:"p",role:"ADMIN"} as any,session)).toBe(true);});test("other user cannot access",()=>expect(auth.canAccessSession({id:"u2",publicId:"p",role:"FARMER"} as any,session)).toBe(false));});

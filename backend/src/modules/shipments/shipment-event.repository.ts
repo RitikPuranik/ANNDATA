@@ -1,4 +1,4 @@
-import { PrismaClient, ShipmentEventType, ShipmentStatus } from "@prisma/client";
+import { Prisma, PrismaClient, ShipmentEventType, ShipmentStatus } from "@prisma/client";
 import { ShipmentEventRecord } from "./shipment.types";
 
 export interface CreateShipmentEventData {
@@ -29,7 +29,7 @@ export class PrismaShipmentEventRepository implements ShipmentEventRepository {
         previousStatus: data.previousStatus ?? null,
         newStatus: data.newStatus ?? null,
         actorUserId: data.actorUserId ?? null,
-        metadata: data.metadata ?? undefined,
+        metadata: (data.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
       },
     });
   }

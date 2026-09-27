@@ -191,6 +191,7 @@ export interface DisputeListFilters {
   assignedToUserId?: string;
   farmerId?: string;
   buyerId?: string;
+  transporterId?: string;
   lotId?: string;
   tradeOfferId?: string;
   shipmentId?: string;

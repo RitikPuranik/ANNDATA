@@ -23,6 +23,7 @@ import {
 export type NotificationRecord = Notification;
 export type NotificationDeliveryRecord = NotificationDelivery;
 export type NotificationPreferenceRecord = NotificationPreference;
+export type NotificationWithDeliveries = NotificationRecord & { deliveries: NotificationDeliveryRecord[] };
 
 /** What a caller (a controller, or an internal publish() call) sees back. */
 export interface NotificationDTO {

@@ -23,7 +23,7 @@ import { WarehouseDataProvider, WarehouseProviderRequest, WarehouseProviderResul
  */
 export class FarmLinkWarehouseProvider implements WarehouseDataProvider {
   readonly providerId = "farmlink";
-  readonly providerType = "FARMLINK" as const;
+  readonly providerType = "ANNDATA" as const;
 
   async fetchWarehouses(_request: WarehouseProviderRequest): Promise<WarehouseProviderResult> {
     return {

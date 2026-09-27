@@ -312,6 +312,10 @@ model User {
   notifications           Notification[]
   notificationPreference  NotificationPreference?
 
+  // Module 23 (Part 1) — Low-Connectivity Offline Sync & Preloading.
+  // Additive back-relation only; no other Module 1 field/relation changes.
+  syncSessions SyncSession[]
+
   @@index([mobile])
   @@index([email])
   @@index([publicId])
@@ -4384,4 +4388,144 @@ model NotificationAnnouncement {
   @@index([publishedAt])
   @@index([scheduledFor])
   @@map("notification_announcements")
+}
+
+// ---------------------------------------------------------------------------
+// Module 23 (Part 1) — Low-Connectivity Offline Sync & Preloading.
+//
+// Scope: the low-connectivity engine only — a strictly-ordered,
+// one-packet-at-a-time offline action queue (SyncSession/SyncPacket) that
+// lets a client on a poor or intermittent connection forward queued
+// actions to the backend one small packet at a time instead of one large
+// request, plus a read-only "preload bundle" assembled on demand from
+// already-existing tables (User/FarmerProfile/Crop/State/MandiPrice — no
+// data is duplicated or re-owned here). The Multilingual/Voice portions of
+// the original Module 23 scope are intentionally NOT part of this change
+// — see README's status table and docs/modules/module-23-low-connectivity.md.
+//
+// Purely additive: two new enums, two new tables, and one additive
+// back-relation on User (`syncSessions`, added above) — same convention
+// Module 22 used for `notifications`/`notificationPreference`. No existing
+// table, column, index, or enum value is altered or dropped.
+// ---------------------------------------------------------------------------
+
+enum SyncSessionStatus {
+  OPEN
+  COMPLETED
+  ABANDONED
+}
+
+enum SyncPacketStatus {
+  PENDING
+  PROCESSING
+  APPLIED
+  FAILED
+}
+
+model SyncSession {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // A client-generated stable identifier for the physical device/app
+  // install (not a database id) — lets a farmer's phone resume its own
+  // still-open session after a dropped connection instead of starting a
+  // fresh one and losing the sequence cursor.
+  deviceId String
+
+  status           SyncSessionStatus @default(OPEN)
+  clientAppVersion String?
+  // Free-form, client-reported connectivity label ("OFFLINE", "POOR_2G",
+  // "GOOD", ...) — purely descriptive/diagnostic, never used for any
+  // authorization or business-rule decision.
+  networkProfile   String?
+
+  // The sequence number of the last successfully *consumed* packet
+  // (applied OR failed — see SyncPacket.status) for this session — the
+  // single source of truth for "what sequence number comes next"
+  // (SyncSessionService.submitPacket in sync-session.service.ts). Starts
+  // at 0 so the first packet a client sends is sequence #1.
+  lastAppliedSequence Int @default(0)
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  packets SyncPacket[]
+
+  // A device should only ever have one OPEN session at a time — enforced
+  // by the service layer (findOpenSessionForDevice before create), not a
+  // DB constraint, since Postgres/Prisma can't portably scope a unique
+  // index to `status = 'OPEN'` here.
+  @@index([userId, deviceId, status])
+  @@index([userId, status])
+  @@map("sync_sessions")
+}
+
+model SyncPacket {
+  id       String @id @default(uuid())
+  publicId String @unique @default(uuid())
+
+  sessionId String
+  session   SyncSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Denormalized from session.userId purely so idempotencyKey uniqueness
+  // (below) can be scoped per-user without a join — the same
+  // "denormalize the owning id for a unique index" convention already
+  // used elsewhere in this schema (e.g. Notification's sourceEventId
+  // idempotency key).
+  userId String
+
+  // Assigned by the client and enforced strictly increasing per session,
+  // one at a time, by SyncSessionService.submitPacket — see
+  // SyncSession.lastAppliedSequence above. This (not sessionId, sequence
+  // being reused by two clients or two requests racing) is what makes
+  // "packets forwarded one by one" an actual backend guarantee rather
+  // than just a client convention.
+  sequence Int
+
+  // Lets a client safely resubmit the exact same packet after a timeout
+  // on a flaky link without risking a double-apply — see
+  // findPacketByIdempotencyKey in low-connectivity.repository.ts.
+  idempotencyKey String
+
+  // Which handler this packet is destined for — resolved against
+  // PacketHandlerRegistry (packet-handler.registry.ts); never trusted to
+  // directly name a table or run arbitrary logic itself.
+  targetModule String
+  action       String
+  payload      Json
+
+  status   SyncPacketStatus @default(PENDING)
+  attempts Int              @default(1)
+
+  resultSummary Json?
+  errorCode     String?
+  errorMessage  String?
+
+  // When the client actually created this packet (which, on a poor
+  // connection, may be long before it reaches the server) vs. createdAt
+  // (when the server first persisted it) — kept distinct for
+  // low-connectivity diagnostics/support.
+  clientCreatedAt DateTime
+  appliedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Enforces strict, gap-free packet ordering within a session at the
+  // database level: two concurrent submissions that both believe they are
+  // sequence N can never both succeed — the loser hits this constraint
+  // (P2002), which sync-session.service.ts turns into a clear
+  // SYNC_PACKET_OUT_OF_ORDER error instead of silently racing.
+  @@unique([sessionId, sequence])
+  // Scoped idempotency — see idempotencyKey comment above.
+  @@unique([userId, idempotencyKey])
+  @@index([sessionId, status])
+  @@index([userId, createdAt])
+  @@map("sync_packets")
 }

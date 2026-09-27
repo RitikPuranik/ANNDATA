@@ -1,11 +1,47 @@
 import {
-  NetRealizationCostCategory,
   NetRealizationPriceSourceType,
   NetRealizationStatus,
   QuantityUnit,
   RealizationCompleteness,
-  RealizationValueSource,
 } from "@prisma/client";
+
+export type RealizationValueSource =
+  | "ACTUAL"
+  | "ESTIMATED"
+  | "USER_PROVIDED"
+  | "MARKET_REFERENCE"
+  | "UNKNOWN";
+export const RealizationValueSource = {
+  ACTUAL: "ACTUAL",
+  ESTIMATED: "ESTIMATED",
+  USER_PROVIDED: "USER_PROVIDED",
+  MARKET_REFERENCE: "MARKET_REFERENCE",
+  UNKNOWN: "UNKNOWN",
+} as const;
+
+export type NetRealizationCostCategory =
+  | "TRANSPORT"
+  | "LOADING"
+  | "UNLOADING"
+  | "PACKAGING"
+  | "STORAGE"
+  | "COMMISSION"
+  | "MARKET_FEE"
+  | "TAX"
+  | "INSURANCE"
+  | "OTHER";
+export const NetRealizationCostCategory = {
+  TRANSPORT: "TRANSPORT",
+  LOADING: "LOADING",
+  UNLOADING: "UNLOADING",
+  PACKAGING: "PACKAGING",
+  STORAGE: "STORAGE",
+  COMMISSION: "COMMISSION",
+  MARKET_FEE: "MARKET_FEE",
+  TAX: "TAX",
+  INSURANCE: "INSURANCE",
+  OTHER: "OTHER",
+} as const;
 
 /**
  * Part C — Calculation Input Contract.

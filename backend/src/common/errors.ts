@@ -187,6 +187,16 @@ export type ErrorCode =
   | "DISPUTE_NOT_RESOLVED"
   | "DISPUTE_REOPEN_NOT_ALLOWED"
   | "DISPUTE_EVIDENCE_NOT_FOUND"
+  // Module 23 (Part 1) — Low-Connectivity Offline Sync & Preloading.
+  // SYNC_SESSION_NOT_FOUND and SYNC_PACKET_NOT_FOUND are NOT included here
+  // — thrown via the generic NotFoundError — and unauthorized session/
+  // packet access is thrown via the generic AuthorizationError. Every
+  // other code here is a business-rule violation thrown via
+  // LowConnectivityDomainError.
+  | "SYNC_SESSION_NOT_OPEN"
+  | "SYNC_PACKET_OUT_OF_ORDER"
+  | "SYNC_PACKET_HANDLER_NOT_REGISTERED"
+  | "SYNC_PACKET_NOT_RETRYABLE"
   | "UNEXPECTED_ERROR";
 
 export class AppError extends Error {
@@ -530,6 +540,22 @@ export class DisputeDomainError extends AppError {
       | "DISPUTE_RESOLUTION_REQUIRES_CODE"
       | "DISPUTE_NOT_RESOLVED"
       | "DISPUTE_REOPEN_NOT_ALLOWED"
+    >,
+    statusCode = 422,
+  ) {
+    super(message, statusCode, code);
+  }
+}
+
+export class LowConnectivityDomainError extends AppError {
+  constructor(
+    message: string,
+    code: Extract<
+      ErrorCode,
+      | "SYNC_SESSION_NOT_OPEN"
+      | "SYNC_PACKET_OUT_OF_ORDER"
+      | "SYNC_PACKET_HANDLER_NOT_REGISTERED"
+      | "SYNC_PACKET_NOT_RETRYABLE"
     >,
     statusCode = 422,
   ) {

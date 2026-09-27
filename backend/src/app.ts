@@ -23,6 +23,7 @@ import { createFarmersRouter } from "./modules/farmers/farmers.routes";
 import { FarmsRepository } from "./modules/farms/farms.repository";
 import { createWhatsAppModule } from "./modules/whatsapp";
 import { createNotificationModule } from "./modules/notifications/notification.module";
+import { createLowConnectivityModule } from "./modules/low-connectivity/low-connectivity.module";
 import { FarmsService } from "./modules/farms/farms.service";
 import { createFarmsRouter } from "./modules/farms/farms.routes";
 import { FarmerCropRepository } from "./modules/crops/farmer-crop.repository";
@@ -876,6 +877,16 @@ export function createApp(deps: AppDependencies): Express {
 
   app.use("/api", notifications.router);
   app.locals.notifications = notifications;
+
+  // Module 23 (Part 1) — Low-Connectivity Offline Sync & Preloading.
+  const lowConnectivity = createLowConnectivityModule({
+    prisma: deps.prisma,
+    authRepository: deps.authRepository,
+    auditService: deps.auditService,
+  });
+
+  app.use("/api", lowConnectivity.router);
+  app.locals.lowConnectivity = lowConnectivity;
 
   app.use(notFoundHandler);
   app.use(errorHandler);

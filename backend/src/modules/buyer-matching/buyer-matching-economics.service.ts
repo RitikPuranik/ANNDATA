@@ -186,7 +186,7 @@ export class BuyerMatchingEconomicsService {
       const modal = snapshot.price.nationalAverage;
       const comparison: MarketComparison = {
         status: "AVAILABLE",
-        marketModalPricePerQuintal: modal,
+        marketModalPricePerQuintal: modal ?? undefined,
         trendDirection: snapshot.trend.direction,
         trendChangePercentage7d: snapshot.trend.changePercentage,
         dataFreshness: snapshot.dataQuality.freshness,

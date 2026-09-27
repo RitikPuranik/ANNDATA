@@ -1,4 +1,4 @@
-import { StorageType } from "@prisma/client";
+import { StorageType, WarehouseStatus } from "@prisma/client";
 import { QUANTITY_ALIASES, QuantityUnit as BaseQuantityUnit, convertQuantityToKg } from "../fpo/unit-conversion";
 import { ExternalWarehouseRecord, WarehouseProviderType } from "./providers/warehouse-data-provider";
 
@@ -54,6 +54,7 @@ export interface NormalizedWarehouseRecord {
   maxTemperatureC: number | null;
 
   metadata: Record<string, unknown> | undefined;
+  status?: WarehouseStatus | null;
   sourceUpdatedAt: Date | null;
 
   warnings: NormalizationIssue[];
@@ -198,6 +199,9 @@ export function normalizeExternalWarehouseRecord(record: ExternalWarehouseRecord
     minTemperatureC: normalizeTemperature(record.storage?.minimumTemperature, "minimumTemperature", warnings),
     maxTemperatureC: normalizeTemperature(record.storage?.maximumTemperature, "maximumTemperature", warnings),
     metadata: record.metadata,
+    status: record.status && ["ACTIVE", "INACTIVE", "SUSPENDED"].includes(record.status.trim().toUpperCase())
+      ? (record.status.trim().toUpperCase() as WarehouseStatus)
+      : null,
     sourceUpdatedAt: record.sourceUpdatedAt ?? null,
     warnings,
   };

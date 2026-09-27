@@ -127,8 +127,5 @@ export class GeminiSpeechToTextProvider implements SpeechToTextProvider {
     throw new Error(
       `STT provider HTTP ${lastStatus}: ${lastDetail.slice(0, 300)}`,
     );
-    const body = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? "";
-    return { text };
   }
 }

@@ -4,6 +4,7 @@
  * consistent with tests/unit/buyer-matching.service.test.ts.
  */
 import { BuyerMatchingService } from "../../src/modules/buyer-matching/buyer-matching.service";
+import { invalidateBuyerMatchingCache } from "../../src/modules/buyer-matching/buyer-matching-cache";
 import { FakeAuditService } from "../testUtils/fakeAuditService";
 
 function farmerCtx() {
@@ -62,6 +63,10 @@ const farmers = { ensure: jest.fn().mockResolvedValue({ id: "farmer-1" }) } as a
 const audit = new FakeAuditService();
 
 describe("BuyerMatchingService.matches() — backward compatibility", () => {
+  beforeEach(async () => {
+    await invalidateBuyerMatchingCache();
+  });
+
   it("returns the original price-only shape when no economics collaborator is supplied", async () => {
     const service = new BuyerMatchingService(makePrisma(), makeLots(), lotAuth, farmers, audit);
     const result: any = await service.matches(farmerCtx(), "lot-pub-1");
@@ -74,6 +79,10 @@ describe("BuyerMatchingService.matches() — backward compatibility", () => {
 });
 
 describe("BuyerMatchingService.matches() — Module 12 Enhancement economics", () => {
+  beforeEach(async () => {
+    await invalidateBuyerMatchingCache();
+  });
+
   function makeEconomics() {
     return {
       lotContext: jest.fn().mockResolvedValue({

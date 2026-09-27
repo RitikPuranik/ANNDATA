@@ -6,6 +6,7 @@ import { WarehouseStorageRepository } from "../../src/modules/warehouse-intellig
 import { WarehouseCapabilityRepository } from "../../src/modules/warehouse-intelligence/warehouse-capability.repository";
 import { ReferenceDataService } from "../../src/modules/reference-data/reference-data.service";
 import { AuditService } from "../../src/modules/audit/audit.service";
+import { invalidateWarehouseCache } from "../../src/modules/warehouse-intelligence/warehouse-cache";
 
 function warehouseRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -103,6 +104,10 @@ function makeService(overrides: {
   const service = new WarehouseAvailabilityService(warehouses, storageUnits, capabilities, referenceData, audit);
   return { service, warehouses, storageUnits, capabilities, referenceData, audit };
 }
+
+beforeEach(async () => {
+  await invalidateWarehouseCache();
+});
 
 describe("WarehouseAvailabilityService.getStorageAvailability", () => {
   it("throws WAREHOUSE_NOT_FOUND for a warehouse that doesn't exist", async () => {

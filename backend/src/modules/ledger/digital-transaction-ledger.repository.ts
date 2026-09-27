@@ -92,17 +92,29 @@ export class PrismaDigitalTransactionLedgerRepository implements DigitalTransact
       return { entry, deduped: false };
     } catch (err) {
       if (isUniqueConstraintError(err)) {
-        const existing = await client.digitalTransactionLedger.findUnique({
-          where: {
-            ledger_idempotency_key: {
+        if (data.sourceEntityId == null || data.sourceEventId == null) {
+          const existing = await client.digitalTransactionLedger.findFirst({
+            where: {
               sourceModule: data.sourceModule,
               sourceEntityId: data.sourceEntityId,
               sourceEventId: data.sourceEventId,
               eventType: data.eventType,
             },
-          },
-        });
-        if (existing) return { entry: existing, deduped: true };
+          });
+          if (existing) return { entry: existing, deduped: true };
+        } else {
+          const existing = await client.digitalTransactionLedger.findUnique({
+            where: {
+              ledger_idempotency_key: {
+                sourceModule: data.sourceModule,
+                sourceEntityId: data.sourceEntityId,
+                sourceEventId: data.sourceEventId,
+                eventType: data.eventType,
+              },
+            },
+          });
+          if (existing) return { entry: existing, deduped: true };
+        }
       }
       throw err;
     }
@@ -128,6 +140,11 @@ export class PrismaDigitalTransactionLedgerRepository implements DigitalTransact
   }
 
   findExisting(sourceModule: LedgerSourceModule, sourceEntityId: string | null, sourceEventId: string | null, eventType: LedgerEventType) {
+    if (sourceEntityId == null || sourceEventId == null) {
+      return this.prisma.digitalTransactionLedger.findFirst({
+        where: { sourceModule, sourceEntityId, sourceEventId, eventType },
+      });
+    }
     return this.prisma.digitalTransactionLedger.findUnique({
       where: { ledger_idempotency_key: { sourceModule, sourceEntityId, sourceEventId, eventType } },
     });
