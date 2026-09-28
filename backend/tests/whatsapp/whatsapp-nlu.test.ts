@@ -24,6 +24,28 @@ describe("deterministic command parser", () => {
     });
   }
 
+  it("selling phrases start the sell flow, not the lots list or a login gate", () => {
+    for (const text of [
+      "I want to sell my crop",
+      "i want to sell my wheat",
+      "I would like to sell my crop",
+      "mujhe apni fasal bechni hai",
+      "meri fasal bechna hai",
+      "मुझे अपनी फसल बेचनी है",
+      "who will buy my wheat",
+      "where can I sell my soybean",
+      "kaun kharidega mera gehu",
+    ]) {
+      expect(intent(text)).toBe("FIND_BUYER");
+    }
+  });
+
+  it("differently worded price questions still reach mandi prices", () => {
+    for (const text of ["what is the price of wheat today", "how much is soybean", "gehu kitne ka hai"]) {
+      expect(intent(text)).toBe("CHECK_MANDI_PRICE");
+    }
+  });
+
   it("ABOUT never steals a real action: 'kaise' / 'how' / 'process' beside an action word keep that action", () => {
     expect(intent("payment kaise milega")).toBe("VIEW_PAYMENT");
     expect(intent("payment process")).toBe("VIEW_PAYMENT");

@@ -32,7 +32,7 @@ export class NotificationPreferenceRepository {
   update(userId: string, data: Prisma.NotificationPreferenceUpdateInput): Promise<NotificationPreferenceRecord> {
     return this.prisma.notificationPreference.upsert({
       where: { userId },
-      create: { userId, ...(data as Prisma.NotificationPreferenceUncheckedCreateInput) },
+      create: { ...(data as Prisma.NotificationPreferenceUncheckedCreateInput), userId },
       update: data,
     });
   }

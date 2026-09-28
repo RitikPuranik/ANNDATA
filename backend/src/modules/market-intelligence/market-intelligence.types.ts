@@ -16,3 +16,25 @@ export interface MarketCandidate {
   history: PricePoint[];
   distanceKm?: number;
 }
+
+export interface MarketSnapshot {
+  crop: unknown;
+  market: { totalMandisReporting: number };
+  price: {
+    unit: string;
+    nationalAverage: number | null;
+    minimum: number;
+    maximum: number;
+  };
+  trend: {
+    direction: TrendDirection;
+    changePercentage: number | null;
+    period: string;
+  };
+  dataQuality: {
+    lastUpdated: string;
+    recordsUsed: number;
+    freshness: DataFreshness | null;
+  };
+}
+

@@ -8,7 +8,7 @@ import {
   Prisma,
   PrismaClient,
 } from "@prisma/client";
-import { NotificationListFilters, NotificationRecord } from "./notification.types";
+import { NotificationListFilters, NotificationRecord, NotificationWithDeliveries } from "./notification.types";
 
 export interface CreateNotificationData {
   recipientUserId: string;
@@ -26,7 +26,7 @@ export interface CreateNotificationData {
 }
 
 export interface NotificationListPage {
-  items: NotificationRecord[];
+  items: NotificationWithDeliveries[];
   total: number;
   unreadCount: number;
 }

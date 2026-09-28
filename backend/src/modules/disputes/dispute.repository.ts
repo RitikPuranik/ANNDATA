@@ -171,6 +171,7 @@ export class PrismaDisputeRepository implements DisputeRepository {
       ...(filters.assignedToUserId ? { assignedToUserId: filters.assignedToUserId } : {}),
       ...(filters.farmerId ? { farmerId: filters.farmerId } : {}),
       ...(filters.buyerId ? { buyerId: filters.buyerId } : {}),
+      ...(filters.transporterId ? { transporterId: filters.transporterId } : {}),
       ...(filters.lotId ? { lotId: filters.lotId } : {}),
       ...(filters.tradeOfferId ? { tradeOfferId: filters.tradeOfferId } : {}),
       ...(filters.shipmentId ? { shipmentId: filters.shipmentId } : {}),

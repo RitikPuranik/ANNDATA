@@ -8,7 +8,11 @@ export type AuditAction =
   | "USER_LOGOUT_ALL"
   | "PASSWORD_CHANGED"
   | "PASSWORD_RESET_REQUESTED"
+  | "PASSWORD_RESET_OTP_REQUESTED"
+  | "PASSWORD_RESET_OTP_VERIFIED"
   | "PASSWORD_RESET_COMPLETED"
+  | "PRICE_FORECAST_GENERATED"
+  | "WDRA_IMPORT_COMPLETED"
   | "ACCOUNT_SUSPENDED"
   | "ACCOUNT_REACTIVATED"
   | "ROLE_CHANGED"
@@ -211,7 +215,16 @@ export type AuditAction =
   // notification creation/delivery/read/archive is not audited here; its
   // own history lives on the Notification/NotificationDelivery rows.
   | "NOTIFICATION_PREFERENCE_UPDATED"
-  | "NOTIFICATION_ANNOUNCEMENT_CREATED";
+  | "NOTIFICATION_ANNOUNCEMENT_CREATED"
+  // Module 23 (Part 1) — Low-Connectivity Offline Sync & Preloading. Only
+  // session lifecycle and failures are audited (same "don't audit every
+  // read/routine event" convention Module 22 states above) — an
+  // individual APPLIED packet is not audited; its own row already carries
+  // its full outcome.
+  | "SYNC_SESSION_STARTED"
+  | "SYNC_SESSION_COMPLETED"
+  | "SYNC_SESSION_ABANDONED"
+  | "SYNC_PACKET_FAILED";
 
 export interface AuditEvent {
   actorUserId?: string | null;

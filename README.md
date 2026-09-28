@@ -43,7 +43,7 @@ The system is being developed module-by-module. Later modules consume earlier do
 | 20 | Digital Transaction Ledger | ✅ Complete |
 | 21 | Dispute & Grievance Management | ✅ Complete |
 | 22 | Notifications & Alerts | ✅ Complete |
-| 23 | Multilingual / Voice / Low-Connectivity | ❌ Planned |
+| 23 | Multilingual / Voice / Low-Connectivity | 🟡 Partial functionality exists |
 | 24 | Fraud & Risk Detection | ❌ Planned |
 | 25 | Analytics & Impact Dashboard | ❌ Planned |
 | 26 | Admin & Government Dashboard | 🟡 Partial functionality exists |
@@ -57,6 +57,8 @@ The system is being developed module-by-module. Later modules consume earlier do
 Module 19 is implemented as a **payment status system**, not a payment gateway. It records obligations and payment records/statuses but does not itself move money through UPI, cards, banks, or escrow.
 
 Module 20 is implemented as an **append-only, auditable financial history** built on Module 19's handoff contract — it is also not a payment gateway and never moves money. `TRADE_VALUE_RECORDED`/`LOGISTICS_COST_RECORDED`/`STORAGE_COST_RECORDED`/`OTHER_DEDUCTION_RECORDED`/`DELIVERY_ADJUSTMENT`/`REFUND` event types exist but are not yet auto-wired from Module 13/14/18, since no existing business rule in those modules currently produces those figures independently — see `docs/modules/module-20-digital-transaction-ledger.md` for the full breakdown of what is and isn't wired.
+
+Module 23 currently implements only the **low-connectivity offline sync/preload engine**. Packets are forwarded one at a time with server-enforced sequencing and idempotency, and the preload bundle is chunkable and versioned. **Multilingual and voice are not implemented.** No other module's business actions are registered as packet handlers yet; only the built-in diagnostic handlers are available. See `docs/modules/module-23-low-connectivity.md`.
 
 Module 21 is implemented as a **dispute/grievance record and lifecycle
 system**, not a payment system — a resolution's financial consequence is

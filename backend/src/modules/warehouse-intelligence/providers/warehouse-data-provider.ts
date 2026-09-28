@@ -75,6 +75,7 @@ export interface ExternalWarehouseRecord {
    * payload dump. */
   metadata?: Record<string, unknown>;
 
+  status?: string | null;
   sourceUpdatedAt?: Date | null;
 }
 

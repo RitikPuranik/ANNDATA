@@ -6,6 +6,8 @@ import { parseMessage } from "./whatsapp-command-parser";
 import type { WhatsAppNluProvider } from "./whatsapp-nlu.provider";
 
 export const AI_MIN_CONFIDENCE = 0.6;
+/** Rule matches at or above this are trusted without asking the AI. */
+export const RULES_TRUSTED_CONFIDENCE = 0.85;
 
 /**
  * Intent detection pipeline:
@@ -30,7 +32,7 @@ export class WhatsAppIntentService {
 
   async detect(text: string, opts: { language: Lang; rateKey: string }): Promise<DetectedIntent> {
     const rules = parseMessage(text);
-    if (rules.intent !== "UNKNOWN") return rules;
+    if (rules.intent !== "UNKNOWN" && rules.confidence >= RULES_TRUSTED_CONFIDENCE) return rules;
     if (this.nlu.name === "none" || text.trim().length < 3) return rules;
 
     if (!(await this.limiter.allow(`ai:${opts.rateKey}`, this.aiLimitPerHour, 3600))) {
@@ -45,9 +47,13 @@ export class WhatsAppIntentService {
         return rules;
       }
       if (parsed.data.confidence < AI_MIN_CONFIDENCE || parsed.data.intent === "UNKNOWN") {
+        // A weak rule match is still better than nothing.
+        if (rules.intent !== "UNKNOWN") return rules;
         return { intent: "UNKNOWN", entities: parsed.data.entities, confidence: parsed.data.confidence, source: "ai" };
       }
-      return { intent: parsed.data.intent, entities: parsed.data.entities, confidence: parsed.data.confidence, source: "ai" };
+      // Keep entities the rules already found (crop/qty/location), let the AI fill gaps.
+      const entities = { ...parsed.data.entities, ...rules.entities };
+      return { intent: parsed.data.intent, entities, confidence: parsed.data.confidence, source: "ai" };
     } catch (err) {
       logger.warn({ err: (err as Error).message }, "[WhatsApp] ai provider error");
       return rules;

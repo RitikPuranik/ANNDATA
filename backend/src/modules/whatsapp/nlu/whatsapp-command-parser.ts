@@ -21,7 +21,7 @@ const K = {
   yes: ["yes", "y", "haan", "han", "ha", "haa", "ji", "ok", "okay", "sahi", "confirm", "theek", "thik", "हाँ", "हां", "जी", "ठीक"],
   no: ["no", "n", "nahi", "nahin", "nai", "nope", "नहीं", "ना"],
   have: ["hai", "hain", "have", "hoon", "है", "हैं"],
-  sell: ["sell", "bechna", "bechni", "bech", "bechu", "bechun", "bechoon", "bikri", "बेचना", "बेचनी", "बेच", "बेचूं", "बेचूँ"],
+  sell: ["sell", "selling", "sale", "sold", "bechna", "bechni", "bechne", "bechnu", "bech", "bechu", "bechun", "bechoon", "bechunga", "bechenge", "bikri", "bikwana", "bikwani", "becna", "बेचना", "बेचनी", "बेचने", "बेच", "बेचूं", "बेचूँ", "बेचूंगा", "बिक्री", "बिकवाना"],
   where: ["kaha", "kahan", "कहाँ", "कहां", "where", "status", "kab", "कब"],
   maal: ["maal", "mal", "माल"],
   about: ["about", "process", "explain", "explanation", "samjhao", "samjhaiye", "intro", "introduction", "जानकारी", "परिचय"],
@@ -30,6 +30,14 @@ const K = {
 /** "How does Anndata work" phrasings (matched on normalized text: lowercase, punctuation → space). */
 const ABOUT_PHRASES =
   /(how (does|do|it|anndata|this|to use)|how .{0,20} works?|kaise (kaam|kam|chalta|chalti|karta|kare|use)|what is anndata|what s anndata|about anndata|anndata (kya|kaise|ke bare|ke baare)|कैसे (काम|चलता|चलती)|फार्मलिंक (क्या|कैसे))/u;
+
+/** "Who will buy my wheat", "kaun kharidega", "where can I sell" → find a buyer. */
+const BUYER_PHRASES =
+  /(who (will|can|would|wants to) buy|who buys|anyone (to )?buy|someone (to )?buy|kaun (kharid|lega|le ga|lenge)|kisko (bech|de)|kahan (bech|beche)|kaha (bech|beche)|where (to|can i|do i|should i) sell|need (a )?buyer|want (a )?buyer|buyer chahiye|khareedar chahiye|kharidar chahiye|खरीदार चाहिए|कौन खरीदेगा|कहाँ बेच|कहां बेच)/u;
+
+/** "What is the rate", "kitne ka hai", "how much is wheat" → mandi price. */
+const PRICE_PHRASES =
+  /(what s the (price|rate)|what is the (price|rate)|how much (is|are|does|do|for)|current (price|rate)|today s (price|rate)|kitne (ka|ki|ke|me|mein)|kitna (hai|hain|chal|mil)|कितने (का|की|के)|कितना (है|चल|मिल))/u;
 
 const WEBSITE_KEYWORDS: Array<{ words: string[]; target: WebsiteTarget }> = [
   { words: ["warehouse", "warehouses", "godown", "storage", "गोदाम"], target: "warehouses" },
@@ -192,15 +200,19 @@ export function parseMessage(raw: string): DetectedIntent {
   const maalWhere = hasKeyword(tokens, K.maal) && hasKeyword(tokens, K.where);
   if (hasKeyword(tokens, K.shipment) || maalWhere) return done("VIEW_SHIPMENT", cmdConf, cmdSource);
   if (hasKeyword(tokens, K.offer)) return done("VIEW_OFFERS", cmdConf, cmdSource);
-  if (hasKeyword(tokens, K.price)) return done("CHECK_MANDI_PRICE", cmdConf, cmdSource);
-  if (hasKeyword(tokens, K.buyer)) return done("FIND_BUYER", cmdConf, cmdSource);
-  if (hasKeyword(tokens, K.lot)) return done("VIEW_LOTS", cmdConf, cmdSource);
+  if (hasKeyword(tokens, K.price) || PRICE_PHRASES.test(n)) return done("CHECK_MANDI_PRICE", cmdConf, cmdSource);
+  if (hasKeyword(tokens, K.buyer) || BUYER_PHRASES.test(n)) return done("FIND_BUYER", cmdConf, cmdSource);
 
+  // Selling words win over "crop"/"lot"/"fasal": "I want to sell my crop" is a
+  // request to sell, not a request to list the farmer's existing lots.
   // "sell 20 quintal wheat" / "mere paas 20 quintal gehu hai" → buyer flow.
   const hasSell = hasKeyword(tokens, K.sell);
   const hasHave = hasKeyword(tokens, K.have) || /(mere paas|i have|mere pas)/.test(n);
-  if ((hasSell || hasHave) && (entities.crop || entities.quantity)) return done("FIND_BUYER", 0.85, "rules");
-  if (hasSell) return done("FIND_BUYER", 0.8, "rules");
+  if (hasSell) return done("FIND_BUYER", entities.crop || entities.quantity ? 0.9 : 0.85, "rules");
+
+  if (hasKeyword(tokens, K.lot)) return done("VIEW_LOTS", cmdConf, cmdSource);
+
+  if (hasHave && (entities.crop || entities.quantity)) return done("FIND_BUYER", 0.85, "rules");
 
   // "How does Anndata work?" — after every action command so "payment kaise milega"
   // or "how to sell wheat" keep their own meaning.

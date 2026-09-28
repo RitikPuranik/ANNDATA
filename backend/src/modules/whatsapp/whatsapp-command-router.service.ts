@@ -1,7 +1,7 @@
 import { logger } from "../../config/logger";
 import { trackEvent } from "../../config/posthog";
 import { extractNumber, isNo, isYes } from "./nlu/whatsapp-command-parser";
-import type { WhatsAppIntentService } from "./nlu/whatsapp-intent.service";
+import { RULES_TRUSTED_CONFIDENCE, type WhatsAppIntentService } from "./nlu/whatsapp-intent.service";
 import type { WhatsAppBuyerAssistantService } from "./whatsapp-buyer-assistant.service";
 import type { WhatsAppCatalogService } from "./whatsapp-catalog.service";
 import type { AnndataUrlService } from "./whatsapp-deeplink.service";
@@ -162,7 +162,7 @@ export class WhatsAppCommandRouter {
       if (answered) return answered;
     }
 
-    const det = rules.intent !== "UNKNOWN" ? rules : await this.d.intents.detect(text, { language: conv.language, rateKey: isLinked(input) ? input.farmer.user.id : `guest:${input.inbound.from}` });
+    const det = rules.intent !== "UNKNOWN" && rules.confidence >= RULES_TRUSTED_CONFIDENCE ? rules : await this.d.intents.detect(text, { language: conv.language, rateKey: isLinked(input) ? input.farmer.user.id : `guest:${input.inbound.from}` });
     return this.dispatch(input, det);
   }
 

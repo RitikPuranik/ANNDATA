@@ -6,7 +6,7 @@ module.exports = {
   roots: ["<rootDir>/tests"],
   setupFiles: ["<rootDir>/tests/setupEnv.ts"],
   transform: {
-    "^.+\\.tsx?$": ["ts-jest", { isolatedModules: true }],
+    "^.+\\.tsx?$": ["ts-jest", { isolatedModules: true, tsconfig: "tsconfig.test.json" }],
   },
   testMatch: ["**/*.test.ts"],
   // *.db.test.ts files talk to a real PostgreSQL database through the

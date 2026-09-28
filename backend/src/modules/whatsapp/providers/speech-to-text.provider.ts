@@ -66,29 +66,66 @@ export class GeminiSpeechToTextProvider implements SpeechToTextProvider {
     // stripped. Anything Gemini doesn't recognise falls back to audio/ogg
     // (what WhatsApp voice notes actually are) rather than sending garbage.
     const cleanMimeType = mimeType.split(";")[0].trim() || "audio/ogg";
-    const res = await this.fetchImpl(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.geminiApiKey },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }, { inlineData: { mimeType: cleanMimeType, data: audio.toString("base64") } }],
-          },
-        ],
-        generationConfig: { temperature: 0, maxOutputTokens: 300 },
-      }),
-      signal: AbortSignal.timeout(this.config.aiTimeoutMs),
-    });
-    if (!res.ok) {
-      // Truncated response body surfaces in the "[WhatsApp] voice
-      // transcription failed" log line so a bad API key / unsupported
-      // model / quota error is diagnosable without guesswork.
-      const detail = await res.text().catch(() => "");
-      throw new Error(`STT provider HTTP ${res.status}: ${detail.slice(0, 300)}`);
+    const requestBody = {
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }, { inlineData: { mimeType: cleanMimeType, data: audio.toString("base64") } }],
+        },
+      ],
+      generationConfig: { temperature: 0, maxOutputTokens: 300 },
+    };
+
+    // Gemini can temporarily return 503 when the selected model is under
+    // heavy load. Retry only temporary failures (503/429); configuration
+    // errors such as 400/401/404 should fail immediately.
+    const maxRetries = 3;
+    let lastStatus = 503;
+    let lastDetail = "";
+
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      const res = await this.fetchImpl(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.geminiApiKey },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(this.config.aiTimeoutMs),
+      });
+
+      if (res.ok) {
+        const body = (await res.json()) as {
+          candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+        };
+        const text =
+          body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? "";
+        return { text };
+      }
+
+      lastStatus = res.status;
+      lastDetail = await res.text().catch(() => "");
+
+      const retryable = res.status === 503 || res.status === 429;
+      const hasRetriesLeft = attempt < maxRetries;
+
+      if (!retryable || !hasRetriesLeft) {
+        throw new Error(
+          `STT provider HTTP ${lastStatus}: ${lastDetail.slice(0, 300)}`,
+        );
+      }
+
+      const delayMs = 1000 * 2 ** attempt;
+
+      console.warn(
+        `[WhatsApp] Gemini STT temporary failure (${res.status}), ` +
+          `retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
-    const body = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? "";
-    return { text };
+
+    // This is unreachable, but keeps TypeScript's control-flow analysis
+    // explicit if the retry loop is changed later.
+    throw new Error(
+      `STT provider HTTP ${lastStatus}: ${lastDetail.slice(0, 300)}`,
+    );
   }
 }
