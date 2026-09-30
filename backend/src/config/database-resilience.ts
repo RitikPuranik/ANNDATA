@@ -2,8 +2,8 @@ import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from "
 import { env } from "./env";
 import { logger } from "./logger";
 
-const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_BASE_DELAY_MS = 500;
+const DEFAULT_MAX_RETRIES = 5;
+const DEFAULT_BASE_DELAY_MS = 750;
 
 export interface DatabaseRetryOptions {
   operation: string;
@@ -23,8 +23,20 @@ function errorMessage(error: unknown): string {
  * must fail immediately instead of being repeated.
  */
 export function isTransientDatabaseError(error: unknown): boolean {
-  if (error instanceof PrismaClientKnownRequestError) {
-    return new Set(["P1001", "P1008", "P1017", "P2024"]).has(error.code);
+  // Prefer the Prisma error code, but do not depend exclusively on
+  // instanceof because Prisma errors can cross runtime/package boundaries.
+  const code =
+    error instanceof PrismaClientKnownRequestError
+      ? error.code
+      : typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          typeof (error as { code?: unknown }).code === "string"
+        ? (error as { code: string }).code
+        : undefined;
+
+  if (code && new Set(["P1001", "P1008", "P1017", "P2024"]).has(code)) {
+    return true;
   }
 
   const message = errorMessage(error).toLowerCase();
@@ -74,7 +86,10 @@ export async function withDatabaseRetry<T>(
         throw error;
       }
 
-      const delayMs = baseDelayMs * 2 ** retry;
+      // Small jitter prevents multiple cron/worker instances from retrying
+      // the same Neon outage in lockstep.
+      const jitterMs = Math.floor(Math.random() * Math.max(1, baseDelayMs / 2));
+      const delayMs = baseDelayMs * 2 ** retry + jitterMs;
 
       logger.warn(
         {
