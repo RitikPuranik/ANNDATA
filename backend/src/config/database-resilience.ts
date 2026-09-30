@@ -1,8 +1,4 @@
-import {
-  Prisma,
-  PrismaClientKnownRequestError,
-  PrismaClientUnknownRequestError,
-} from "@prisma/client";
+import { PrismaClientKnownRequestError, PrismaClientUnknownRequestError } from "@prisma/client";
 import { env } from "./env";
 import { logger } from "./logger";
 
@@ -31,20 +27,19 @@ export function isTransientDatabaseError(error: unknown): boolean {
     return new Set(["P1001", "P1008", "P1017", "P2024"]).has(error.code);
   }
 
+  const message = errorMessage(error).toLowerCase();
+
   if (error instanceof PrismaClientUnknownRequestError) {
-    const message = errorMessage(error).toLowerCase();
     return (
       message.includes("can't reach database server") ||
-      message.includes("connection") && (
-        message.includes("reset") ||
-        message.includes("closed") ||
-        message.includes("timed out") ||
-        message.includes("timeout")
-      )
+      (message.includes("connection") &&
+        (message.includes("reset") ||
+          message.includes("closed") ||
+          message.includes("timed out") ||
+          message.includes("timeout")))
     );
   }
 
-  const message = errorMessage(error).toLowerCase();
   return (
     message.includes("can't reach database server") ||
     message.includes("connection terminated") ||
@@ -96,8 +91,3 @@ export async function withDatabaseRetry<T>(
     }
   }
 }
-
-// Keep Prisma imported as a runtime dependency in this module so future
-// Prisma error subclasses can be added here without duplicating detection
-// logic across individual jobs.
-void Prisma;
