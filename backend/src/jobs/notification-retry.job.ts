@@ -17,6 +17,9 @@ import { NotificationRepository } from "../modules/notifications/notification.re
  */
 const STALE_AFTER_MS = 5 * 60 * 1000; // 5 minutes
 const SWEEP_BATCH_SIZE = 200;
+const DB_FAILURE_REPORT_COOLDOWN_MS = 15 * 60 * 1000;
+
+let lastDatabaseFailureReportAt = 0;
 
 export function registerNotificationRetryJob(
   repo: NotificationRepository,
@@ -63,12 +66,20 @@ export function registerNotificationRetryJob(
         );
       }
     } catch (err) {
-      // A final failure is still reported to Sentry, but the scheduled task
-      // exits cleanly and the worker remains alive for the next sweep.
-      captureException(err, {
-        job: "notification-retry",
-        operation: "database-or-delivery-sweep",
-      });
+      // A Neon outage can persist across several minute ticks. Keep the
+      // scheduler alive, but avoid creating one Sentry event every minute.
+      if (Date.now() - lastDatabaseFailureReportAt >= DB_FAILURE_REPORT_COOLDOWN_MS) {
+        lastDatabaseFailureReportAt = Date.now();
+        captureException(err, {
+          job: "notification-retry",
+          operation: "database-or-delivery-sweep",
+        });
+      } else {
+        logger.warn(
+          { event: "notification-retry-database-unavailable" },
+          "[Notifications] database unavailable; retrying on the next scheduled sweep",
+        );
+      }
     } finally {
       running = false;
     }
