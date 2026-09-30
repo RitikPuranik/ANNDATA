@@ -14,6 +14,11 @@ const envObjectSchema = z.object({
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
+  // Bounded retries for transient Neon/Prisma connectivity failures in
+  // background jobs. These do not affect normal query/business errors.
+  DB_OPERATION_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(3),
+  DB_OPERATION_RETRY_BASE_DELAY_MS: z.coerce.number().int().positive().max(10_000).default(500),
+
   JWT_ACCESS_SECRET: z.string().min(16, "JWT_ACCESS_SECRET must be a long random string"),
   JWT_REFRESH_SECRET: z.string().min(16, "JWT_REFRESH_SECRET must be a long random string"),
   SESSION_SECRET: z.string().min(16, "SESSION_SECRET must be a long random string"),
